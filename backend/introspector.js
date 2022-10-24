@@ -3,7 +3,7 @@ const neo4j = require("neo4j-driver");
 const fs = require('fs');
 
 const driver = neo4j.driver(
-    "bolt://localhost:11003",
+    "neo4j://localhost:7687",
     neo4j.auth.basic("neo4j", "root")
 );
 
