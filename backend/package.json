@@ -1,0 +1,24 @@
+{
+  "name": "artvis-backend",
+  "version": "1.0.0",
+  "description": "Backend for the ArtVis project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.cvast.tuwien.ac.at/vfilipov/artvis.git"
+  },
+  "author": "velitchko",
+  "license": "MIT",
+  "dependencies": {
+    "@neo4j/graphql": "^3.10.1",
+    "apollo-server": "^3.10.3",
+    "graphql": "^16.6.0",
+    "neo4j-driver": "^5.1.0"
+  },
+  "devDependencies": {
+    "@neo4j/introspector": "^1.0.2"
+  }
+}
