@@ -30,6 +30,7 @@
     "webpack-dev-server": "^4.11.1"
   },
   "dependencies": {
+    "@apollo/client": "^3.7.1",
     "react-dom": "^18.2.0"
   }
 }
