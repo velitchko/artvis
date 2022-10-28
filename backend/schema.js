@@ -1,4 +1,4 @@
-type Artist {
+export const schema = `type Artist {
 	artistsExhibitedWith: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: IN, properties: "ExhibitedWithProperties")
 	birthdate: String!
 	birthplace: String!
@@ -92,4 +92,4 @@ type Location {
 	place_tgn: String!
 	town: String!
 	type: String!
-}
+}`;
