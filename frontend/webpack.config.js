@@ -8,6 +8,8 @@ module.exports = {
   entry: './src/index.tsx',
   output: {
     path: __dirname + '/dist/',
+    filename: 'index_bundle.js',
+    publicPath: '/'
   },
   module: {
     rules: [
@@ -20,10 +22,13 @@ module.exports = {
         use: 'ts-loader',
       },
       {
-        test: /\.css$/, // (s(a|c)ss)?$
-        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+        test: /\.css$/i, // (s(a|c)ss)?$
+        use: ['style-loader', 'css-loader', 'postcss-loader'], //MiniCssExtractPlugin.loader,  'sass-loader'
       },
     ]
+  },
+  devServer: {
+    historyApiFallback: true,
   },
   devtool: prod ? undefined : 'source-map',
   plugins: [
