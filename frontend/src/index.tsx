@@ -1,36 +1,15 @@
-import './styles/main.css'
+import './index.css'
 
 import React from 'react'
-import { createRoot } from 'react-dom/client'
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from "react-router-dom"
 
-import App from './components/app/app';
-import {
-    ApolloProvider,
-    ApolloClient,
-    createHttpLink,
-    InMemoryCache,
-    gql
-} from '@apollo/client';
+import Base from './routes/base';
 
-const httpLink = createHttpLink({
-    uri: 'http://localhost:4000'
-});
-
-const client = new ApolloClient({
-    link: httpLink,
-    cache: new InMemoryCache()
-});
-
-const container = document.getElementById('app-root')!
-
-const root = createRoot(container)
-
-client.query({
-    query: gql`query { artists { firstname, lastname } }`
-}).then((result) => console.log(result));
+const root = ReactDOM.createRoot(document.getElementById('app-root')!);
 
 root.render(
-    <ApolloProvider client={client}>
-    <App />
-    </ApolloProvider>
+    <BrowserRouter>
+        <Base />
+    </BrowserRouter>
 )
