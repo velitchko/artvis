@@ -15,13 +15,18 @@
   "author": "velitchko",
   "license": "MIT",
   "dependencies": {
+    "@apollo/server": "^4.1.1",
     "@graphql-tools/graphql-file-loader": "^7.5.5",
     "@graphql-tools/load": "^7.8.0",
     "@graphql-tools/schema": "^9.0.4",
     "@neo4j/graphql": "^3.10.1",
-    "apollo-server": "^3.10.3",
+    "body-parser": "^1.20.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "graphql": "^16.6.0",
     "graphql-import-node": "^0.0.5",
+    "graphql-tag": "^2.12.6",
+    "http": "^0.0.1-security",
     "neo4j-driver": "^5.1.0"
   },
   "devDependencies": {
