@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack serve --port 4200",
     "build:css": "postcss src/index.scss -o src/styles/main.css",
+    "dev": "npm run build:css && webpack serve --port 4200 --mode development",
     "build": "NODE_ENV=production webpack"
   },
   "repository": {
@@ -16,6 +17,8 @@
   "author": "velitchko",
   "license": "MIT",
   "devDependencies": {
+    "@types/d3": "^7.4.0",
+    "@types/lodash": "^4.14.187",
     "@types/react": "^18.0.21",
     "@types/react-dom": "^18.0.6",
     "autoprefixer": "^10.4.13",
@@ -36,6 +39,16 @@
   },
   "dependencies": {
     "@apollo/client": "^3.7.1",
-    "react-dom": "^18.2.0"
+    "d3": "^7.6.1",
+    "flowbite": "^1.5.3",
+    "flowbite-react": "^0.3.2",
+    "lodash": "^4.17.21",
+    "postcss-loader": "^7.0.1",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.4.3",
+    "react-tsparticles": "^2.3.3",
+    "style-loader": "^3.3.1",
+    "tsparticles": "^2.3.4",
+    "tsparticles-engine": "^2.3.3"
   }
 }
