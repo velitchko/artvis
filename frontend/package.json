@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack serve --port 4200",
     "build:css": "postcss src/index.scss -o src/styles/main.css",
-    "dev": "npm run build:css && webpack serve --port 4200 --mode development",
+    "dev": "webpack serve --port 4200 --mode development",
     "build": "NODE_ENV=production webpack"
   },
   "repository": {
