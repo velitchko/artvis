@@ -1,0 +1,25 @@
+version: '3.8'
+
+
+services:
+  backend:
+    image: backend/node:18
+    ports:
+      - 4000:4000
+    restart: 'no'
+    volumes:
+      - ./backend:/backend
+      - /backend/node_modules
+    build: 
+      context: ./backend
+
+  frontend:
+    image: frontend/node:18
+    ports:
+      - 4200:4200
+    restart: 'no'
+    volumes:
+      - ./frontend:/frontend
+      - /frontend/node_modules
+    build: 
+      context: ./frontend
