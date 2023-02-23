@@ -1,9 +1,16 @@
 version: '3.8'
 
-
 services:
-  backend:
-    image: backend/node:18
+
+  artvis-backend:
+    image: artvis-backend/node:18
+    container_name: artvis-backend
+    networks:
+      - artvis-net
+    external_links: 
+      - artvis-db
+    environment:
+      -  NODE_OPTIONS=--max-old-space-size=8192
     ports:
       - 4000:4000
     restart: 'no'
@@ -12,9 +19,14 @@ services:
       - /backend/node_modules
     build: 
       context: ./backend
-
-  frontend:
-    image: frontend/node:18
+      
+  artvis-frontend:
+    image: artvis-frontend/node:18
+    container_name: artvis-frontend
+    networks:
+      - artvis-net
+    external_links: 
+      - artvis-db
     ports:
       - 4200:4200
     restart: 'no'
@@ -23,3 +35,8 @@ services:
       - /frontend/node_modules
     build: 
       context: ./frontend
+
+networks:
+    artvis-net:
+        external: 
+            name: artvis-network
