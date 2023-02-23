@@ -15,7 +15,7 @@ import { cypherRouter } from './cypherRouting.js';
 const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
-	'neo4j://localhost:7687',
+	'bolt://artvis-db:7687',
 	neo4j.auth.basic('neo4j', 'root')
 );
 const app = express();
@@ -40,7 +40,9 @@ neoSchema.getSchema().then(async (schema) => {
 		// expressMiddleware accepts the same arguments:
 		// an Apollo Server instance and optional configuration options
 		expressMiddleware(server, {
-			context: async ({ req }) => ({ token: req.headers.token }),
+			context: async ({ req }) => ({ 
+				token: req.headers.token 
+			}),
 		}),
 	);
 
