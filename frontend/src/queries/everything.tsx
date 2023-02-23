@@ -3,7 +3,8 @@ import { gql } from '@apollo/client';
 const GET_EVERYTHING = gql`
 query GetEverything($value: String!) { 
     artists(where: { 
-        OR: [{ firstname_CONTAINS: $value },
+        OR: [
+            { firstname_CONTAINS: $value },
             { lastname_CONTAINS: $value }
         ]
     }) 
