@@ -13,7 +13,7 @@ services:
       -  NODE_OPTIONS=--max-old-space-size=8192
     ports:
       - 4000:4000
-    restart: 'no'
+    restart: 'unless-stopped'
     volumes:
       - ./backend:/backend
       - /backend/node_modules
@@ -29,7 +29,7 @@ services:
       - artvis-db
     ports:
       - 4200:4200
-    restart: 'no'
+    restart: 'unless-stopped'
     volumes:
       - ./frontend:/frontend
       - /frontend/node_modules
