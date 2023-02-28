@@ -6,7 +6,7 @@ import {
     ApolloLink
 } from '@apollo/client';
 
-import { environment } from '../../../environments/environment.dev';
+import { environment } from '../../../environments/environment';
 
 const httpLink: ApolloLink = createHttpLink({
     uri: environment.graphQL
