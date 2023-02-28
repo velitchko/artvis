@@ -7,25 +7,25 @@ services:
     container_name: artvis-backend
     networks:
       - artvis-net
-    external_links: 
+    external_links:
       - artvis-db
     environment:
-      -  NODE_OPTIONS=--max-old-space-size=8192
+      - NODE_OPTIONS=--max-old-space-size=8192
     ports:
       - 4000:4000
     restart: 'unless-stopped'
     volumes:
       - ./backend:/backend
       - /backend/node_modules
-    build: 
+    build:
       context: ./backend
-      
+
   artvis-frontend:
     image: artvis-frontend/node:18
     container_name: artvis-frontend
     networks:
       - artvis-net
-    external_links: 
+    external_links:
       - artvis-db
     ports:
       - 4200:4200
@@ -33,10 +33,10 @@ services:
     volumes:
       - ./frontend:/frontend
       - /frontend/node_modules
-    build: 
+    build:
       context: ./frontend
 
 networks:
-    artvis-net:
-        external: 
-            name: artvis-network
+  artvis-net:
+    name: artvis-network
+    external: true
