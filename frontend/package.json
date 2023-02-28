@@ -7,8 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack serve --port 4200",
     "build:css": "postcss src/index.scss -o src/styles/main.css",
+    "prod": "webpack server --port 4200 --mode production",
     "dev": "webpack serve --port 4200 --mode development",
-    "build": "NODE_ENV=production webpack"
+    "build:prod": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "deploy": "npm run build:prod && npm run prod"
   },
   "repository": {
     "type": "git",
@@ -25,6 +28,7 @@
     "@types/react-dom": "^18.0.6",
     "autoprefixer": "^10.4.13",
     "css-loader": "^6.7.1",
+    "file-replace-loader": "^1.4.0",
     "html-webpack-plugin": "^5.5.0",
     "mini-css-extract-plugin": "^2.6.1",
     "node-sass": "^7.0.3",
