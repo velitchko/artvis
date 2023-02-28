@@ -1,2 +1,4 @@
 # modules directory
 node_modules
+dist
+package-lock.json
