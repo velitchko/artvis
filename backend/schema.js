@@ -1,17 +1,26 @@
 export const schema = `type Artist {
+	articleRank: Float!
 	artistsExhibitedWith: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: IN, properties: "ExhibitedWithProperties")
-	birthdate: String!
+	betweennessCentrality: Float!
+	birthdate: Date!
 	birthplace: String!
+	closenessCentrality: Float!
 	country: String!
 	createdCatalogueEntries: [CatalogueEntry!]! @relationship(type: "CREATED", direction: OUT)
 	createdItemItems: [Item!]! @relationship(type: "CREATED_ITEM", direction: OUT)
-	deathdate: String!
+	deathdate: Date!
 	deathplace: String!
+	degreeCentrality: Float!
+	eigenvectorCentrality: Float!
 	exhibitedExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED", direction: OUT, properties: "ExhibitedProperties")
 	exhibitedWithArtists: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: OUT, properties: "ExhibitedWithProperties")
 	firstname: String!
+	harmonicCentrality: Float!
 	id: String!
 	lastname: String!
+	louvainCommunity: BigInt!
+	modularityOptimizationCommunity: BigInt!
+	pageRank: Float!
 	sex: String!
 	title: String!
 	wasFeaturedInCatalogues: [Catalogue!]! @relationship(type: "WAS_FEATURED_IN", direction: OUT)
@@ -41,6 +50,7 @@ type CatalogueEntry {
 	id_exhibition: String!
 	id_item: String!
 	id_person: String!
+	itemsVerifiedInCatalogueEntry: [Item!]! @relationship(type: "VERIFIED_IN_CATALOGUE_ENTRY", direction: IN)
 	style: String
 	technique: String
 	title: String
@@ -53,17 +63,20 @@ interface ExhibitedProperties @relationshipProperties {
 }
 
 interface ExhibitedWithProperties @relationshipProperties {
-	exhibitions: [String]!
+	enddate: Date!
+	exhibitionId: String!
+	startdate: Date!
+	title: String!
 }
 
 type Exhibition {
 	artistsExhibited: [Artist!]! @relationship(type: "EXHIBITED", direction: IN, properties: "ExhibitedProperties")
 	catalogueEntriesEntryIn: [CatalogueEntry!]! @relationship(type: "ENTRY_IN", direction: IN)
 	cataloguesIsCatalogueFor: [Catalogue!]! @relationship(type: "IS_CATALOGUE_FOR", direction: IN)
-	enddate: String
+	enddate: Date!
 	id: String!
 	organizer: String
-	startdate: String
+	startdate: Date!
 	title: String
 	tookPlaceInLocations: [Location!]! @relationship(type: "TOOK_PLACE_IN", direction: OUT)
 	type: String
@@ -79,6 +92,7 @@ type Item {
 	technique: String
 	title: String
 	type: String
+	verifiedInCatalogueEntryCatalogueEntries: [CatalogueEntry!]! @relationship(type: "VERIFIED_IN_CATALOGUE_ENTRY", direction: OUT)
 }
 
 type Location {
