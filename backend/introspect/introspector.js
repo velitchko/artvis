@@ -3,8 +3,8 @@ const neo4j = require("neo4j-driver");
 const fs = require('fs');
 
 const driver = neo4j.driver(
-    "neo4j://localhost:7687",
-    neo4j.auth.basic("neo4j", "root")
+    "bolt+s://artvis.cvast.tuwien.ac.at:7687",
+    neo4j.auth.basic("neo4j", "rancidity5-5lips-7Halls-6Gorse-Mahogany-7Angelic")
 );
 
 const sessionFactory = () => driver.session({ defaultAccessMode: neo4j.session.READ })
