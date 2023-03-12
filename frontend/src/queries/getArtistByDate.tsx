@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 
-const GET_ARTIST_BY_ID = gql`
+const GET_ARTIST_BY_DATE = gql`
 query Artists ($searchId: String!) { 
     artists(where: { id: $searchId }) {
         firstname, 
@@ -15,4 +15,4 @@ query Artists ($searchId: String!) {
 }
 `;
 
-export default GET_ARTIST_BY_ID;
+export default GET_ARTIST_BY_DATE;

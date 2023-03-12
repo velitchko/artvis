@@ -4,10 +4,10 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { resolve } = require('path');
 
 module.exports = (env, argv) => {
-  const prod = argv.mode === 'production' ? 'prod' : 'dev';
+  const stage = argv.mode === 'production' ? 'prod' : 'dev';
 
   return {
-    mode: prod === 'prod' ? 'production' : 'development',
+    mode: stage === 'prod' ? 'production' : 'development',
     performance: {
       hints: false,
       maxEntrypointSize: 512000,
@@ -37,7 +37,7 @@ module.exports = (env, argv) => {
           test: /environment\.ts?$/,
           loader: 'file-replace-loader',
           options: {
-            replacement: resolve(`./environments/environment.${prod}.ts`),
+            replacement: resolve(`./environments/environment.${stage}.ts`),
           }
         }
       ]
@@ -45,7 +45,7 @@ module.exports = (env, argv) => {
     devServer: {
       historyApiFallback: true,
     },
-    devtool: prod === 'prod' ? undefined : 'source-map',
+    devtool: stage === 'prod' ? undefined : 'source-map',
     plugins: [
       new HtmlWebpackPlugin({
         template: 'index.html',
