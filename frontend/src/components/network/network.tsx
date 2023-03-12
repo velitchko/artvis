@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import _ from 'lodash';
 import { colors } from '../../colors/colors';
 import client from '../apollo/client';
-import GET_ARTIST from '../../queries/artist';
+import GET_ARTIST_BY_ID from '../../queries/getArtistById';
 import { useLocation } from 'react-router-dom';
 import Cytoscape from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
@@ -26,9 +26,9 @@ const NetworkComponent = (props: any) => {
     // const [links, setLinks] = React.useState<Array<Link>>(new Array<Link>());
 
     const [elements, setElements] = React.useState<any>(new Array<any>());
-    
+
     const [loading, setLoading] = React.useState<boolean>(true);
-    
+
     const { state } = useLocation();
     const value = React.useRef(state.id);
     const layout = React.useRef<any>({
@@ -46,7 +46,7 @@ const NetworkComponent = (props: any) => {
     });
 
     useEffect(() => {
-        client.query({ query: GET_ARTIST, variables: { searchId: value.current } }).then((result: any) => {
+        client.query({ query: GET_ARTIST_BY_ID, variables: { searchId: value.current } }).then((result: any) => {
             if (!loading) return;
 
             setLoading(false);
