@@ -9,6 +9,8 @@ import Cytoscape from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import { easeBackInOut } from 'd3';
 import './snapshot.css';
+import GET_EXHIBITIONS_BY_DATE from '../../queries/getExhibitionsBydate';
+import GET_ARTISTS_BY_IDS from '../../queries/getArtistsByIds';
 
 
 type Node = {
@@ -22,6 +24,9 @@ type Link = {
     targetId: string,
     props: any
 };
+
+let artistIds = new Map<string, boolean>();
+let artistLinkIds = new Map<string, boolean>();
 
 const SnapshotGraph = (props: any) => {
     // const [nodes, setNodes] = React.useState<Array<Node>>(new Array<Node>());
@@ -47,23 +52,50 @@ const SnapshotGraph = (props: any) => {
     });
 
     useEffect(() => {
-        client.query({ query: GET_ARTIST_BY_DATE, variables: { searchId: "test" } }).then((result: any) => {
+
+        client.query({ query: GET_EXHIBITIONS_BY_DATE, variables: { startDate: 1914, endDate: 1914 } }).then((result: any) => {
             if (!loading) return;
 
-            setLoading(false);
+            let artistIdsMap = new Map<string, boolean>();
 
-            let artistNodes = new Array<Node>();
-            let artistLinks = new Array<Link>();
-
-            artistNodes.push({ name: result.data.artists[0].firstname + ' ' + result.data.artists[0].lastname, type: result.data.artists[0].__typename, id: result.data.artists[0].id });
-            result.data.artists[0].exhibitedWithArtists.map((artist: any) => {
-                artistNodes.push({ name: artist.firstname + ' ' + artist.lastname, type: artist.__typename, id: artist.id });
-                artistLinks.push({ sourceId: result.data.artists[0].id, targetId: artist.id, props: { stroke: '#000' } });
+            result.data.exhibitions.forEach((exhibition: any) => {
+                exhibition.artistsExhibited.forEach((artist: any) => {
+                    if (!artistIdsMap.has(artist.id)) {
+                        artistIdsMap.set(artist.id, true);
+                    }
+                });
             });
 
-            setElements({
-                nodes: artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
-                edges: artistLinks.map((link: Link) => { return { data: { source: link.sourceId, target: link.targetId, label: 'x' } }; })
+            client.query({
+                query: GET_ARTISTS_BY_IDS, variables: { startDate: 1914, endDate: 1914, artistIds: Array.from(artistIdsMap.keys()) }
+            }).then((result: any) => {
+                if (!loading) return;
+
+                setLoading(false);
+
+                let artistNodes = new Array<Node>();
+                let artistLinks = new Array<Link>();
+                artistIds = new Map<string, boolean>();
+                artistLinkIds = new Map<string, boolean>();
+
+                result.data.artists.forEach((element: any) => {
+
+                    if (element.artistsExhibitedWith.length === 0) {
+                        return;
+                    }
+
+                    addArtistNode(artistNodes, element);
+
+                    element.artistsExhibitedWith.map((artist: any) => {
+                        addArtistNode(artistNodes, artist);
+                        addArtistLinkNode(element.id, artist.id, artistLinks);
+                    });
+                });
+
+                setElements({
+                    nodes: artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
+                    edges: artistLinks.map((link: Link) => { return { data: { source: link.sourceId, target: link.targetId, label: 'x' } }; })
+                });
             });
         });
     });
@@ -81,3 +113,25 @@ const SnapshotGraph = (props: any) => {
 };
 
 export default SnapshotGraph;
+
+function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
+
+    if (artistIds.has(artistNode.id)) {
+        return;
+    }
+
+    artistNodes.push({ name: artistNode.firstname + ' ' + artistNode.lastname, type: artistNode.__typename, id: artistNode.id });
+    artistIds.set(artistNode.id, true);
+}
+
+function addArtistLinkNode(sourceId: String, targetId: String, artistLinks: any) {
+
+    var combinedId = "source:" + sourceId + "-target:" + targetId;
+
+    if (artistLinkIds.has(combinedId)) {
+        return;
+    }
+
+    artistLinks.push({ sourceId: sourceId, targetId: targetId, props: { stroke: '#000' } });
+    artistLinkIds.set(combinedId, true);
+}

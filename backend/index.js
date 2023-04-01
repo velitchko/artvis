@@ -15,7 +15,7 @@ import { cypherRouter } from './cypherRouting.js';
 const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
-	'bolt+s://localhost:7687',
+	'bolt://localhost:7687',
 	neo4j.auth.basic('neo4j', 'root')
 );
 const app = express();

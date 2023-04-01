@@ -3,7 +3,7 @@ import _ from 'lodash';
 import SnapshotHeader from './snapshot-header';
 import './snapshot.css';
 import SnapshotSidebar from './snapshot-sidebar';
-import SnapshotGraph from './snapshot-graph';
+import SnapshotBody from './snapshot-body';
 
 
 const SnapshotComponent = (props: any) => {
@@ -13,11 +13,8 @@ const SnapshotComponent = (props: any) => {
             <div className="page">
                 <header><SnapshotHeader /></header>
                 <div className="content">
-
-
                     <SnapshotSidebar />
-
-                    <SnapshotGraph />
+                    <SnapshotBody />
                 </div>
             </div>
         </>
