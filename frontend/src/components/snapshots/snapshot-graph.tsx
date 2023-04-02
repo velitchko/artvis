@@ -11,6 +11,7 @@ import { easeBackInOut } from 'd3';
 import './snapshot.css';
 import GET_EXHIBITIONS_BY_DATE from '../../queries/getExhibitionsBydate';
 import GET_ARTISTS_BY_IDS from '../../queries/getArtistsByIds';
+import { dateRangeService } from '../../services/date-range-selection.service';
 
 
 type Node = {
@@ -36,6 +37,8 @@ const SnapshotGraph = (props: any) => {
 
     const [loading, setLoading] = React.useState<boolean>(true);
 
+    const [dateRange, setDateRange] = React.useState<any>();
+
     const { state } = useLocation();
     const layout = React.useRef<any>({
         name: 'concentric',
@@ -51,11 +54,20 @@ const SnapshotGraph = (props: any) => {
         // transform: function (_: any, position: any ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts 
     });
 
+    dateRangeService.getData().subscribe((dateRange: any) => {
+        setDateRange(dateRange.value);
+        setLoading(true);
+    });
+
+
     useEffect(() => {
 
-        client.query({ query: GET_EXHIBITIONS_BY_DATE, variables: { startDate: 1914, endDate: 1914 } }).then((result: any) => {
-            if (!loading) return;
+        var startDate = dateRange ? dateRange.startDate.getFullYear() : 1914;
+        var endDate = dateRange ? dateRange.endDate.getFullYear() : 1914;
 
+        client.query({ query: GET_EXHIBITIONS_BY_DATE, variables: { startDate: startDate, endDate: endDate } }).then((result: any) => {
+            if (!loading) return;
+            setLoading(false);
             let artistIdsMap = new Map<string, boolean>();
 
             result.data.exhibitions.forEach((exhibition: any) => {
@@ -67,7 +79,7 @@ const SnapshotGraph = (props: any) => {
             });
 
             client.query({
-                query: GET_ARTISTS_BY_IDS, variables: { startDate: 1914, endDate: 1914, artistIds: Array.from(artistIdsMap.keys()) }
+                query: GET_ARTISTS_BY_IDS, variables: { startDate: startDate, endDate: endDate, artistIds: Array.from(artistIdsMap.keys()) }
             }).then((result: any) => {
                 if (!loading) return;
 
@@ -113,6 +125,11 @@ const SnapshotGraph = (props: any) => {
 };
 
 export default SnapshotGraph;
+
+
+function createGraph() {
+
+}
 
 function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
 
