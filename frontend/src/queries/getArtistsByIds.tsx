@@ -17,12 +17,8 @@ query Artists($artistIds: [String!], $startDate: Int!, $endDate: Int!) {
     }
   }) {
     id
-    firstname
-    lastname
     artistsExhibitedWith {
       id
-      firstname
-      lastname
     }
   }
 }

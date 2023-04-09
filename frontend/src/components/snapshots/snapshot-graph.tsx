@@ -137,7 +137,7 @@ function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
         return;
     }
 
-    artistNodes.push({ name: artistNode.firstname + ' ' + artistNode.lastname, type: artistNode.__typename, id: artistNode.id });
+    artistNodes.push({ name: artistNode.id, type: artistNode.__typename, id: artistNode.id });
     artistIds.set(artistNode.id, true);
 }
 

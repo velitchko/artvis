@@ -3,8 +3,6 @@ import { gql } from '@apollo/client';
 const GET_ARTIST_BY_DATE = gql`
 query ArtistsExhibitedWith {
   artists {
-    firstname,
-    lastname,
     id
     artistsExhibitedWith(where:  
     {
@@ -18,8 +16,6 @@ query ArtistsExhibitedWith {
         }
     })
     {
-      firstname,
-      lastname,
       id
     }
   }
