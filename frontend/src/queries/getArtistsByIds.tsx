@@ -11,8 +11,6 @@ query Artists($artistIds: [String!], $startDate: Int!, $endDate: Int!) {
           {enddate_LTE: $endDate}
           {startdate_GTE: $startDate}
         ]
-        
-        
       }
     }
   }) {

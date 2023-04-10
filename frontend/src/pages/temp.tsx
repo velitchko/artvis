@@ -7,13 +7,13 @@ class TempComponent extends React.Component {
         maintitle: 'Art Vis',
         subtitle: 'Art History Visualized'
     };
-    
+
     render() {
         return (
-            <React.StrictMode>
+            <div>
                 <ParticlesComponent />
                 <h1>Temp</h1>
-            </React.StrictMode>
+            </div>
         );
     }
 

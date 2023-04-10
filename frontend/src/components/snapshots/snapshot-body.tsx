@@ -1,13 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import SnapshotGraph from './snapshot-graph';
 
-class SnapshotBody extends React.Component {
+const SnapshotBody = (props: any) => {
 
-    render() {
-        return (<div>
-            <SnapshotGraph />
-        </div>);
-    }
+    return (<div>
+        <SnapshotGraph />
+    </div>);
 };
 
 export default SnapshotBody;

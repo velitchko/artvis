@@ -12,7 +12,9 @@ import './snapshot.css';
 import GET_EXHIBITIONS_BY_DATE from '../../queries/getExhibitionsBydate';
 import GET_ARTISTS_BY_IDS from '../../queries/getArtistsByIds';
 import { dateRangeService } from '../../services/date-range-selection.service';
+import cise from 'cytoscape-cise';
 
+Cytoscape.use(cise);
 
 type Node = {
     name: string,
@@ -41,8 +43,9 @@ const SnapshotGraph = (props: any) => {
 
     const { state } = useLocation();
     const layout = React.useRef<any>({
-        name: 'concentric',
+        name: 'circle',
         fit: true, // whether to fit to viewport
+        avoidOverlap: true,
         padding: 5, // fit padding
         boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
         animate: true, // whether to transition the node positions
@@ -61,13 +64,21 @@ const SnapshotGraph = (props: any) => {
 
 
     useEffect(() => {
+        if (!loading) return;
+        setLoading(false);
+
+        console.log('i fire once Graph');
 
         var startDate = dateRange ? dateRange.startDate.getFullYear() : 1914;
         var endDate = dateRange ? dateRange.endDate.getFullYear() : 1914;
 
+        let artistNodes = new Array<Node>();
+        let artistLinks = new Array<Link>();
+        artistIds = new Map<string, boolean>();
+        artistLinkIds = new Map<string, boolean>();
+
         client.query({ query: GET_EXHIBITIONS_BY_DATE, variables: { startDate: startDate, endDate: endDate } }).then((result: any) => {
-            if (!loading) return;
-            setLoading(false);
+
             let artistIdsMap = new Map<string, boolean>();
 
             result.data.exhibitions.forEach((exhibition: any) => {
@@ -79,16 +90,8 @@ const SnapshotGraph = (props: any) => {
             });
 
             client.query({
-                query: GET_ARTISTS_BY_IDS, variables: { startDate: startDate, endDate: endDate, artistIds: Array.from(artistIdsMap.keys()) }
+                query: GET_ARTISTS_BY_IDS, variables: { startDate: startDate, endDate: endDate, artistIds: Array.from(artistIdsMap.keys()).slice(0, 20) }
             }).then((result: any) => {
-                if (!loading) return;
-
-                setLoading(false);
-
-                let artistNodes = new Array<Node>();
-                let artistLinks = new Array<Link>();
-                artistIds = new Map<string, boolean>();
-                artistLinkIds = new Map<string, boolean>();
 
                 result.data.artists.forEach((element: any) => {
 
@@ -118,6 +121,7 @@ const SnapshotGraph = (props: any) => {
             {!loading && <CytoscapeComponent
                 elements={CytoscapeComponent.normalizeElements(elements)}
                 layout={layout.current}
+                pixelRatio={"1"}
                 style={{ width: '100vw', height: '100vh' }} />
             }
         </>

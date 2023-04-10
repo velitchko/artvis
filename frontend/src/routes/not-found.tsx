@@ -5,7 +5,7 @@ import ParticlesComponent from "../components/particles/particles";
 export default function ErrorPage() {
 
     return (
-        <React.StrictMode>
+        <div>
             <ParticlesComponent />
             <div className="w-full flex h-[75vh] justify-center items-center mx-auto">
                 <div className="absolute">
@@ -13,6 +13,6 @@ export default function ErrorPage() {
                     <h2 className="px-4 py-2 text-white bg-black rounded">Sorry, an unexpected error has occurred.</h2>
                 </div>
             </div>
-        </React.StrictMode>
+        </div>
     );
-}   
+}

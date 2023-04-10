@@ -9,14 +9,12 @@ import ErrorPage from "./not-found";
 
 export default function Base() {
     return (
-        <React.StrictMode>
-            <Routes>
-                <Route path="/" element={<HomeComponent />} />
-                <Route path="/tmp" element={<TempComponent />} />
-                <Route path="/network" element={<NetworkComponent />} />
-                <Route path="/snapshots" element={<SnapshotComponent />} />
-                <Route path="*" element={<ErrorPage />} />
-            </Routes>
-        </React.StrictMode>
+        <Routes>
+            <Route path="/" element={<HomeComponent />} />
+            <Route path="/tmp" element={<TempComponent />} />
+            <Route path="/network" element={<NetworkComponent />} />
+            <Route path="/snapshots" element={<SnapshotComponent />} />
+            <Route path="*" element={<ErrorPage />} />
+        </Routes>
     );
 }

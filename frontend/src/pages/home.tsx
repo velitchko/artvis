@@ -9,16 +9,16 @@ class HomeComponent extends React.Component {
         maintitle: 'Art Vis',
         subtitle: 'Art History Visualized'
     };
-    
+
     render() {
         return (
-            <React.StrictMode>
+            <div>
                 <ParticlesComponent />
                 <SearchComponent />
                 <div className="w-full flex h-[75vh] justify-center items-center mx-auto">
                     <HeadingComponent {...this.title} />
                 </div>
-            </React.StrictMode>
+            </div>
         );
     }
 
