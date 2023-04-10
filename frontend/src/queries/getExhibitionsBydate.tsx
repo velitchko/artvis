@@ -10,6 +10,8 @@ query ExhibitedExhibitionsConnection($startDate: Int!, $endDate: Int!) {
   }) {
     id
     title
+    startdate
+    enddate
     artistsExhibited {
       id
       firstname

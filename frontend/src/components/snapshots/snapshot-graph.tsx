@@ -48,11 +48,11 @@ const SnapshotGraph = (props: any) => {
         avoidOverlap: true,
         padding: 5, // fit padding
         boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
-        animate: true, // whether to transition the node positions
+        animate: false, // whether to transition the node positions
         animationDuration: 500, // duration of animation in ms if enabled
         animationEasing: 'ease-in-out', // easing of animation if enabled
-        animateFilter: function () { return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
-        ready: undefined, // callback on layoutready
+        animateFilter: function () { return false; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
+        ready: function () { console.log("layout ready") }, // callback on layoutready
         stop: undefined, // callback on layoutstop
         // transform: function (_: any, position: any ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts 
     });
@@ -66,8 +66,6 @@ const SnapshotGraph = (props: any) => {
     useEffect(() => {
         if (!loading) return;
         setLoading(false);
-
-        console.log('i fire once Graph');
 
         var startDate = dateRange ? dateRange.startDate.getFullYear() : 1914;
         var endDate = dateRange ? dateRange.endDate.getFullYear() : 1914;
@@ -90,21 +88,28 @@ const SnapshotGraph = (props: any) => {
             });
 
             client.query({
-                query: GET_ARTISTS_BY_IDS, variables: { startDate: startDate, endDate: endDate, artistIds: Array.from(artistIdsMap.keys()).slice(0, 20) }
+                query: GET_ARTISTS_BY_IDS, variables: { startDate: startDate, endDate: endDate, artistIds: Array.from(artistIdsMap.keys()) }
             }).then((result: any) => {
+
+                var artistWithLargeGroups = result.data.artists.filter(x => x.artistsExhibitedWith.length > 50).map(x => x.id);
 
                 result.data.artists.forEach((element: any) => {
 
+                    //Not required to add artist to nodes as he did not exhibit with any other Artist
                     if (element.artistsExhibitedWith.length === 0) {
                         return;
                     }
 
+                    let artistHasLargeNetwork = artistWithLargeGroups.includes(element.id);
+
                     addArtistNode(artistNodes, element);
 
-                    element.artistsExhibitedWith.map((artist: any) => {
-                        addArtistNode(artistNodes, artist);
-                        addArtistLinkNode(element.id, artist.id, artistLinks);
-                    });
+                    if (!artistHasLargeNetwork) {
+                        element.artistsExhibitedWith.map((artist: any) => {
+                            addArtistNode(artistNodes, artist);
+                            addArtistLinkNode(element.id, artist.id, artistLinks);
+                        });
+                    }
                 });
 
                 setElements({
@@ -131,10 +136,6 @@ const SnapshotGraph = (props: any) => {
 export default SnapshotGraph;
 
 
-function createGraph() {
-
-}
-
 function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
 
     if (artistIds.has(artistNode.id)) {
@@ -148,8 +149,9 @@ function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
 function addArtistLinkNode(sourceId: String, targetId: String, artistLinks: any) {
 
     var combinedId = "source:" + sourceId + "-target:" + targetId;
+    var reversedCombinedId = "source:" + targetId + "-target:" + sourceId;
 
-    if (artistLinkIds.has(combinedId)) {
+    if (artistLinkIds.has(combinedId) || artistLinkIds.has(reversedCombinedId)) {
         return;
     }
 
