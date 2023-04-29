@@ -5,11 +5,11 @@ import { dateRangeService } from '../../services/date-range-selection.service';
 import { DateRange } from '../../models/date-range';
 
 var startDate = new Date("1900-01-01");
-var endDate = new Date("2023-01-01");
+var endDate = new Date("1920-01-01");
 
 var stepSize = 6;
 var startValue = 0;
-var endValue = 1467 //123 years and 12 month yeach
+var endValue = 240 //123 years and 12 month yeach
 
 var sendDateUpdateHandle: any;
 

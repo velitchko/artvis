@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "webpack serve --port 4200",
+    "start-dev": "webpack serve --port 4200 --mode development",
     "build:css": "postcss src/index.scss -o src/styles/main.css",
     "prod": "webpack server --port 4200 --mode production",
     "dev": "webpack serve --port 4200 --mode development",
@@ -48,6 +49,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.3.0",
     "@fortawesome/free-solid-svg-icons": "^6.3.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "axios": "^1.3.6",
     "cytoscape": "^3.23.0",
     "cytoscape-cise": "^1.0.0",
     "d3": "^7.6.1",

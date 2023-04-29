@@ -1,0 +1,3 @@
+const GET_ARTIST_EXHIBITED_WITH = "MATCH (a:Artist)-[:EXHIBITED]->(e:Exhibition)-[:TOOK_PLACE_IN]->(:Host) WITH a, COUNT(DISTINCT e.title) AS exhibition_count WHERE exhibition_count >= 10 WITH COLLECT(a.id) AS artistIds MATCH (a1: Artist)-[r:EXHIBITED_WITH]->(a2:Artist) WHERE r.startdate >= ###START_DATE### AND r.enddate <= ###END_DATE### AND a1.id IN artistIds AND a2.id IN artistIds RETURN {firstname: a1.firstname,lastname: a1.lastname, id: a1.id} AS a1,{firstname: a2.firstname,lastname: a2.lastname, id: a2.id} AS a2";
+
+export default GET_ARTIST_EXHIBITED_WITH;
