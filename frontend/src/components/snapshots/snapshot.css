@@ -9,9 +9,18 @@ body {
     margin: 0;
 }
 
-header {
+.header {
     height: 80px;
     background-color: #D6D6D6;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.header-item {
+    width: 280px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 
@@ -109,9 +118,4 @@ header {
     align-items: center;
     justify-content: flex-end;
     padding: 0 12px 15px;
-}
-
-.daterange-filter {
-    padding: 10px;
-    width: 25%;
 }

@@ -15,6 +15,7 @@ import cise from 'cytoscape-cise';
 import axios from 'axios';
 import { environment } from '../../../environments/environment';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/cypherQueries/getExhibitedWithArtists';
+import { graphControlService } from '../../services/graph-controls.service';
 
 Cytoscape.use(cise);
 
@@ -76,6 +77,13 @@ const SnapshotGraph = (props: any) => {
         setLoading(true);
     });
 
+    graphControlService.getData().subscribe((graphControls: any) => {
+
+        let layout = cyRef.layout({
+            name: graphControls.value.layout
+        });
+        layout.run();
+    });
 
     useEffect(() => {
         if (!loading) return;
@@ -86,6 +94,8 @@ const SnapshotGraph = (props: any) => {
 
         let artistNodes = new Array<Node>();
         let artistLinks = new Array<Link>();
+        artistIds = new Map<string, boolean>();
+        artistLinkIds = new Map<string, string[]>();
 
         let query = GET_ARTIST_EXHIBITED_WITH.replace("###START_DATE###", startDate);
         query = query.replace("###END_DATE###", endDate);
@@ -113,7 +123,6 @@ const SnapshotGraph = (props: any) => {
 
     return (
         <>
-            <h1>Network</h1>
             {!loading && <CytoscapeComponent
                 elements={CytoscapeComponent.normalizeElements(elements)}
                 cy={(cy) => {
@@ -141,7 +150,7 @@ const SnapshotGraph = (props: any) => {
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}
-                style={{ width: '100vw', height: '100vh' }} />
+                style={{ width: '95vw', height: '85vh' }} />
             }
         </>
     )
@@ -159,9 +168,7 @@ function toggleEdgesforNode(sourceNodeId: string) {
     }
     else {
         persistedEdges.push(sourceNodeId);
-        //addEdgesOnHover(sourceNodeId);
     }
-
 }
 
 function removeEdgesOnHover(sourceNodeId: string) {
