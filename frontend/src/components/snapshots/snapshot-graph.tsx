@@ -33,6 +33,7 @@ type Link = {
 let artistIds = new Map<string, boolean>();
 let artistLinkIds = new Map<string, string[]>();
 let cyRef;
+let persistedEdges = new Array<string>();
 
 const SnapshotGraph = (props: any) => {
     // const [nodes, setNodes] = React.useState<Array<Node>>(new Array<Node>());
@@ -125,13 +126,17 @@ const SnapshotGraph = (props: any) => {
 
                     cyRef.on("mouseout ", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
-                        var edges = evt.target[0]._private.edges;
                         removeEdgesOnHover(nodeId);
                     });
 
+                    cyRef.unbind("click").on("click", "node", function (evt) {
+                        var nodeId = evt.target[0]._private.data.id;
+                        toggleEdgesforNode(nodeId);
+                    });
+
                     cyRef.on('add', 'node', _evt => {
-                        cy.layout(layout.current).run()
-                        cy.fit()
+                        cyRef.layout(layout.current).run()
+                        cyRef.fit()
                     });
                 }}
                 layout={layout.current}
@@ -144,8 +149,26 @@ const SnapshotGraph = (props: any) => {
 
 export default SnapshotGraph;
 
-function removeEdgesOnHover(sourceNodeId: string) {
+function toggleEdgesforNode(sourceNodeId: string) {
 
+    var indexOfNode = persistedEdges.indexOf(sourceNodeId);
+
+    if (indexOfNode !== -1) {
+        persistedEdges.splice(indexOfNode, 1);
+        removeEdgesOnHover(sourceNodeId);
+    }
+    else {
+        persistedEdges.push(sourceNodeId);
+        //addEdgesOnHover(sourceNodeId);
+    }
+
+}
+
+function removeEdgesOnHover(sourceNodeId: string) {
+    var indexOfNode = persistedEdges.indexOf(sourceNodeId);
+    if (indexOfNode !== -1) {
+        return;
+    }
     var node = cyRef.$("#" + sourceNodeId);
     var connectedNodes = node.connectedEdges();
 
