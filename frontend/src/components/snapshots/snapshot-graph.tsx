@@ -76,20 +76,19 @@ const SnapshotGraph = (props: any) => {
     });
 
 
-    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData) => {
+    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData:any) => {
         var imageBase64Url = cyRef.png();
         var data = {
             imageUrl: imageBase64Url,
             artistLinkIds: new Map(artistLinkIds),
             artistNodes: Object.assign({}, artistNodes),
             persistedEdges: Object.assign({}, persistedEdges),
-            creationDate: new Date()
+            creationDate: new Date(),
+            name: snapshotData.snapshotName
         }
 
         emitCustomEvent('SNAPSHOT_CREATED', data);
     })
-
-
 
     dateRangeService.getData().subscribe((dateRange: any) => {
         setDateRange(dateRange.value);

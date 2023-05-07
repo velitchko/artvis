@@ -49,9 +49,7 @@ body {
 }
 
 .sidebar .sidebar-position {
-    height: 100px;
     cursor: pointer;
-    align-items: center;
     padding: 0 12px;
     text-align: left;
     margin: 0 0 10px 10px;
@@ -61,16 +59,30 @@ body {
 .sidebar .image-contaner {
     background-size: contain;
     background-repeat: no-repeat;
-    height: 100%;
     width: 100%;
     margin: 0 auto;
     background-color: white;
 }
 
+.sidebar .controls {
+    margin-left: 10px;
+    margin-bottom: 25px;
+}
+
+.sidebar .controls button{
+    width: 35px;
+    height: 35px;
+}
+
+.sidebar .controls span{
+   padding: 0 15px;
+}
+
+
 .sidebar .snapshot-info {
-    width: 100%;
+    min-width: 50%;
     height: 15px;
-    margin-bottom: 35px;
+    margin-bottom: 15px;
 }
 
 .sidebar .sidebar-position:hover {
@@ -86,7 +98,6 @@ body {
 .sidebar span {
     width: 0;
     height: 0;
-    padding: 0 15px;
     transition: width 0.3s ease;
     color: #c9c9c9;
     text-transform: uppercase;
@@ -102,13 +113,17 @@ body {
 }
 
 .sidebar-open .sidebar-position span {
-    display: block;
-    width: 100%;
     height: auto;
 }
 
 .sidebar-open .sidebar-position {
     display: flex;
+    flex-direction: column;
+    padding-bottom: 10px;
+}
+
+.sidebar-open .snapshot-info button {
+    height: 20px;
 }
 
 .trigger {
