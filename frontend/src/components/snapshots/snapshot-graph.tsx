@@ -16,6 +16,7 @@ import axios from 'axios';
 import { environment } from '../../../environments/environment';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/cypherQueries/getExhibitedWithArtists';
 import { graphControlService } from '../../services/graph-controls.service';
+import { emitCustomEvent, useCustomEventListener } from 'react-custom-events';
 
 Cytoscape.use(cise);
 
@@ -31,10 +32,12 @@ type Link = {
     props: any
 };
 
+let artistNodes = new Array<Node>();
 let artistIds = new Map<string, boolean>();
 let artistLinkIds = new Map<string, string[]>();
 let cyRef;
 let persistedEdges = new Array<string>();
+
 
 const SnapshotGraph = (props: any) => {
     // const [nodes, setNodes] = React.useState<Array<Node>>(new Array<Node>());
@@ -72,6 +75,22 @@ const SnapshotGraph = (props: any) => {
         refresh: 20
     });
 
+
+    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData) => {
+        var imageBase64Url = cyRef.png();
+        var data = {
+            imageUrl: imageBase64Url,
+            artistLinkIds: new Map(artistLinkIds),
+            artistNodes: Object.assign({}, artistNodes),
+            persistedEdges: Object.assign({}, persistedEdges),
+            creationDate: new Date()
+        }
+
+        emitCustomEvent('SNAPSHOT_CREATED', data);
+    })
+
+
+
     dateRangeService.getData().subscribe((dateRange: any) => {
         setDateRange(dateRange.value);
         setLoading(true);
@@ -92,8 +111,7 @@ const SnapshotGraph = (props: any) => {
         var startDate = dateRange ? dateRange.startDate.getFullYear() : 1914;
         var endDate = dateRange ? dateRange.endDate.getFullYear() : 1914;
 
-        let artistNodes = new Array<Node>();
-        let artistLinks = new Array<Link>();
+        artistNodes = new Array<Node>();
         artistIds = new Map<string, boolean>();
         artistLinkIds = new Map<string, string[]>();
 
@@ -110,7 +128,7 @@ const SnapshotGraph = (props: any) => {
                 response.data.forEach((artistPair: any) => {
                     addArtistNode(artistNodes, artistPair.a1);
                     addArtistNode(artistNodes, artistPair.a2);
-                    addArtistLinkNode(artistPair.a1.id, artistPair.a2.id, artistLinks);
+                    addArtistLinkNode(artistPair.a1.id, artistPair.a2.id);
                 });
 
 
@@ -206,7 +224,7 @@ function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
     artistIds.set(artistNode.id, true);
 }
 
-function addArtistLinkNode(sourceId: string, targetId: string, artistLinks: any) {
+function addArtistLinkNode(sourceId: string, targetId: string) {
 
     var targetIds = [targetId];
 

@@ -59,12 +59,12 @@ body {
 }
 
 .sidebar .image-contaner {
-    background-image: url('../../assets//img/sampleGraph.png');
     background-size: contain;
     background-repeat: no-repeat;
     height: 100%;
     width: 100%;
     margin: 0 auto;
+    background-color: white;
 }
 
 .sidebar .snapshot-info {
@@ -98,6 +98,7 @@ body {
 .sidebar-open {
     width: 250px;
     transition: width 0.3s ease;
+    z-index: 1000;
 }
 
 .sidebar-open .sidebar-position span {
