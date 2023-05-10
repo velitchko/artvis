@@ -1,15 +1,9 @@
 import React, { useEffect } from 'react';
 import _ from 'lodash';
-import { colors } from '../../colors/colors';
-import client from '../apollo/client';
-import GET_ARTIST_BY_DATE from '../../queries/getArtistByDate';
 import { useLocation } from 'react-router-dom';
 import Cytoscape from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
-import { easeBackInOut } from 'd3';
 import './snapshot.css';
-import GET_EXHIBITIONS_BY_DATE from '../../queries/getExhibitionsBydate';
-import GET_ARTISTS_BY_IDS from '../../queries/getArtistsByIds';
 import { dateRangeService } from '../../services/date-range-selection.service';
 import cise from 'cytoscape-cise';
 import axios from 'axios';
@@ -76,7 +70,7 @@ const SnapshotGraph = (props: any) => {
     });
 
 
-    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData:any) => {
+    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData: any) => {
         var imageBase64Url = cyRef.png();
         var data = {
             imageUrl: imageBase64Url,
@@ -167,7 +161,7 @@ const SnapshotGraph = (props: any) => {
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}
-                style={{ width: '95vw', height: '85vh' }} />
+                style={{ width: '48vw', height: '85vh' }} />
             }
         </>
     )

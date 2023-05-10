@@ -1,0 +1,25 @@
+.date-range-selection-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.date-range-selection-container label {
+    margin-right: 20px;
+}
+
+.slider-container {
+    width: 360px;
+}
+
+.slider-container .date-container {
+    display: flex;
+    flex-direction: row;
+}
+
+.slider-container .date-container>div:first-child {
+    margin-right: auto;
+}
+
+.slider-container .date-container>div:last-child {
+    margin-left: auto;
+}

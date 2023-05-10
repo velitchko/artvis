@@ -1,8 +1,8 @@
-import Slider from 'rc-slider';
 import React from 'react';
-import './index.css';
+import './daterangefilter.css';
 import { dateRangeService } from '../../services/date-range-selection.service';
 import { DateRange } from '../../models/date-range';
+import { Slider } from '@mui/material';
 
 var startDate = new Date("1900-01-01");
 var endDate = new Date("1920-01-01");
@@ -16,13 +16,15 @@ var sendDateUpdateHandle: any;
 class DateRangeFilter extends React.Component<any, any> {
     constructor(props: any) {
         super(props);
+        var range: number[] = [startValue, endValue];
+
         this.state = {
             lowerBound: startValue,
             upperBound: endValue,
-            value: [startValue, endValue],
+            value: range,
         };
     }
-    onSliderChange = (value: any) => {
+    onSliderChange = (event: Event, value: number | number[]) => {
         this.setState({
             value,
         });
@@ -48,18 +50,6 @@ class DateRangeFilter extends React.Component<any, any> {
         this.setState({ upperBound: +e.target.value });
     };
 
-    getStartDateString = (value: any) => {
-        var start = new Date(startDate.getFullYear(), startDate.getMonth() + value[0], startDate.getDate());
-
-        return start.toDateString();
-    };
-
-    getEndDateString = (value: any) => {
-        var start = new Date(startDate.getFullYear(), startDate.getMonth() + value[1], startDate.getDate());
-
-        return start.toDateString();
-    };
-
     getStartDate = (value: any) => {
         var start = new Date(startDate.getFullYear(), startDate.getMonth() + value[0], startDate.getDate());
 
@@ -72,13 +62,25 @@ class DateRangeFilter extends React.Component<any, any> {
         return start;
     };
 
+    valuetext(value: number) {
+        var date = new Date(startDate.getFullYear(), startDate.getMonth() + value, startDate.getDate());
+        return date.toDateString();
+    }
+
     render() {
         return (
-            <div>
-                <Slider min={startValue} max={endValue} step={stepSize} range allowCross={false} value={this.state.value} onChange={this.onSliderChange} />
-                <div>
-                    <p>StartDate: {this.getStartDateString(this.state.value)}</p>
-                    <p>EndDate: {this.getEndDateString(this.state.value)}</p>
+            <div className='date-range-selection-container'>
+                <label>DateRange Selection</label>
+                <div className='slider-container'>
+                    <Slider min={startValue} max={endValue} valueLabelFormat={value => <div>{this.valuetext(value)}</div>} step={stepSize} value={this.state.value} disableSwap={true} onChange={this.onSliderChange} valueLabelDisplay="auto" getAriaLabel={this.valuetext} getAriaValueText={this.valuetext} />
+                    <div className='date-container'>
+                        <div className='startDate'>
+                            {startDate.toDateString()}
+                        </div>
+                        <div className='endDate'>
+                            {endDate.toDateString()}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
