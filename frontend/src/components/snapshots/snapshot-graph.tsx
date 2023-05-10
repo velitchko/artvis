@@ -26,16 +26,15 @@ type Link = {
     props: any
 };
 
-let artistNodes = new Array<Node>();
-let artistIds = new Map<string, boolean>();
-let artistLinkIds = new Map<string, string[]>();
-let cyRef;
-let persistedEdges = new Array<string>();
-
+const globalArtistData = new Map<number, any>();
 
 const SnapshotGraph = (props: any) => {
     // const [nodes, setNodes] = React.useState<Array<Node>>(new Array<Node>());
     // const [links, setLinks] = React.useState<Array<Link>>(new Array<Link>());
+
+    var isSnapshot = props.isSnapshot;
+
+    var cyRef;
 
     const [elements, setElements] = React.useState<any>(new Array<any>());
 
@@ -69,27 +68,30 @@ const SnapshotGraph = (props: any) => {
         refresh: 20
     });
 
+    if (!isSnapshot) {
+        useCustomEventListener('CREATE_SNAPSHOT', (snapshotData: any) => {
+            var imageBase64Url = cyRef.png();
+            var data = {
+                imageUrl: imageBase64Url,
+                artistLinkIds: new Map(globalArtistData.get(0).artistLinkIds),
+                artistNodes: Object.assign({}, globalArtistData.get(0).artistNodes),
+                persistedEdges: Object.assign({}, globalArtistData.get(0).persistedEdges),
+                creationDate: new Date(),
+                name: snapshotData.snapshotName
+            }
 
-    useCustomEventListener('CREATE_SNAPSHOT', (snapshotData: any) => {
-        var imageBase64Url = cyRef.png();
-        var data = {
-            imageUrl: imageBase64Url,
-            artistLinkIds: new Map(artistLinkIds),
-            artistNodes: Object.assign({}, artistNodes),
-            persistedEdges: Object.assign({}, persistedEdges),
-            creationDate: new Date(),
-            name: snapshotData.snapshotName
-        }
-
-        emitCustomEvent('SNAPSHOT_CREATED', data);
-    })
-
-    dateRangeService.getData().subscribe((dateRange: any) => {
-        setDateRange(dateRange.value);
-        setLoading(true);
-    });
+            emitCustomEvent('SNAPSHOT_CREATED', data);
+        })
+        dateRangeService.getData().subscribe((dateRange: any) => {
+            setDateRange(dateRange.value);
+            setLoading(true);
+        });
+    }
 
     graphControlService.getData().subscribe((graphControls: any) => {
+
+        if (!cyRef)
+            return;
 
         let layout = cyRef.layout({
             name: graphControls.value.layout
@@ -101,12 +103,21 @@ const SnapshotGraph = (props: any) => {
         if (!loading) return;
         setLoading(false);
 
+        let artistData = {
+            persistedEdges: new Array<string>(),
+            artistLinkIds: new Map<string, string[]>(),
+            artistNodes: new Array<Node>(),
+            artistIds: new Map<string, boolean>()
+        };
+
+        globalArtistData.set(props.id, artistData);
+
         var startDate = dateRange ? dateRange.startDate.getFullYear() : 1914;
         var endDate = dateRange ? dateRange.endDate.getFullYear() : 1914;
 
-        artistNodes = new Array<Node>();
-        artistIds = new Map<string, boolean>();
-        artistLinkIds = new Map<string, string[]>();
+        globalArtistData.get(props.id).artistNodes = new Array<Node>();
+        globalArtistData.get(props.id).artistIds = new Map<string, boolean>();
+        globalArtistData.get(props.id).artistLinkIds = new Map<string, string[]>();
 
         let query = GET_ARTIST_EXHIBITED_WITH.replace("###START_DATE###", startDate);
         query = query.replace("###END_DATE###", endDate);
@@ -119,18 +130,78 @@ const SnapshotGraph = (props: any) => {
             .then(response => {
 
                 response.data.forEach((artistPair: any) => {
-                    addArtistNode(artistNodes, artistPair.a1);
-                    addArtistNode(artistNodes, artistPair.a2);
-                    addArtistLinkNode(artistPair.a1.id, artistPair.a2.id);
+                    addArtistNode(globalArtistData.get(props.id).artistNodes, artistPair.a1, props.id);
+                    addArtistNode(globalArtistData.get(props.id).artistNodes, artistPair.a2, props.id);
+                    addArtistLinkNode(artistPair.a1.id, artistPair.a2.id, props.id);
                 });
 
 
                 setElements({
-                    nodes: artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
+                    nodes: globalArtistData.get(props.id).artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
                     edges: []
                 });
             });
     });
+
+
+    let toggleEdgesforNode = (sourceNodeId: string, graphId: number) => {
+
+        var indexOfNode = globalArtistData.get(graphId).persistedEdges.indexOf(sourceNodeId);
+
+        if (indexOfNode !== -1) {
+            globalArtistData.get(graphId).persistedEdges.splice(indexOfNode, 1);
+            removeEdgesOnHover(sourceNodeId, graphId);
+        }
+        else {
+            globalArtistData.get(graphId).persistedEdges.push(sourceNodeId);
+        }
+    }
+
+    let removeEdgesOnHover = (sourceNodeId: string, graphId: number) => {
+        var indexOfNode = globalArtistData.get(graphId).persistedEdges.indexOf(sourceNodeId);
+        if (indexOfNode !== -1) {
+            return;
+        }
+        var node = cyRef.$("#" + sourceNodeId);
+        var connectedNodes = node.connectedEdges();
+
+        cyRef.remove(connectedNodes);
+    }
+
+    let addEdgesOnHover = (sourceNodeId: string, graphId: number) => {
+        var links = globalArtistData.get(graphId).artistLinkIds.get(sourceNodeId);
+
+        if (!links) {
+            console.log("no connections found");
+            return;
+        }
+
+        var data = links.map((targetId) => { return { group: 'edges', data: { source: sourceNodeId, target: targetId, label: 'artistconnection-' + sourceNodeId } }; });
+        cyRef.add(
+            data
+        );
+    }
+
+    let addArtistNode = (artistNodes: Array<Node>, artistNode: any, graphId: number) => {
+
+        if (globalArtistData.get(graphId).artistIds.has(artistNode.id)) {
+            return;
+        }
+
+        artistNodes.push({ name: artistNode.firstname + " " + artistNode.lastname, type: artistNode.__typename, id: artistNode.id });
+        globalArtistData.get(graphId).artistIds.set(artistNode.id, true);
+    }
+
+    let addArtistLinkNode = (sourceId: string, targetId: string, graphId: number) => {
+
+        var targetIds = [targetId];
+
+        if (globalArtistData.get(graphId).artistLinkIds.has(sourceId)) {
+            targetIds = targetIds.concat(globalArtistData.get(graphId).artistLinkIds.get(sourceId));
+        }
+
+        globalArtistData.get(graphId).artistLinkIds.set(sourceId, targetIds);
+    }
 
     return (
         <>
@@ -139,91 +210,36 @@ const SnapshotGraph = (props: any) => {
                 cy={(cy) => {
                     cyRef = cy;
 
+                    var id = props.id;
+
                     cyRef.on("mouseover", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
-                        addEdgesOnHover(nodeId);
+                        addEdgesOnHover(nodeId, id);
                     });
 
                     cyRef.on("mouseout ", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
-                        removeEdgesOnHover(nodeId);
+                        removeEdgesOnHover(nodeId, id);
                     });
 
                     cyRef.unbind("click").on("click", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
-                        toggleEdgesforNode(nodeId);
+                        toggleEdgesforNode(nodeId, id);
                     });
 
                     cyRef.on('add', 'node', _evt => {
                         cyRef.layout(layout.current).run()
                         cyRef.fit()
                     });
+
+
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}
                 style={{ width: '48vw', height: '85vh' }} />
             }
         </>
-    )
+    );
 };
 
 export default SnapshotGraph;
-
-function toggleEdgesforNode(sourceNodeId: string) {
-
-    var indexOfNode = persistedEdges.indexOf(sourceNodeId);
-
-    if (indexOfNode !== -1) {
-        persistedEdges.splice(indexOfNode, 1);
-        removeEdgesOnHover(sourceNodeId);
-    }
-    else {
-        persistedEdges.push(sourceNodeId);
-    }
-}
-
-function removeEdgesOnHover(sourceNodeId: string) {
-    var indexOfNode = persistedEdges.indexOf(sourceNodeId);
-    if (indexOfNode !== -1) {
-        return;
-    }
-    var node = cyRef.$("#" + sourceNodeId);
-    var connectedNodes = node.connectedEdges();
-
-    cyRef.remove(connectedNodes);
-}
-
-function addEdgesOnHover(sourceNodeId: string) {
-    var links = artistLinkIds.get(sourceNodeId);
-
-    if (!links) {
-        console.log("no connections found");
-        return;
-    }
-
-    var data = links.map((targetId) => { return { group: 'edges', data: { source: sourceNodeId, target: targetId, label: 'artistconnection-' + sourceNodeId } }; });
-    cyRef.add(
-        data
-    );
-}
-
-function addArtistNode(artistNodes: Array<Node>, artistNode: any) {
-
-    if (artistIds.has(artistNode.id)) {
-        return;
-    }
-
-    artistNodes.push({ name: artistNode.firstname + " " + artistNode.lastname, type: artistNode.__typename, id: artistNode.id });
-    artistIds.set(artistNode.id, true);
-}
-
-function addArtistLinkNode(sourceId: string, targetId: string) {
-
-    var targetIds = [targetId];
-
-    if (artistLinkIds.has(sourceId)) {
-        targetIds = targetIds.concat(artistLinkIds.get(sourceId));
-    }
-
-    artistLinkIds.set(sourceId, targetIds);
-}
