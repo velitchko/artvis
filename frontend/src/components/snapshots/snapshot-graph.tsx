@@ -5,13 +5,16 @@ import Cytoscape from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import './snapshot.css';
 import { dateRangeService } from '../../services/date-range-selection.service';
-import cise from 'cytoscape-cise';
 import axios from 'axios';
 import { environment } from '../../../environments/environment';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/cypherQueries/getExhibitedWithArtists';
 import { graphControlService } from '../../services/graph-controls.service';
 import { emitCustomEvent, useCustomEventListener } from 'react-custom-events';
 
+import cola from 'cytoscape-cola';
+import cise from 'cytoscape-cise';
+
+Cytoscape.use(cola);
 Cytoscape.use(cise);
 
 type Node = {
@@ -116,12 +119,21 @@ const SnapshotGraph = (props: any) => {
 
     graphControlService.getData().subscribe((graphControls: any) => {
 
-        if (!cyRef)
+        if (!cyRef || !globalArtistData.has(props.id))
             return;
 
         let layout = cyRef.layout({
             name: graphControls.value.layout
         });
+
+        if (graphControls.value.layout === "cola") {
+            // var sourceNodeIds = Array.from(globalArtistData.get(props.id).artistLinkIds.keys());
+            // sourceNodeIds.forEach((sourceNodeId: any) => {
+            //     toggleEdgesforNode(sourceNodeId, props.id);
+            //     addEdgesOnHover(sourceNodeId, props.id);
+            // });
+        }
+
         layout.run();
     });
 

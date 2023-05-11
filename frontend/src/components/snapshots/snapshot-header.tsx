@@ -31,6 +31,7 @@ class SnapshotHeader extends React.Component {
                     <option value="concentric">concentric</option>
                     <option value="breadthfirst">breadthfirst</option>
                     <option value="cise">cise</option>
+                    <option value="cola">cola</option>
                 </select>
             </div>
         </div>);
