@@ -74,18 +74,44 @@ const SnapshotGraph = (props: any) => {
             var data = {
                 imageUrl: imageBase64Url,
                 artistLinkIds: new Map(globalArtistData.get(0).artistLinkIds),
-                artistNodes: Object.assign({}, globalArtistData.get(0).artistNodes),
-                persistedEdges: Object.assign({}, globalArtistData.get(0).persistedEdges),
+                artistNodes: Array.from(globalArtistData.get(0).artistNodes),
+                persistedEdges: Array.from(globalArtistData.get(0).persistedEdges),
+                artistIds: new Map(globalArtistData.get(0).artistIds),
                 creationDate: new Date(),
                 name: snapshotData.snapshotName
             }
 
             emitCustomEvent('SNAPSHOT_CREATED', data);
-        })
+        });
         dateRangeService.getData().subscribe((dateRange: any) => {
             setDateRange(dateRange.value);
             setLoading(true);
         });
+    } else {
+        useCustomEventListener('LOAD_SNAPSHOT', (snapshotData: any) => {
+            setLoading(false);
+            let artistData = {
+                persistedEdges: snapshotData.persistedEdges,
+                artistLinkIds: snapshotData.artistLinkIds,
+                artistNodes: snapshotData.artistNodes,
+                artistIds: snapshotData.artistIds
+            };
+
+            globalArtistData.set(props.id, artistData);
+
+            let edges = [];
+
+            artistData.persistedEdges.forEach(sourceNodeId => {
+                var links = globalArtistData.get(props.id).artistLinkIds.get(sourceNodeId).map((targetId) => { return { group: 'edges', data: { source: sourceNodeId, target: targetId, label: 'artistconnection-' + sourceNodeId } }; })
+                edges = edges.concat(links);
+            });
+
+
+            setElements({
+                nodes: globalArtistData.get(props.id).artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
+                edges: edges
+            });
+        })
     }
 
     graphControlService.getData().subscribe((graphControls: any) => {
@@ -99,8 +125,9 @@ const SnapshotGraph = (props: any) => {
         layout.run();
     });
 
+
     useEffect(() => {
-        if (!loading) return;
+        if (!loading || isSnapshot) return;
         setLoading(false);
 
         let artistData = {
@@ -134,7 +161,6 @@ const SnapshotGraph = (props: any) => {
                     addArtistNode(globalArtistData.get(props.id).artistNodes, artistPair.a2, props.id);
                     addArtistLinkNode(artistPair.a1.id, artistPair.a2.id, props.id);
                 });
-
 
                 setElements({
                     nodes: globalArtistData.get(props.id).artistNodes.map((node: Node) => { return { data: { id: node.id, label: node.name } }; }),
@@ -205,7 +231,7 @@ const SnapshotGraph = (props: any) => {
 
     return (
         <>
-            {!loading && <CytoscapeComponent
+            {<CytoscapeComponent
                 elements={CytoscapeComponent.normalizeElements(elements)}
                 cy={(cy) => {
                     cyRef = cy;

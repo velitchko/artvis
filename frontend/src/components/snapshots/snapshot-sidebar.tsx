@@ -27,9 +27,13 @@ const SnapshotSidebar = (props: any) => {
     const [snapshotName, setSnapshotNameTextInput] = useState('');
 
     useCustomEventListener('SNAPSHOT_CREATED', (snapshotData) => {
-       const newList = snapShots.concat(snapshotData);
+        const newList = snapShots.concat(snapshotData);
         setSnapshotList(newList);
     })
+
+    function loadSnapshot(snapshot) {
+        emitCustomEvent('LOAD_SNAPSHOT', snapshot);
+    }
 
     function openCreateSnapshotModel(): void {
         setSnapshotNameTextInput("");
@@ -40,7 +44,7 @@ const SnapshotSidebar = (props: any) => {
         setDeleteDialogOpen(true);
     }
 
-    function removeSnapshot(snapshotData): void{
+    function removeSnapshot(snapshotData): void {
         var index = snapShots.findIndex(x => x.creationDate.getTime() === snapshotData.creationDate.getTime() && x.name === snapshotData.name);
         snapShots.splice(index, 1);
         setSnapshotList(snapShots);
@@ -55,7 +59,7 @@ const SnapshotSidebar = (props: any) => {
         setCreateDialogOpen(false);
 
         let createData = {
-          snapshotName: snapshotName
+            snapshotName: snapshotName
         };
 
         emitCustomEvent('CREATE_SNAPSHOT', createData);
@@ -76,7 +80,7 @@ const SnapshotSidebar = (props: any) => {
         <div className='snapshot-controls'>
 
             {isSidebarOpen ? <div className="controls">
-                <Fab  aria-label="add" onClick={openCreateSnapshotModel}>
+                <Fab aria-label="add" onClick={openCreateSnapshotModel}>
                     <AddIcon />
                 </Fab>
                 <span >Create Snapshot</span>
@@ -90,7 +94,7 @@ const SnapshotSidebar = (props: any) => {
                     </DialogContentText>
                     <TextField
                         required
-                        onChange= {handleSnapshotNameInputChange}
+                        onChange={handleSnapshotNameInputChange}
                         autoFocus
                         margin="dense"
                         id="name"
@@ -122,11 +126,11 @@ const SnapshotSidebar = (props: any) => {
                             aria-describedby="alert-dialog-description"
                         >
                             <DialogTitle id="alert-dialog-title">
-                                {"Delete Snapshot " + snapshot.name + "?"}
+                                {"Delete Snapshot?"}
                             </DialogTitle>
                             <DialogContent>
                                 <DialogContentText id="alert-dialog-description">
-                                    Are you sure you want to delete the snapshot {snapshot.name}?
+                                    Are you sure you want to delete this snapshot?
                                 </DialogContentText>
                             </DialogContent>
                             <DialogActions>
@@ -139,7 +143,7 @@ const SnapshotSidebar = (props: any) => {
 
 
                     </div>
-                    <div className="image-contaner">
+                    <div key={snapshot.creationDate.getTime()} className="image-contaner" onClick={() => loadSnapshot(snapshot)}>
                         <img src={snapshot.imageUrl} />
                     </div>
                 </div>
