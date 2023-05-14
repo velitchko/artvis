@@ -148,6 +148,31 @@ const SnapshotGraph = (props: any) => {
         toggleEdgesforNode(data.nodeId, props.id);
     });
 
+    useCustomEventListener('CHART_ZOOMED', (data: any) => {
+        setLoading(false);
+
+        if (data.chartId === props.id) {
+            return;
+        }
+
+        cyRef.zoom({
+            level: data.zoom,
+            renderedPosition: data.position
+        });
+    });
+
+    useCustomEventListener('CHART_PANED', (data: any) => {
+        setLoading(false);
+
+        if (data.chartId === props.id) {
+            return;
+        }
+
+        cyRef.pan({
+            x: data.pan.x,
+            y: data.pan.y
+        });
+    });
     graphControlService.getData().subscribe((graphControls: any) => {
 
         if (!cyRef || !globalArtistData.has(props.id))
@@ -215,6 +240,10 @@ const SnapshotGraph = (props: any) => {
 
     let toggleEdgesforNode = (sourceNodeId: string, graphId: number) => {
 
+        if (!globalArtistData.has(graphId)) {
+            return;
+        }
+
         var indexOfNode = globalArtistData.get(graphId).persistedEdges.indexOf(sourceNodeId);
 
         if (indexOfNode !== -1) {
@@ -227,17 +256,41 @@ const SnapshotGraph = (props: any) => {
     }
 
     let removeEdgesOnHover = (sourceNodeId: string, graphId: number) => {
-        var indexOfNode = globalArtistData.get(graphId).persistedEdges.indexOf(sourceNodeId);
+
+        if (!globalArtistData.has(graphId)) {
+            return;
+        }
+
+
+        var persistedEdges = globalArtistData.get(graphId).persistedEdges;
+
+        var indexOfNode = persistedEdges.indexOf(sourceNodeId);
         if (indexOfNode !== -1) {
             return;
         }
         var node = cyRef.$("#" + sourceNodeId);
-        var connectedNodes = node.connectedEdges();
+        var connectedNodes = node.connectedEdges().filter(x => {
+
+            var targetNodeId = x._private.data.target;
+            var sourceNodeId = x._private.data.source;
+
+            return persistedEdges.indexOf(targetNodeId) === -1 && persistedEdges.indexOf(sourceNodeId) === -1;
+        });
 
         cyRef.remove(connectedNodes);
     }
 
     let addEdgesOnHover = (sourceNodeId: string, graphId: number) => {
+
+        if (!globalArtistData.has(graphId)) {
+            return;
+        }
+
+        var indexOfNode = globalArtistData.get(graphId).persistedEdges.indexOf(sourceNodeId);
+        if (indexOfNode !== -1) {
+            return;
+        }
+
         var links = globalArtistData.get(graphId).artistLinkIds.get(sourceNodeId);
 
         if (!links) {
@@ -280,6 +333,7 @@ const SnapshotGraph = (props: any) => {
                     cyRef = cy;
 
                     var id = props.id;
+                    var mousePosition = {};
 
                     cyRef.on("mouseover", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
@@ -322,7 +376,28 @@ const SnapshotGraph = (props: any) => {
                         cyRef.fit()
                     });
 
+                    cyRef.on('mousemove', _evt => {
+                        mousePosition = _evt.renderedPosition;
+                    });
 
+                    cyRef.on('dragpan', _evt => {
+                        var panData = {
+                            pan: cyRef.pan(),
+                            position: mousePosition,
+                            chartId: id
+                        }
+                        emitCustomEvent('CHART_PANED', panData);
+                    });
+
+                    cyRef.on('scrollzoom', _evt => {
+                        var zoomData = {
+                            zoom: cyRef.zoom(),
+                            position: mousePosition,
+                            chartId: id
+                        }
+
+                        emitCustomEvent('CHART_ZOOMED', zoomData);
+                    });
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}

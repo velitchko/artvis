@@ -154,3 +154,8 @@ body {
     display: flex;
     flex-direction: row;
 }
+
+.sidebar-container {
+    overflow: auto;
+    height: 75%;
+}
