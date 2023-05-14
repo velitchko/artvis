@@ -117,6 +117,37 @@ const SnapshotGraph = (props: any) => {
         })
     }
 
+    useCustomEventListener('NODE_HOVERED_IN', (data: any) => {
+        setLoading(false);
+
+        if (data.chartId === props.id) {
+            return;
+        }
+
+        var test = "";
+        addEdgesOnHover(data.nodeId, props.id);
+    });
+
+    useCustomEventListener('NODE_HOVERED_OUT', (data: any) => {
+        setLoading(false);
+
+        if (data.chartId === props.id) {
+            return;
+        }
+
+        removeEdgesOnHover(data.nodeId, props.id);
+    });
+
+    useCustomEventListener('NODE_SELECTED', (data: any) => {
+        setLoading(false);
+
+        if (data.chartId === props.id) {
+            return;
+        }
+
+        toggleEdgesforNode(data.nodeId, props.id);
+    });
+
     graphControlService.getData().subscribe((graphControls: any) => {
 
         if (!cyRef || !globalArtistData.has(props.id))
@@ -253,16 +284,37 @@ const SnapshotGraph = (props: any) => {
                     cyRef.on("mouseover", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
                         addEdgesOnHover(nodeId, id);
+
+                        var nodeHoverData = {
+                            nodeId: nodeId,
+                            chartId: id
+                        };
+
+                        emitCustomEvent('NODE_HOVERED_IN', nodeHoverData);
                     });
 
                     cyRef.on("mouseout ", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
                         removeEdgesOnHover(nodeId, id);
+
+                        var nodeHoverData = {
+                            nodeId: nodeId,
+                            chartId: id
+                        };
+
+                        emitCustomEvent('NODE_HOVERED_OUT', nodeHoverData);
                     });
 
                     cyRef.unbind("click").on("click", "node", function (evt) {
                         var nodeId = evt.target[0]._private.data.id;
                         toggleEdgesforNode(nodeId, id);
+
+                        var nodeHoverData = {
+                            nodeId: nodeId,
+                            chartId: id
+                        };
+
+                        emitCustomEvent('NODE_SELECTED', nodeHoverData);
                     });
 
                     cyRef.on('add', 'node', _evt => {
