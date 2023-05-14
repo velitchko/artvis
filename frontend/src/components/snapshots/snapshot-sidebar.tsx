@@ -21,6 +21,8 @@ const SnapshotSidebar = (props: any) => {
 
     const [showCreateDialog, setCreateDialogOpen] = React.useState(false);
     const [showDeleteDialog, setDeleteDialogOpen] = React.useState(false);
+    const [snapshotToDelete, setSnapshotToDelete] = React.useState<any>();
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
     const handleTrigger = () => setIsSidebarOpen(!isSidebarOpen)
     const [snapShots, setSnapshotList] = useState([]);
@@ -40,12 +42,13 @@ const SnapshotSidebar = (props: any) => {
         setCreateDialogOpen(true);
     }
 
-    function openDeleteSnapshotModel(): void {
+    function openDeleteSnapshotModel(snapshot): void {
+        setSnapshotToDelete(snapshot);
         setDeleteDialogOpen(true);
     }
 
-    function removeSnapshot(snapshotData): void {
-        var index = snapShots.findIndex(x => x.creationDate.getTime() === snapshotData.creationDate.getTime() && x.name === snapshotData.name);
+    function removeSnapshot(): void {
+        var index = snapShots.findIndex(x => x.creationDate.getTime() === snapshotToDelete.creationDate.getTime() && x.name === snapshotToDelete.name);
         snapShots.splice(index, 1);
         setSnapshotList(snapShots);
         setDeleteDialogOpen(false);
@@ -70,6 +73,7 @@ const SnapshotSidebar = (props: any) => {
     };
 
     const cancelDelete = () => {
+        setSnapshotToDelete({});
         setDeleteDialogOpen(false);
     };
 
@@ -109,39 +113,37 @@ const SnapshotSidebar = (props: any) => {
                 </DialogActions>
             </Dialog>
 
+            <Dialog
+                open={showDeleteDialog}
+                onClose={cancelDelete}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    {"Delete Snapshot?"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Are you sure you want to delete this snapshot?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={cancelDelete}>Cancel</Button>
+                    <Button onClick={() => removeSnapshot()} autoFocus>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
         </div>
         <div className='sidebar-container'>
             {snapShots.map((snapshot) => (
                 <div key={snapshot.creationDate.getTime()} className="sidebar-position">
                     <div className="snapshot-info">
                         <span>{snapshot.name}</span>
-                        <IconButton aria-label="delete" onClick={() => openDeleteSnapshotModel()}>
+                        <IconButton aria-label="delete" onClick={() => openDeleteSnapshotModel(snapshot)}>
                             <DeleteIcon />
                         </IconButton>
-
-                        <Dialog
-                            open={showDeleteDialog}
-                            onClose={cancelDelete}
-                            aria-labelledby="alert-dialog-title"
-                            aria-describedby="alert-dialog-description"
-                        >
-                            <DialogTitle id="alert-dialog-title">
-                                {"Delete Snapshot?"}
-                            </DialogTitle>
-                            <DialogContent>
-                                <DialogContentText id="alert-dialog-description">
-                                    Are you sure you want to delete this snapshot?
-                                </DialogContentText>
-                            </DialogContent>
-                            <DialogActions>
-                                <Button onClick={cancelDelete}>Cancel</Button>
-                                <Button onClick={() => removeSnapshot(snapshot)} autoFocus>
-                                    Delete
-                                </Button>
-                            </DialogActions>
-                        </Dialog>
-
-
                     </div>
                     <div key={snapshot.creationDate.getTime()} className="image-contaner" onClick={() => loadSnapshot(snapshot)}>
                         <img src={snapshot.imageUrl} />
