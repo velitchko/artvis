@@ -93,11 +93,18 @@ const SnapshotGraph = (props: any) => {
     } else {
         useCustomEventListener('LOAD_SNAPSHOT', (snapshotData: any) => {
             setLoading(false);
+
+            if (snapshotData.position !== props.id) {
+                return;
+            }
+
+            var snapshot = snapshotData.snapshot;
+
             let artistData = {
-                persistedEdges: snapshotData.persistedEdges,
-                artistLinkIds: snapshotData.artistLinkIds,
-                artistNodes: snapshotData.artistNodes,
-                artistIds: snapshotData.artistIds
+                persistedEdges: snapshot.persistedEdges,
+                artistLinkIds: snapshot.artistLinkIds,
+                artistNodes: snapshot.artistNodes,
+                artistIds: snapshot.artistIds
             };
 
             globalArtistData.set(props.id, artistData);
@@ -401,7 +408,7 @@ const SnapshotGraph = (props: any) => {
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}
-                style={{ width: '48vw', height: '85vh' }} />
+                style={{ width: '30vw', height: '85vh' }} />
             }
         </>
     );

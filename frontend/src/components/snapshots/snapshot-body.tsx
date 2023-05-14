@@ -11,6 +11,9 @@ const SnapshotBody = (props: any) => {
             <div className='graph'>
                 <SnapshotGraph isSnapshot={true} id={1} />
             </div>
+            <div className='graph'>
+                <SnapshotGraph isSnapshot={true} id={2} />
+            </div>
         </div>
 
     </div>);
