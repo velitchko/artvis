@@ -122,19 +122,19 @@ const SnapshotGraph = (props: any) => {
         if (!cyRef || !globalArtistData.has(props.id))
             return;
 
-        let layout = cyRef.layout({
-            name: graphControls.value.layout
-        });
+        if (graphControls.value.layout) {
+            let layout = cyRef.layout({
+                name: graphControls.value.layout
+            });
 
-        if (graphControls.value.layout === "cola") {
-            // var sourceNodeIds = Array.from(globalArtistData.get(props.id).artistLinkIds.keys());
-            // sourceNodeIds.forEach((sourceNodeId: any) => {
-            //     toggleEdgesforNode(sourceNodeId, props.id);
-            //     addEdgesOnHover(sourceNodeId, props.id);
-            // });
+            layout.run();
+            return;
         }
 
-        layout.run();
+        if (graphControls.value.refreshLayout) {
+            cyRef.layout.run();
+        }
+
     });
 
 
