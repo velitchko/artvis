@@ -408,7 +408,7 @@ const SnapshotGraph = (props: any) => {
                 }}
                 layout={layout.current}
                 //pixelRatio={"1"}
-                style={{ width: '30vw', height: '85vh' }} />
+                style={{ width: '32vw', height: '85vh' }} />
             }
         </>
     );
