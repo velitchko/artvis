@@ -11,6 +11,8 @@ import {
     DialogContentText,
     DialogTitle,
     IconButton,
+    MenuItem,
+    Select,
     TextField
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
@@ -21,7 +23,11 @@ const SnapshotSidebar = (props: any) => {
 
     const [showCreateDialog, setCreateDialogOpen] = React.useState(false);
     const [showDeleteDialog, setDeleteDialogOpen] = React.useState(false);
+    const [showSnapShotPositionDialog, setSnapShotPositionDialogOpen] = React.useState(false);
+
     const [snapshotToDelete, setSnapshotToDelete] = React.useState<any>();
+    const [snapshotToLoad, setSnapshotToLoad] = React.useState<any>();
+    const [snapshotPosition, setSnapshotPosition] = React.useState(1);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
     const handleTrigger = () => setIsSidebarOpen(!isSidebarOpen)
@@ -33,8 +39,19 @@ const SnapshotSidebar = (props: any) => {
         setSnapshotList(newList);
     })
 
-    function loadSnapshot(snapshot) {
-        emitCustomEvent('LOAD_SNAPSHOT', snapshot);
+    function loadSnapshot() {
+        setSnapShotPositionDialogOpen(false);
+        var snapshotData = {
+            snapshot: snapshotToLoad,
+            position: snapshotPosition
+        }
+
+        emitCustomEvent('LOAD_SNAPSHOT', snapshotData);
+    }
+
+    function showLoadSnapshot(snapshot) {
+        setSnapshotToLoad(snapshot);
+        setSnapShotPositionDialogOpen(true);
     }
 
     function openCreateSnapshotModel(): void {
@@ -54,6 +71,10 @@ const SnapshotSidebar = (props: any) => {
         setDeleteDialogOpen(false);
     }
 
+    function handlePositionChange(e) {
+        setSnapshotPosition(e.target.value);
+    }
+
     const handleSnapshotNameInputChange = event => {
         setSnapshotNameTextInput(event.target.value);
     };
@@ -70,6 +91,11 @@ const SnapshotSidebar = (props: any) => {
 
     const cancelCreate = () => {
         setCreateDialogOpen(false);
+    };
+
+    const cancelSelect = () => {
+        setSnapshotPosition(1);
+        setSnapShotPositionDialogOpen(false);
     };
 
     const cancelDelete = () => {
@@ -113,6 +139,29 @@ const SnapshotSidebar = (props: any) => {
                 </DialogActions>
             </Dialog>
 
+            <Dialog open={showSnapShotPositionDialog}>
+                <DialogTitle>Create Snapshot</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Please specify the slot in which you want to load the snapshot
+                    </DialogContentText>
+                    <Select
+                        labelId="demo-simple-select-label"
+                        id="demo-simple-select"
+                        value={snapshotPosition}
+                        label="Position"
+                        onChange={handlePositionChange}
+                    >
+                        <MenuItem value={1}>1</MenuItem>
+                        <MenuItem value={2}>2</MenuItem>
+                    </Select>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={cancelSelect}>Cancel</Button>
+                    <Button onClick={loadSnapshot}>Load</Button>
+                </DialogActions>
+            </Dialog>
+
             <Dialog
                 open={showDeleteDialog}
                 onClose={cancelDelete}
@@ -145,7 +194,7 @@ const SnapshotSidebar = (props: any) => {
                             <DeleteIcon />
                         </IconButton>
                     </div>
-                    <div key={snapshot.creationDate.getTime()} className="image-contaner" onClick={() => loadSnapshot(snapshot)}>
+                    <div key={snapshot.creationDate.getTime()} className="image-contaner" onClick={() => showLoadSnapshot(snapshot)}>
                         <img src={snapshot.imageUrl} />
                     </div>
                 </div>
