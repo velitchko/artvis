@@ -11,6 +11,7 @@ import neo4j from 'neo4j-driver';
 
 import { schema } from './schema.js';
 import { cypherRouter } from './cypherRouting.js';
+import compression from 'compression';
 
 const typeDefs = gql`${schema}`;
 
@@ -19,6 +20,7 @@ const driver = neo4j.driver(
 	neo4j.auth.basic('neo4j', 'root')
 );
 const app = express();
+app.use(compression());
 const httpServer = http.createServer(app);
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
