@@ -1,0 +1,14 @@
+import { Exhibition } from "./exhibition.model";
+
+export type Host = {
+    country: String;
+	id: String;
+	latitude: String;
+	longitude: String;
+	name: String;
+	place: String;
+	place_tgn: String;
+	town: String;
+	type: String;
+	exhibitionsTookPlaceIn: Array<Exhibition>;
+};
