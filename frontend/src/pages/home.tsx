@@ -3,7 +3,7 @@ import HeadingComponent from '../components/heading/heading';
 import ParticlesComponent from '../components/particles/particles';
 import SearchComponent from '../components/search/search';
 
-class HomeComponent extends React.Component {
+class HomePage extends React.Component {
 
     title = {
         maintitle: 'Art Vis',
@@ -24,4 +24,4 @@ class HomeComponent extends React.Component {
 
 }
 
-export default HomeComponent;
+export default HomePage;
