@@ -73,10 +73,10 @@ type Exhibition {
 	artistsExhibited: [Artist!]! @relationship(type: "EXHIBITED", direction: IN, properties: "ExhibitedProperties")
 	catalogueEntriesEntryIn: [CatalogueEntry!]! @relationship(type: "ENTRY_IN", direction: IN)
 	cataloguesIsCatalogueFor: [Catalogue!]! @relationship(type: "IS_CATALOGUE_FOR", direction: IN)
-	enddate: Date!
+	enddate: Int!
 	id: String!
 	organizer: String
-	startdate: Date!
+	startdate: Int!
 	title: String
 	tookPlaceInLocations: [Location!]! @relationship(type: "TOOK_PLACE_IN", direction: OUT)
 	type: String
