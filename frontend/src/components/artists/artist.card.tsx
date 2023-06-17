@@ -2,7 +2,7 @@ import React from 'react';
 import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
-import { extendWith } from 'lodash';
+import { extendWith, min } from 'lodash';
 
 class ArtistCardComponent extends React.Component<{ artist: Artist, width: number, height: number, yearExtent: Array<number> | Array<undefined>, countExtent: Array<number> | Array<undefined> }, { artist: Artist, id: string, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number> }> {
 
@@ -73,7 +73,7 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         const exhibitionsPerYear = new Map<number, number>();
         
         this.state.artist.exhibitedExhibitions.forEach((exhibition: Exhibition) => {
-            const year = exhibition.startdate;
+            const year = +exhibition.startdate;
             if(exhibitionsPerYear.has(year)) {
                 const count = exhibitionsPerYear.get(year) || 0;
                 exhibitionsPerYear.set(year, count + 1);
@@ -92,20 +92,22 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         // this.xScale?.domain(xExt as Array<number>);      
 
         // fill in missing years in data with 0s
-        const minYear = this.state.yearExtent[0];
-        const maxYear = this.state.yearExtent[1];
+        const minYear = +this.state.yearExtent[0];
+        const maxYear = +this.state.yearExtent[1];
         
-        const years = Array.from(Array(maxYear - minYear + 1).keys()).map((i) => i + minYear);
+        const years: Array<number> = Array.from(Array(maxYear - minYear + 1).keys()).map((i) => i + minYear);
         
-        const dataWithMissingYears = years.map((year) => {
-            const yearData = data.find((d) => d.year === year);
+        const dataWithMissingYears = years.map((year: number) => {
+            const yearData = data.find((d: { year: number, count: number }) => {
+                return d.year === year
+            });
             if(yearData) {
                 return yearData;
             } else {
                 return { year, count: 0 };
             }
         });
-
+        
         const yExt = d3.extent(dataWithMissingYears, (d: { year: number, count: number }) => d.count);
         // this.yScale?.domain(this.state.countExtent as Array<number>);
         this.yScale?.domain(yExt as Array<number>);
