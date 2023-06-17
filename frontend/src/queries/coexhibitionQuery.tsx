@@ -8,9 +8,9 @@ query Edges($where: ArtistExhibitedWithArtistsConnectionWhere) {
         id,
         exhibitedWithArtistsConnection(where: $where) {
             edges {
-            node {
-                id
-            }
+                node {
+                    id
+                }
             }
         }
         }
