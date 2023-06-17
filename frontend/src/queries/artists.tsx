@@ -6,11 +6,11 @@ query Artists {
         firstname, 
         lastname,
         id,
-        birthdate,
         birthplace,
+        birthdate,
         deathdate,
         deathplace,
-        country
+        country,
         exhibitedExhibitions {
             title,
             startdate,
@@ -19,5 +19,7 @@ query Artists {
     }
 }
 `;
+
+// (options: { limit: 100 })
 
 export default GET_ARTISTS;
