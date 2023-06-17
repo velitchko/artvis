@@ -1,26 +1,17 @@
 export const schema = `type Artist {
-	articleRank: Float!
 	artistsExhibitedWith: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: IN, properties: "ExhibitedWithProperties")
-	betweennessCentrality: Float!
 	birthdate: Date!
 	birthplace: String!
-	closenessCentrality: Float!
 	country: String!
 	createdCatalogueEntries: [CatalogueEntry!]! @relationship(type: "CREATED", direction: OUT)
 	createdItemItems: [Item!]! @relationship(type: "CREATED_ITEM", direction: OUT)
 	deathdate: Date!
 	deathplace: String!
-	degreeCentrality: Float!
-	eigenvectorCentrality: Float!
 	exhibitedExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED", direction: OUT, properties: "ExhibitedProperties")
 	exhibitedWithArtists: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: OUT, properties: "ExhibitedWithProperties")
 	firstname: String!
-	harmonicCentrality: Float!
 	id: String!
 	lastname: String!
-	louvainCommunity: BigInt!
-	modularityOptimizationCommunity: BigInt!
-	pageRank: Float!
 	sex: String!
 	title: String!
 	wasFeaturedInCatalogues: [Catalogue!]! @relationship(type: "WAS_FEATURED_IN", direction: OUT)
@@ -63,9 +54,9 @@ interface ExhibitedProperties @relationshipProperties {
 }
 
 interface ExhibitedWithProperties @relationshipProperties {
-	enddate: Date!
+	enddate: BigInt
 	exhibitionId: String!
-	startdate: Date!
+	startdate: BigInt!
 	title: String!
 }
 
@@ -73,13 +64,26 @@ type Exhibition {
 	artistsExhibited: [Artist!]! @relationship(type: "EXHIBITED", direction: IN, properties: "ExhibitedProperties")
 	catalogueEntriesEntryIn: [CatalogueEntry!]! @relationship(type: "ENTRY_IN", direction: IN)
 	cataloguesIsCatalogueFor: [Catalogue!]! @relationship(type: "IS_CATALOGUE_FOR", direction: IN)
-	enddate: Int!
+	enddate: BigInt
 	id: String!
 	organizer: String
-	startdate: Int!
+	startdate: BigInt
 	title: String
-	tookPlaceInLocations: [Location!]! @relationship(type: "TOOK_PLACE_IN", direction: OUT)
+	tookPlaceInHosts: [Host!]! @relationship(type: "TOOK_PLACE_IN", direction: OUT)
 	type: String
+}
+
+type Host {
+	country: String!
+	exhibitionsTookPlaceIn: [Exhibition!]! @relationship(type: "TOOK_PLACE_IN", direction: IN)
+	id: String!
+	latitude: String!
+	longitude: String!
+	name: String!
+	place: String!
+	place_tgn: String!
+	town: String!
+	type: String!
 }
 
 type Item {
@@ -93,17 +97,4 @@ type Item {
 	title: String
 	type: String
 	verifiedInCatalogueEntryCatalogueEntries: [CatalogueEntry!]! @relationship(type: "VERIFIED_IN_CATALOGUE_ENTRY", direction: OUT)
-}
-
-type Location {
-	country: String!
-	exhibitionsTookPlaceIn: [Exhibition!]! @relationship(type: "TOOK_PLACE_IN", direction: IN)
-	id: String!
-	latitude: String!
-	longitude: String!
-	name: String!
-	place: String!
-	place_tgn: String!
-	town: String!
-	type: String!
 }`;
