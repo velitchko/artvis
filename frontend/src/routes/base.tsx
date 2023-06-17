@@ -4,6 +4,7 @@ import NetworkPage from "../pages/network";
 import HomePage from "../pages/home";
 import ArtistPage from "../pages/artist";
 import ErrorPage from "./not-found";
+import ExplorerPage from "../pages/explorer";
 
 
 export default function Base() {
@@ -12,6 +13,7 @@ export default function Base() {
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/network" element={<NetworkPage />} />
+                <Route path="/explorer" element={<ExplorerPage />} />
                 <Route path="/artists" element={<ArtistPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
