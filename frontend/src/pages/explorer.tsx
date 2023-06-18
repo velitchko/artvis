@@ -9,9 +9,10 @@ import * as cron from 'cron';
 
 const ExplorerPage = (props: any) => {
 
-    const nodes = new Map<string, Node>();
-    const links = new Map<string, Link>();
+    const nodes = new Map<string | number, Node>();
+    const links = new Map<string | number, Link>();
 
+    const [network, setNetwork] = useState({nodes: new Array<Node>(), links: new Array<Link>()});
     const [loading, setLoading] = useState(true);
     const [loadingYear, setLoadingYear] = useState(1905);
     const [explanation, setExplanation] = useState('Exciting, huh?');
@@ -67,7 +68,8 @@ const ExplorerPage = (props: any) => {
         'I\'m a cybernetic organism. Living tissue over a metal endoskeleton.',
         'I\'ll be back.',
         'I\'ll be back... in 30 seconds.',
-        'Where is Sarah Conner?'
+        'Where is Sarah Conner?',
+        'Self destruct sequence initiated...',
     ];
 
     useEffect(() => {
@@ -101,6 +103,7 @@ const ExplorerPage = (props: any) => {
             if (year === 1917) {
                 setLoading(false);
                 job.stop();
+                setNetwork({nodes: Array.from(nodes.values()), links: Array.from(links.values())});
             }
         });
     };
@@ -120,8 +123,18 @@ const ExplorerPage = (props: any) => {
 
             n.node.exhibitedWithArtistsConnection.edges.forEach((e: any) => {
                 let link: Link = {
-                    source: n.node.id,
-                    target: e.node.id,
+                    sourceId: n.node.id,
+                    targetId: e.node.id,
+                    source: {
+                        id: n.node.id,
+                        name: n.node.id,
+                        type: n.node.__typename,
+                    },
+                    target: {
+                        id: e.node.id,
+                        name: e.node.id,
+                        type: e.node.__typename,
+                    },
                     props: {
                         startdate: start,
                         enddate: end,
@@ -135,7 +148,7 @@ const ExplorerPage = (props: any) => {
 
     return (
         <React.StrictMode>
-            <NavigationComponent />
+            <NavigationComponent showHeading={ true }/>
             {
                 loading &&
                 <div className="flex flex-col items-center justify-center w-full h-full h-screen">
@@ -149,7 +162,7 @@ const ExplorerPage = (props: any) => {
                     <pre className="text-2xl text-gray">{ explanation }</pre>
                 </div>
             }
-            {!loading && <NetworkComponent nodes={nodes} links={links} width={width} height={height} />}
+            { !loading && <NetworkComponent nodes={ network.nodes } links={ network.links } width={ width } height={ height } /> }
         </React.StrictMode>
     );
 }

@@ -8,11 +8,11 @@ class SmallHeadingComponent extends React.Component<{}, { }> {
 
     render() {
         return (
-            <div className="absolute top-0 left-2">
-                <a href="#">
-                    <h1 className="mb-4 text-xl font-extrabold tracking-tight leading-none text-gray-900 md:text-2xl lg:text-4xl">
+            <div className="absolute w-[100vw] m-auto">
+                <a href="/" className="flex items-center justify-center">
+                    <h1 className="mb-4 text-xl font-extrabold tracking-tight leading-none text-gray-900 md:text-3xl lg:text-5xl">
                         Art
-                        <span className="font-face-kolker text-6xl">Viz</span>
+                        <span className="font-face-kolker md:text-3xl lg:text-7xl">Viz</span>
                     </h1>
                 </a>
             </div>

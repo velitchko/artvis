@@ -24,7 +24,7 @@ const ArtistPage = () => {
     return (
         <>
             <React.StrictMode>
-                <NavigationComponent />
+                <NavigationComponent showHeading={ true } />
                 {/* wait to load then rneder artists component  */}
                 { !loading && <ArtistsComponent artists={artists} /> }
             </React.StrictMode>
