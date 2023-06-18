@@ -1,14 +1,18 @@
 import { gql } from '@apollo/client';
 
 const GET_COEXHIBITIONS = gql`
-query Edges($where: ArtistExhibitedWithArtistsConnectionWhere) {
-    artistsConnection {
+query Edges($where1: ArtistWhere, $where2: ArtistExhibitedWithArtistsConnectionWhere) {
+    artistsConnection(where: $where1) {
     edges {
         node {
+        firstname,
+        lastname,
         id,
-        exhibitedWithArtistsConnection(where: $where) {
+        exhibitedWithArtistsConnection(where: $where2) {
             edges {
                 node {
+                    firstname,
+                    lastname,
                     id
                 }
             }

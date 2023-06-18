@@ -2,7 +2,7 @@ import { gql } from '@apollo/client';
 
 const GET_ARTISTS = gql`
 query Artists { 
-    artists {
+    artists(options: { limit: 100 }) {
         firstname, 
         lastname,
         id,

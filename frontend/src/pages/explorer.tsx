@@ -7,15 +7,20 @@ import { Node } from '../models/node';
 import { Link } from '../models/link';
 import * as cron from 'cron';
 
-const ExplorerPage = (props: any) => {
+const ExplorerPage = (props: { id?: string | number }) => {
 
+
+    const start = 1905;
+    const end = 1917;
     const nodes = new Map<string | number, Node>();
     const links = new Map<string | number, Link>();
 
     const [network, setNetwork] = useState({nodes: new Array<Node>(), links: new Array<Link>()});
     const [loading, setLoading] = useState(true);
-    const [loadingYear, setLoadingYear] = useState(1905);
+    const [loadingYear, setLoadingYear] = useState(start);
     const [explanation, setExplanation] = useState('Exciting, huh?');
+
+    const [id, setId] = useState(props.id || 1);
 
     const [job] = useState(new cron.CronJob("*/30 * * * * *", async () => {
         getRandomExplanation();
@@ -70,22 +75,40 @@ const ExplorerPage = (props: any) => {
         'I\'ll be back... in 30 seconds.',
         'Where is Sarah Conner?',
         'Self destruct sequence initiated...',
+        'Starting all over again...',
+        'Loading backwards.',
+        'Initiating time travel...',
+        'Loading... not.',
+        'Formatting hard drive...',
+        'Deleting all files...',
+        'Deleting all files... except this one.',
+        'Deleting all the data...',
+        'Encountering bugs in the code...',
+        'Encountering bugs in the code... and in real life.',
+        'Encountering bugs in the code... and in real life. And in my apartment.',
+        'Look at that spinner go!',
+        'Look at that spinner go! Wheeeee!',
+        'Look at that spinner go! Wheeeee! I\'m dizzy!',
+        'Look at me. I\'m the captain now.',
     ];
 
     useEffect(() => {
         job.start();
-        loadData(loadingYear);
+        loadData(id, loadingYear);
     }, []);
 
-    const loadData = async (year: number) => {
+    const loadData = async (id: string | number, year: number) => {
         client.query({
             query: GET_COEXHIBITIONS,
             variables: {
-                where: {
+                where1: {
+                    id: id.toString()
+                },
+                where2: {
                     edge: {
                         AND: [
                             { startdate: year.toString() },
-                            { enddate: (year + 1).toString() }
+                            // { enddate: (year + 1).toString() }
                         ]
                     }
                 }
@@ -96,20 +119,27 @@ const ExplorerPage = (props: any) => {
             console.log(error);
         }).finally(() => {
             // load next year
-            if (year <= 1917) {
+            if (year <= end) {
                 setLoadingYear(year + 1);
-                loadData(year + 1);
+                loadData(id, year + 1);
             }
-            if (year === 1917) {
+            if (year === end) {
                 setLoading(false);
                 job.stop();
+
                 setNetwork({nodes: Array.from(nodes.values()), links: Array.from(links.values())});
             }
         });
     };
 
+    const requestNode = async (id: string) => {
+        setId(id);
+        setLoading(true);
+        loadData(id, start);
+    };
+
     const getRandomExplanation = () => {
-        setInterval(() => setExplanation(randomExplanations[Math.floor(Math.random() * randomExplanations.length)]), 10000);
+        setExplanation(randomExplanations[Math.floor(Math.random() * randomExplanations.length)]);
     };
 
     const setData = (data: Array<any>, start: number, end: number) => {
@@ -118,10 +148,27 @@ const ExplorerPage = (props: any) => {
                 id: n.node.id,
                 name: n.node.id,
                 type: n.node.__typename,
+                props: {
+                    firstname: n.node.firstname,
+                    lastname: n.node.lastname,
+                }
             };
             nodes.set(node.id, node);
 
             n.node.exhibitedWithArtistsConnection.edges.forEach((e: any) => {
+                // check if node exists 
+                if (!nodes.has(e.node.id)) {
+                    let node: Node = {
+                        id: e.node.id,
+                        name: e.node.id,
+                        type: e.node.__typename,
+                        props: {
+                            firstname: e.node.firstname,
+                            lastname: e.node.lastname,
+                        }
+                    };
+                    nodes.set(node.id, node);
+                }
                 let link: Link = {
                     sourceId: n.node.id,
                     targetId: e.node.id,
@@ -129,20 +176,32 @@ const ExplorerPage = (props: any) => {
                         id: n.node.id,
                         name: n.node.id,
                         type: n.node.__typename,
+                        props: {
+                            firstname: n.node.firstname,
+                            lastname: n.node.lastname,
+                        }
                     },
                     target: {
                         id: e.node.id,
                         name: e.node.id,
                         type: e.node.__typename,
+                        props: {
+                            firstname: e.node.firstname,
+                            lastname: e.node.lastname,
+                        }
                     },
                     props: {
                         startdate: start,
                         enddate: end,
                     }
                 };
-                links.set(`${link.source}-${link.target}-${link.props.startdate}`, link);
+                links.set(`${link.sourceId}-${link.targetId}-${link.props.startdate}`, link);
             });
         });
+
+        console.log(nodes.values());
+        console.log(links.values());
+        console.log('--------------')
     };
 
 
@@ -162,7 +221,7 @@ const ExplorerPage = (props: any) => {
                     <pre className="text-2xl text-gray">{ explanation }</pre>
                 </div>
             }
-            { !loading && <NetworkComponent nodes={ network.nodes } links={ network.links } width={ width } height={ height } /> }
+            { !loading && <NetworkComponent nodes={ network.nodes } links={ network.links } width={ width } height={ height } requestNode={ requestNode }/> }
         </React.StrictMode>
     );
 }
