@@ -24,9 +24,11 @@ const ArtistPage = () => {
     return (
         <>
             <React.StrictMode>
-                <NavigationComponent showHeading={ true } />
+                    <NavigationComponent showHeading={ true } />
                 {/* wait to load then rneder artists component  */}
-                { !loading && <ArtistsComponent artists={artists} /> }
+                <div className="h-[80px]">
+                </div>
+                    { !loading && <ArtistsComponent artists={artists} /> }
             </React.StrictMode>
         </>
     );

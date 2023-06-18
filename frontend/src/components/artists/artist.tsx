@@ -7,8 +7,9 @@ import { Exhibition } from '../../models/exhibition.model';
 const ArtistsComponent = (props: { artists: Array<Artist>}) => {
 
         let totalYearCount = new Map<number, number>();
-        const width: number = window.innerWidth;
-        const chartCount = 6;
+        // subtract scrollbar width from window width
+        const width = window.innerWidth;
+        const chartCount = 7;
 
         // calculate how much the width of each chart should be to fix
         const chartWidth = width / chartCount;
@@ -24,7 +25,7 @@ const ArtistsComponent = (props: { artists: Array<Artist>}) => {
         const yExt = d3.extent(Array.from(totalYearCount.values()));
 
         return (
-            <div className="flex flex-wrap items-center w-full mt-4">
+            <div className="flex flex-wrap items-center justify-center w-full"> 
                 {props.artists &&  props.artists.map((artist: Artist, index: number) => {
                     return <ArtistCardComponent artist={artist} key={ index } width={ chartWidth } height={ 150 } yearExtent={ xExt } countExtent={ yExt } />;
                 })}
