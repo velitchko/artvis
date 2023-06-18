@@ -20,6 +20,7 @@
   "author": "velitchko",
   "license": "MIT",
   "devDependencies": {
+    "@types/cron": "^2.0.1",
     "@types/cytoscape": "^3.19.9",
     "@types/d3": "^7.4.0",
     "@types/lodash": "^4.14.187",
@@ -45,6 +46,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.7.1",
+    "cron": "^2.3.1",
     "cytoscape": "^3.23.0",
     "d3": "^7.6.1",
     "flowbite": "^1.5.3",
