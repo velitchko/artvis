@@ -21,6 +21,7 @@ const ParticlesComponent = () => {
     return (
         <Particles
             id="tsparticles"
+            className="absolute top-0 left-0 w-full h-full z-[-1]"
             init={particlesInit}
             loaded={particlesLoaded}
             options={{
