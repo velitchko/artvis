@@ -10,6 +10,8 @@ query Edges($where1: ArtistWhere, $where2: ArtistExhibitedWithArtistsConnectionW
         id,
         exhibitedWithArtistsConnection(where: $where2) {
             edges {
+                startdate,
+                enddate,
                 node {
                     firstname,
                     lastname,

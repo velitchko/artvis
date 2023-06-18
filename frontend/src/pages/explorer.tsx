@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import NetworkComponent from '../components/network/network';
 import NavigationComponent from '../components/navigation/navigation';
 import client from '../components/apollo/client';
@@ -12,8 +12,8 @@ const ExplorerPage = (props: { id?: string | number }) => {
 
     const start = 1905;
     const end = 1917;
-    const nodes = new Map<string | number, Node>();
-    const links = new Map<string | number, Link>();
+    const [nodes, setNodes] = useState(new Map<string | number, Node>());
+    const [links, setLinks] = useState(new Map<string | number, Link>());
 
     const [network, setNetwork] = useState({nodes: new Array<Node>(), links: new Array<Link>()});
     const [loading, setLoading] = useState(true);
@@ -92,12 +92,8 @@ const ExplorerPage = (props: { id?: string | number }) => {
         'Look at me. I\'m the captain now.',
     ];
 
-    useEffect(() => {
-        job.start();
-        loadData(id, loadingYear);
-    }, []);
-
     const loadData = async (id: string | number, year: number) => {
+        console.log(nodes, links)
         client.query({
             query: GET_COEXHIBITIONS,
             variables: {
@@ -153,7 +149,7 @@ const ExplorerPage = (props: { id?: string | number }) => {
                     lastname: n.node.lastname,
                 }
             };
-            nodes.set(node.id, node);
+            setNodes(nodes.set(node.id, node))
 
             n.node.exhibitedWithArtistsConnection.edges.forEach((e: any) => {
                 // check if node exists 
@@ -191,18 +187,23 @@ const ExplorerPage = (props: { id?: string | number }) => {
                         }
                     },
                     props: {
-                        startdate: start,
-                        enddate: end,
+                        startdate: e.startdate,
+                        enddate: e.enddaate ? e.enddate : e.startdate,
                     }
                 };
-                links.set(`${link.sourceId}-${link.targetId}-${link.props.startdate}`, link);
+                setLinks(links.set(`${link.sourceId}-${link.targetId}-${link.props.startdate}-${link.props.enddate}`, link));
             });
         });
 
-        console.log(nodes.values());
-        console.log(links.values());
-        console.log('--------------')
+        // console.log(nodes.values());
+        // console.log(links.values());
+        // console.log('--------------')
     };
+
+    useMemo(() => {
+        job.start();
+        loadData(id, loadingYear);
+    }, [network]);
 
 
     return (
