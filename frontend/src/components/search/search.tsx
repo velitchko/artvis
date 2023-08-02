@@ -6,7 +6,7 @@ import client from '../apollo/client';
 
 type IResults = {
     artists: Array<any>,
-    locations: Array<any>,
+    hosts: Array<any>,
     exhibitions: Array<any>,
     catalogues: Array<any>,
     catalogueEntries: Array<any>,
@@ -28,7 +28,7 @@ const SearchComponent = (props: any) => {
             client.query({ query: GET_EVERYTHING, variables: { value: value } }).then((result: any) => {
                 console.log('searched for ' + value);const data = new Array<any>();
                 data.push(result.data.artists.map((artist: any) => { return { name: artist.firstname + ' ' + artist.lastname, type: 'Artist', id: artist.id } }));
-                data.push(result.data.locations.map((location: any) => { return { name: location.name, type: 'Location', id: location.id } }));
+                data.push(result.data.hosts.map((host: any) => { return { name: host.name, type: 'Host', id: host.id } }));
                 data.push(result.data.exhibitions.map((exhibition: any) => { return { name: exhibition.title, type: 'Exhibition', id: exhibition.id } }));
     
                 setResults(data.flat());
