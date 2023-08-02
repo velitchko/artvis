@@ -5,6 +5,7 @@ import HomePage from "../pages/home";
 import ArtistPage from "../pages/artist";
 import ErrorPage from "./not-found";
 import ExplorerPage from "../pages/explorer";
+import ArtistDetailPage from "../pages/artist.detail";
 
 
 export default function Base() {
@@ -15,6 +16,7 @@ export default function Base() {
                 <Route path="/network" element={<NetworkPage />} />
                 <Route path="/explorer" element={<ExplorerPage />} />
                 <Route path="/artists" element={<ArtistPage />} />
+                <Route path="/artists/:id" element={<ArtistDetailPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
         </React.StrictMode>
