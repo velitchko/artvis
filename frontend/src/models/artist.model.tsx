@@ -6,16 +6,16 @@ import { Item } from './item.model';
 
 export type Artist = {
     // FROM THE SCHEMA
-	id: String;
-	firstname: String;
-	lastname: String;
+	id: string;
+	firstname: string;
+	lastname: string;
 	birthdate?: Date;
-	birthplace?: String;
-	country?: String;
+	birthplace?: string;
+	country?: string;
 	deathdate?: Date;
-	deathplace?: String;
-	sex?: String;
-	title?: String;
+	deathplace?: string;
+	sex?: string;
+	title?: string;
     artistsExhibitedWith: Array<Artist>;
 	wasFeaturedInCatalogues?: Array<Catalogue>;
 	createdCatalogueEntries?: Array<CatalogueEntry>;
