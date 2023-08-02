@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import ArtistCardComponent from './artist.card';
@@ -10,6 +11,8 @@ const ArtistsComponent = (props: { artists: Array<Artist>}) => {
         // subtract scrollbar width from window width
         const width = window.innerWidth;
         const chartCount = 7;
+
+        const navigate = useNavigate();
 
         const orders = [{ value: 'name', label: 'alphabetically'}, {value: 'count', label: 'exhibition count'}, {value:'chi', label: 'chi square'}];
         const [order, setOrder] = React.useState('name'); // 'name', 'count', 'chi'
@@ -114,7 +117,7 @@ const ArtistsComponent = (props: { artists: Array<Artist>}) => {
                     </select>
                 </div>
                 {artists &&  artists.map((artist: Artist) => {
-                    return <ArtistCardComponent artist={artist} key={ artist.id } width={ chartWidth } height={ 150 } yearExtent={ xExt } countExtent={ yExt } />;
+                    return <ArtistCardComponent artist={artist} key={ artist.id } width={ chartWidth } height={ 150 } yearExtent={ xExt } countExtent={ yExt } navigate={ navigate }/>;
                 })}
             </div>
         );

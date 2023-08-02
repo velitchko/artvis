@@ -3,15 +3,16 @@ import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 import { extendWith, min } from 'lodash';
+import { NavigateFunction } from 'react-router-dom';
 
-class ArtistCardComponent extends React.Component<{ artist: Artist, width: number, height: number, yearExtent: Array<number> | Array<undefined>, countExtent: Array<number> | Array<undefined> }, { artist: Artist, id: string, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number> }> {
+class ArtistCardComponent extends React.Component<{ artist: Artist, width: number, height: number, yearExtent: Array<number> | Array<undefined>, countExtent: Array<number> | Array<undefined>, navigate: NavigateFunction }, { artist: Artist, id: string, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction }> {
 
     private svgContainer: d3.Selection<any, any, any, any> | undefined;
     private xScale: d3.ScaleLinear<number, number, never> | undefined;
     private yScale: d3.ScaleLinear<number, number, never> | undefined;
     private margin: { bottom: number, left: number, right: number, top: number };
 
-    constructor(props: { artist: Artist, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number> }) {
+    constructor(props: { artist: Artist, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction }) {
         super(props);
 
         this.state = {
@@ -20,7 +21,8 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
             width: props.width,
             height: props.height,
             yearExtent: props.yearExtent,
-            countExtent: props.countExtent
+            countExtent: props.countExtent,
+            navigate: props.navigate
         };
 
         this.svgContainer = undefined;
@@ -38,6 +40,10 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
 
     componentDidMount(): void {
         this.init();
+    }
+
+    onArtistClick = () => {
+        this.state.navigate(`/artists/${this.state.artist.id}`);
     }
 
     init() {
@@ -122,7 +128,7 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         });
         // TODO: color path segments based on count
 
-
+        // TODO: mouseover draw line and tooltip with current year
 
         timeline
             .selectAll('path')
@@ -141,10 +147,17 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         return (
             <>  
             <div className="border-dashed border-2 border-sky-200 m-1">
-                <div className="absolute">
-                    <p className="truncate">{ this.state.artist.firstname } { this.state.artist.lastname } ({ this.state.artist.country })</p>
-                    <p className="truncate">{ this.state.artist.birthplace } ({ this.state.artist.birthdate?.toString() })</p>
-                    <p className="truncate">{ this.state.artist.deathplace } ({ this.state.artist.deathdate?.toString() })</p>
+                    <button className="absolute" onClick={this.onArtistClick}>
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="1" stroke="#33363F" strokeWidth="2" />
+                            <path d="M18.2265 11.3805C18.3552 11.634 18.4195 11.7607 18.4195 12C18.4195 12.2393 18.3552 12.366 18.2265 12.6195C17.6001 13.8533 15.812 16.5 12 16.5C8.18799 16.5 6.39992 13.8533 5.77348 12.6195C5.64481 12.366 5.58048 12.2393 5.58048 12C5.58048 11.7607 5.64481 11.634 5.77348 11.3805C6.39992 10.1467 8.18799 7.5 12 7.5C15.812 7.5 17.6001 10.1467 18.2265 11.3805Z" stroke="#33363F" strokeWidth="2" />
+                            <path d="M17 4H17.2C18.9913 4 19.887 4 20.4435 4.5565C21 5.11299 21 6.00866 21 7.8V8M17 20H17.2C18.9913 20 19.887 20 20.4435 19.4435C21 18.887 21 17.9913 21 16.2V16M7 4H6.8C5.00866 4 4.11299 4 3.5565 4.5565C3 5.11299 3 6.00866 3 7.8V8M7 20H6.8C5.00866 20 4.11299 20 3.5565 19.4435C3 18.887 3 17.9913 3 16.2V16" stroke="#33363F" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                    </button>
+                    <div className="absolute">
+                        <p className="truncate">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</p>
+                    <p className="truncate">{ this.state.artist.birthplace == '\N' ? '?' : this.state.artist.birthplace }, { this.state.artist.birthdate?.toString().split('-')[0] }</p>
+                    <p className="truncate">{ this.state.artist.deathplace == '\N' ? '?' : this.state.artist.deathplace }, { this.state.artist.deathdate?.toString().split('-')[0] }</p>
                 </div>
                 <svg id={ this.state.id }></svg>
             </div>
