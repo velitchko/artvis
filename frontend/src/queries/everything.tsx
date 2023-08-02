@@ -14,7 +14,7 @@ query GetEverything($value: String!) {
         id
     }
 
-    locations(where: { name_CONTAINS: $value }) {
+    hosts(where: { name_CONTAINS: $value }) {
         place,
         name,
         town,
