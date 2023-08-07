@@ -11,7 +11,9 @@ query Artists ($searchId: String!) {
         country,
         sex,
         birthdate,
+        birthplace,
         deathdate,
+        deathplace,
         exhibitedWithArtists {
             firstname,
             lastname,
@@ -19,7 +21,17 @@ query Artists ($searchId: String!) {
             country,
             sex,
             birthdate,
-            deathdate    
+            deathdate,
+            exhibitedExhibitions {
+                title,
+                startdate,
+                id
+            }  
+        }
+        exhibitedExhibitions {
+            title,
+            startdate,
+            id
         }
     }
 }

@@ -22,7 +22,7 @@ const ArtistDetailPage = () => {
             }
         })
         .then(result => {
-            setArtist(result.data.artists as Artist);
+            setArtist(result.data.artists[0] as Artist);
             setLoading(false);
         });
     }, []);
