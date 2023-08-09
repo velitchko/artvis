@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null }> {
 
     private svgContainer: d3.Selection<any, any, any, any> | undefined;
     private xScale: d3.ScaleLinear<number, number, never> | undefined;
@@ -14,11 +14,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private width: number = 500;
     private height: number = 500;
 
-    constructor(props: { artist: Artist, width: number, height: number }) {
+    constructor(props: { artist: Artist, compareWith: Artist | null }) {
         super(props);
 
         this.state = {
-            artist: props.artist
+            artist: props.artist,
+            compareWith: null
         };
 
         this.svgContainer = undefined;
@@ -39,8 +40,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             right: 20
         };
     }
-
-  
 
     componentDidMount(): void {
         this.width = window.innerWidth;
@@ -153,6 +152,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         timeline.exit().remove();
     }    
 
+    onArtistChange(artistId: string) {
+        const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
+        if(artist) {
+            this.setState({ compareWith: artist });
+        }
+    }
+
     formatDate(date: Date | string | undefined) {
         if(!date) return '';
 
@@ -169,6 +175,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         <h2>{this.formatDate(this.state.artist.birthdate)}({this.state.artist.birthplace}) - {this.formatDate(this.state.artist.deathdate)}({this.state.artist.deathplace})</h2>
 
                         <svg id="artist-detail-timeline"></svg>
+                        <select name="artist" id="artist-select" onChange={(e) => this.onArtistChange(e.target.value)}>
+                            {this.state.artist.exhibitedWithArtists && this.state.artist.exhibitedWithArtists.map((artist: Artist) => {
+                                return <option  key={artist.id} value={artist.id}>{artist.firstname} {artist.lastname}</option>
+                            }
+                            )}
+                        </select>
                     </div>
                 }
             </>
