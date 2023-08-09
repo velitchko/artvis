@@ -15,9 +15,9 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     const navigate = useNavigate();
 
     const orders = [
-        { value: 'name', label: 'Alphabetically' }, 
-        { value: 'count', label: 'Exhibition Count' }, 
-        { value: 'chi', label: 'Similarity' }
+        { value: 'name', label: 'Alphabetically' },
+        { value: 'count', label: 'Exhibition Count' },
+        // { value: 'chi', label: 'Similarity' }
     ];
     const [order, setOrder] = React.useState('name'); // 'name', 'count', 'chi'
     const [artists, setArtists] = React.useState(new Array<Artist>());
@@ -40,8 +40,12 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     const chiSquare = (x: Array<number>, y: Array<number>) => {
         let chi = 0;
         for (let i = 0; i < x.length; i++) {
+            if(Math.pow(x[i] + y[i], 2) === 0) {
+                continue; // avoid division by 0
+            }
             chi += Math.pow(x[i] - y[i], 2) / Math.pow(x[i] + y[i], 2);
         }
+        
         return chi / 2;
     }
 
@@ -50,6 +54,83 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         setOrder(event.target.value);
         const reordered = reorder(event.target.value);
         setArtists(reordered)
+    }
+
+    const reorderArtistBySim = (id: string) => {
+        let objects = [...artists]; // need a copy here to avoide read-only errors
+
+        setArtists(new Array<Artist>());
+
+        const baseArtist = objects.find((artist: Artist) => artist.id === id);
+        const aExhibitions = baseArtist?.exhibitedExhibitions?.map((exhibition: Exhibition) => +exhibition.startdate);
+        const aExhibitionsCount = new Map<number, number>();
+        aExhibitions?.forEach((year: number) => {
+            const count = aExhibitionsCount.get(year);
+            aExhibitionsCount.set(year, count ? count + 1 : 1)
+        });
+
+        for(let i = 1905; i <= 1915; i++) {
+            if (!aExhibitionsCount.has(i)) {
+                aExhibitionsCount.set(i, 0);
+            }
+        }
+
+        const aExhibitionsCountArray = Array.from(aExhibitionsCount.values());
+
+        const scores = new Map<string, number>();
+        
+        objects.forEach((b: Artist) => {
+            // const aExhibitions = a.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);
+            const bExhibitions = b.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);
+            // const aExhibitionsCount = new Map<number, number>();
+            const bExhibitionsCount = new Map<number, number>();
+            // aExhibitions?.forEach((year: number) => {
+            //     const count = aExhibitionsCount.get(year);
+            //     aExhibitionsCount.set(year, count ? count + 1 : 1)
+            // });
+            bExhibitions?.forEach((year: number) => {
+                const count = bExhibitionsCount.get(year);
+                bExhibitionsCount.set(year, count ? count + 1 : 1)
+            });
+
+            // fill in missing years from 1905-1915
+            for (let i = 1905; i <= 1915; i++) {
+                // if (!aExhibitionsCount.has(i)) {
+                //     aExhibitionsCount.set(i, 0);
+                // }
+                if (!bExhibitionsCount.has(i)) {
+                    bExhibitionsCount.set(i, 0);
+                }
+            }
+
+            
+            const bExhibitionsCountArray = Array.from(bExhibitionsCount.values());
+
+            const chi = chiSquare(aExhibitionsCountArray, bExhibitionsCountArray);
+
+            scores.set(b.id, chi);
+            // return chi;
+        });
+        
+        const sorted = new Map([...scores.entries()].sort((a, b) => a[1] - b[1]));
+
+        console.log(sorted)
+
+        // sort objects by chi score
+        objects.sort((a: Artist, b: Artist) => {
+            const aScore = sorted.get(a.id);
+            const bScore = sorted.get(b.id);
+
+            if(aScore === undefined || bScore === undefined) {
+                // never happens
+                return 0;
+            }
+            return aScore - bScore;
+        });
+
+        console.log(objects);
+
+        setArtists(objects)
     }
 
     const reorder = (order: string): Array<Artist> => {
@@ -66,39 +147,6 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
             case 'age':
                 break;
             case 'country':
-                break;
-            case 'chi':
-                objects.sort((a: Artist, b: Artist) => {
-                    const aExhibitions = a.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);
-                    const bExhibitions = b.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);
-                    const aExhibitionsCount = new Map<number, number>();
-                    const bExhibitionsCount = new Map<number, number>();
-                    aExhibitions?.forEach((year: number) => {
-                        const count = aExhibitionsCount.get(year);
-                        aExhibitionsCount.set(year, count ? count + 1 : 1)
-                    });
-                    bExhibitions?.forEach((year: number) => {
-                        const count = bExhibitionsCount.get(year);
-                        bExhibitionsCount.set(year, count ? count + 1 : 1)
-                    });
-
-                    // fill in missing years from 1905-1915
-                    for (let i = 1905; i <= 1915; i++) {
-                        if (!aExhibitionsCount.has(i)) {
-                            aExhibitionsCount.set(i, 0);
-                        }
-                        if (!bExhibitionsCount.has(i)) {
-                            bExhibitionsCount.set(i, 0);
-                        }
-                    }
-
-                    const aExhibitionsCountArray = Array.from(aExhibitionsCount.values());
-                    const bExhibitionsCountArray = Array.from(bExhibitionsCount.values());
-
-                    const chi = chiSquare(aExhibitionsCountArray, bExhibitionsCountArray);
-
-                    return chi;
-                });
                 break;
             default:
                 break;
@@ -120,9 +168,10 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                     }
                 </select>
             </div>
+
             <div className="flex flex-wrap items-center justify-center w-full">
                 {artists && artists.map((artist: Artist) => {
-                    return <ArtistCardComponent artist={artist} key={artist.id} width={chartWidth} height={150} yearExtent={xExt} countExtent={yExt} navigate={navigate} />;
+                    return <ArtistCardComponent artist={artist} key={artist.id} width={chartWidth} height={150} yearExtent={xExt} countExtent={yExt} navigate={navigate} reorderSim={reorderArtistBySim} />;
                 })}
             </div>
         </>

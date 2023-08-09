@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { MouseEventHandler } from 'react';
 import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 import { extendWith, min } from 'lodash';
 import { NavigateFunction } from 'react-router-dom';
 
-class ArtistCardComponent extends React.Component<{ artist: Artist, width: number, height: number, yearExtent: Array<number> | Array<undefined>, countExtent: Array<number> | Array<undefined>, navigate: NavigateFunction }, { artist: Artist, id: string, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction }> {
+class ArtistCardComponent extends React.Component<{ artist: Artist, width: number, height: number, yearExtent: Array<number> | Array<undefined>, countExtent: Array<number> | Array<undefined>, navigate: NavigateFunction, reorderSim: Function }, { artist: Artist, id: string, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction, reorderSim: Function }> {
 
     private svgContainer: d3.Selection<any, any, any, any> | undefined;
     private xScale: d3.ScaleLinear<number, number, never> | undefined;
     private yScale: d3.ScaleLinear<number, number, never> | undefined;
     private margin: { bottom: number, left: number, right: number, top: number };
 
-    constructor(props: { artist: Artist, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction }) {
+    constructor(props: { artist: Artist, width: number, height: number, yearExtent: Array<number>, countExtent: Array<number>, navigate: NavigateFunction, reorderSim: Function }) {
         super(props);
 
         this.state = {
@@ -22,7 +22,8 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
             height: props.height,
             yearExtent: props.yearExtent,
             countExtent: props.countExtent,
-            navigate: props.navigate
+            navigate: props.navigate,
+            reorderSim: props.reorderSim
         };
 
         this.svgContainer = undefined;
@@ -44,6 +45,11 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
 
     onArtistClick = () => {
         this.state.navigate(`/artists/${this.state.artist.id}`);
+    }
+
+    reorderByArtistSim = () => {
+        console.log('reorder by ' + this.state.artist.firstname + ' ' + this.state.artist.lastname);
+        this.state.reorderSim(this.state.artist.id);
     }
 
     init() {
@@ -147,6 +153,18 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         return (
             <>  
             <div className="border-dashed border-2 border-sky-200 m-1">
+                <button className="float-right" onClick={ this.reorderByArtistSim }>
+                    <svg className="w-6 h-6" viewBox="0 0 301.219 301.219" fill="currentColor" stroke="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <g>
+                                <path d="M159.365,23.736v-10c0-5.523-4.477-10-10-10H10c-5.523,0-10,4.477-10,10v10c0,5.523,4.477,10,10,10h139.365 C154.888,33.736,159.365,29.259,159.365,23.736z"/>
+                                <path d="M130.586,66.736H10c-5.523,0-10,4.477-10,10v10c0,5.523,4.477,10,10,10h120.586c5.523,0,10-4.477,10-10v-10 C140.586,71.213,136.109,66.736,130.586,66.736z"/>
+                                <path d="M111.805,129.736H10c-5.523,0-10,4.477-10,10v10c0,5.523,4.477,10,10,10h101.805c5.523,0,10-4.477,10-10v-10 C121.805,134.213,117.328,129.736,111.805,129.736z"/>
+                                <path d="M93.025,199.736H10c-5.523,0-10,4.477-10,10v10c0,5.523,4.477,10,10,10h83.025c5.522,0,10-4.477,10-10v-10 C103.025,204.213,98.548,199.736,93.025,199.736z"/>
+                                <path d="M74.244,262.736H10c-5.523,0-10,4.477-10,10v10c0,5.523,4.477,10,10,10h64.244c5.522,0,10-4.477,10-10v-10 C84.244,267.213,79.767,262.736,74.244,262.736z"/>
+                                <path d="M298.29,216.877l-7.071-7.071c-1.875-1.875-4.419-2.929-7.071-2.929c-2.652,0-5.196,1.054-7.072,2.929l-34.393,34.393 V18.736c0-5.523-4.477-10-10-10h-10c-5.523,0-10,4.477-10,10v225.462l-34.393-34.393c-1.876-1.875-4.419-2.929-7.071-2.929c-2.652,0-5.196,1.054-7.071,2.929l-7.072,7.071c-3.904,3.905-3.904,10.237,0,14.142l63.536,63.536c1.953,1.953,4.512,2.929,7.071,2.929c2.559,0,5.119-0.976,7.071-2.929l63.536-63.536 C302.195,227.113,302.195,220.781,298.29,216.877z"/>
+                            </g>
+                    </svg>
+                </button>
                 <button className="float-right" onClick={ this.onArtistClick }>
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="1" stroke="#33363F" strokeWidth="2" />
