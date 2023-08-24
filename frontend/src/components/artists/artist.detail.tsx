@@ -1,9 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import GET_ARTISTS_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
+import NetworkComponent from '../network/network';
+import { Node } from '../../models/node';
+import { Link } from '../../models/link';
+import { useQuery } from '@apollo/client';
+import client from '../apollo/client';
 
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, nodes: Array<Node>, links: Array<Link> }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private xScale: d3.ScaleLinear<number, number, never> | undefined;
@@ -13,19 +19,26 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private countExtent: Array<number> | Array<undefined>;
     private width: number = 500;
     private height: number = 500;
-    private svgNetworkContainer: d3.Selection<any, any, any, any> | undefined;
-    private simulation: d3.Simulation<d3.SimulationNodeDatum, undefined> | undefined;
+    private minYear: number = 0;
+    private maxYear: number = 0;
+    private nodes: Array<Node>;
+    private links: Array<Link>;
+    private showNetwork: boolean = false;
 
-    constructor(props: { artist: Artist, compareWith: Artist | null }) {
+    constructor(props: { artist: Artist, compareWith: Artist | null, nodes: Array<Node>, links: Array<Link> }) {
         super(props);
 
         this.state = {
             artist: props.artist,
-            compareWith: null
+            compareWith: null,
+            nodes: new Array<Node>(),
+            links: new Array<Link>()
         };
 
         this.svgTimeLineContainer = undefined;
-        this.svgNetworkContainer = undefined;
+    
+        this.nodes = new Array<Node>();
+        this.links = new Array<Link>();
 
         this.xScale = undefined;
         this.yScale = undefined;
@@ -35,6 +48,9 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.width = 500;
         this.height = 500;
+
+        this.minYear = 1905;
+        this.maxYear = 1916;
 
         this.margin = {
             top: 30,
@@ -71,27 +87,10 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.yScale = d3.scaleLinear<number, number, never>().range([this.height - this.margin.top, this.margin.top]);
         
         this.drawTimeline();
-
-        // const network = this.svgNetworkContainer?.select('.network-container');
-
-        // if(network) return;
-
-        // this.svgNetworkContainer = d3.select('#artist-detail-network')
-        //     .attr('width', this.width)
-        //     .attr('height', this.height)
-        //     .attr('viewBox', `0 0 ${this.width} ${this.height}`)
-
-        // this.svgNetworkContainer.append('g')
-        //     .attr('class', 'network-container')
-        //     .append('rect')
-        //     .attr('width', this.width - (this.margin.left + this.margin.right))
-        //     .attr('height', this.height - (this.margin.top + this.margin.bottom))
-        //     .attr('fill', 'transparent')
-
-        // this.drawNetwork();
+        this.drawNetwork();
     }
 
-    drawTimeline() {
+    drawTimeline(update?: { newYscale: number }) {
         if(!this.svgTimeLineContainer) return;
 
         if(!this.state.artist.exhibitedExhibitions) return;
@@ -127,19 +126,15 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // const xExt = d3.extent(data, (d: { year: number, count: number }) => d.year);
         // this.xScale?.domain(this.yearExtent as Array<number>);
-        this.xScale?.domain([1900, 1920]);
+        this.xScale?.domain([this.minYear, this.maxYear]);
         // this.xScale?.domain(xExt as Array<number>);      
 
         // fill in missing years in data with 0s
         // const minYear = this.yearExtent[0] || 0;
         // const maxYear = this.yearExtent[1] || 0;
-        const minYear = 1900;
-        const maxYear = 1920;
         
-        const years: Array<number> = Array.from(Array(maxYear - minYear + 1).keys()).map((i) => i + minYear);
+        const years: Array<number> = Array.from(Array(this.maxYear - this.minYear + 1).keys()).map((i) => i + this.minYear);
         
-        console.log(years)
-
         const dataWithMissingYears = years.map((year: number) => {
             const yearData = data.find((d: { year: number, count: number }) => {
                 return d.year === year
@@ -150,12 +145,11 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 return { year, count: 0 };
             }
         });
-
-        console.log(dataWithMissingYears);
         
         const yExt = d3.extent(dataWithMissingYears, (d: { year: number, count: number }) => d.count);
         // this.yScale?.domain(this.state.countExtent as Array<number>);
-        this.yScale?.domain(yExt as Array<number>);
+        update ? this.yScale?.domain([0, update.newYscale]) : this.yScale?.domain(yExt as Array<number>);
+        // this.yScale?.domain(yExt as Array<number>);
 
         const lineGenerator =  d3.line<{ year: number, count: number }>()
         .curve(d3.curveMonotoneX)
@@ -167,14 +161,16 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         });
 
         timeline
-            .selectAll('path')
+            .selectAll('.base-path')
             .data(dataWithMissingYears)
             .join('path')
             .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
+            .attr('class', 'base-path')
             .attr('stroke', 'skyblue')
             .attr('stroke-width', 2)
+            .attr('stroke-opacity', 0.5)
+            .style("stroke-dasharray", ("3, 3"))
             .attr('fill', 'none')
-            .attr('class', 'timeline-path')
 
         timeline.exit().remove();
 
@@ -261,106 +257,33 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 tooltip.style('display', 'none');
             });
 
-        // add legend
-        // const legend = this.svgContainer.append('g')
-        //     .attr('class', 'legend')
-        //     .attr('transform', `translate(${this.width - this.margin.right - 20}, ${this.margin.top})`);
-
-        // legend.append('circle')
-        //     .attr('cx', 0)
-        //     .attr('cy', 0)
-        //     .attr('r', 5)
-        //     .attr('fill', 'skyblue');
-
-        // legend.append('text')
-        //     .attr('x', 10)
-        //     .attr('y', 5)
-        //     .attr('font-size', '12px')
-        //     .text('Exhibitions');
-
-        // add compare with line
+        // add average line with line
         
-    }
-
-    dragstarted(event: any, d: any) {
-            if (!event.active) this.simulation?.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-        
-    dragged(event: any, d: any) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-        
-    dragended(event: any, d: any) {
-            if (!event.active) this.simulation?.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
     }
     
     drawNetwork() {
-        // draw network of artists and their exhibitions together
-        if(!this.svgNetworkContainer) return;
+        client.query({
+            query: GET_ARTISTS_EXHIBITED_WITH,  
+            variables: {
+            searchId: this.state.artist.id
+        }}).then(result => {
+            this.nodes = result.data.artists[0].exhibitedWithArtists.map((artist: Artist) => {
+                return { id: artist.id, name: artist.firstname + ' ' + artist.lastname, type: 'artist', props: { data: artist } };
+            });
 
-        const network = this.svgNetworkContainer.select('.network-container');
+            // push base artist to nodes
+            this.nodes.push({ id: this.state.artist.id, name: this.state.artist.firstname + ' ' + this.state.artist.lastname, type: 'artist', props: { data: this.state.artist } } );
 
-        if(!network) return;
+            this.links = result.data.artists[0].exhibitedWithArtists.map((artist: Artist) => {
+                return { source: this.state.artist.id, target: artist.id, value: 1 };
+            });
 
-        const data = this.state.artist.exhibitedWithArtists?.map((artist: Artist) => {
-            return {
-                source: this.state.artist.id,
-                target: artist.id
-            }
-        });
+            this.showNetwork = true;
 
-        console.log(data)
-
-        if(!data) return;
-
-        this.simulation = d3.forceSimulation(data as Array<d3.SimulationNodeDatum>) 
-            .force('link', d3.forceLink().id((d: any) => d.id))
-            .force('charge', d3.forceManyBody().strength(-100))
-            .force('center', d3.forceCenter(this.width / 2, this.height / 2));
-
-        const link = network.selectAll('line')
-            .data(data)
-            .join('line')
-            .attr('stroke', 'black')
-            .attr('stroke-width', 1);
-
-        const node = network.selectAll('circle')
-            .data(data)
-            .join('circle')
-            .attr('r', 5)
-            .attr('fill', 'skyblue')
-            .on('start', this.dragstarted.bind(this))
-            .on('drag', this.dragged.bind(this))
-            .on('end', this.dragended.bind(this));
-
-        // add labels ontop of nodes
-        const labels = network.selectAll('text')
-            .data(data)
-            .join('text')
-            .attr('class', 'network-label')
-            .attr('x', (d: any) => d.x)
-            .attr('y', (d: any) => d.y)
-            .text((d: any) => d.id);
-        
-        this.simulation.on('tick', () => {
-            link
-                .attr('x1', (d: any) => d.source.x)
-                .attr('y1', (d: any) => d.source.y)
-                .attr('x2', (d: any) => d.target.x)
-                .attr('y2', (d: any) => d.target.y);
-
-            node
-                .attr('cx', (d: any) => d.x)
-                .attr('cy', (d: any) => d.y);
-
-            labels
-                .attr('x', (d: any) => d.x)
-                .attr('y', (d: any) => d.y);
+            this.setState(prevState => ({ nodes: this.nodes, links: this.links }), () => { 
+                this.showNetwork = true;
+            });
+            
         });
     }
 
@@ -375,8 +298,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const timeline = this.svgTimeLineContainer.select('.timeline-container');
 
         if(!timeline) return;
-
-        console.log('comparing');
 
        // from this.state.compareWith artist calculate total amount of exhibitions per year
         const exhibitionsPerYear = new Map<number, number>();
@@ -395,10 +316,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const data = [...exhibitionsPerYear].map(([year, count]) => ({ year, count })).sort((a, b) => a.year - b.year);
 
         // fill in missing years in data with 0s
-        const minYear = 1900;
-        const maxYear = 1920;
-
-        const years: Array<number> = Array.from(Array(maxYear - minYear + 1).keys()).map((i) => i + minYear);
+        const years: Array<number> = Array.from(Array(this.maxYear - this.minYear + 1).keys()).map((i) => i + this.minYear);
 
         const dataWithMissingYears = years.map((year: number) => {
             const yearData = data.find((d: { year: number, count: number }) => {
@@ -411,6 +329,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             }
         });
 
+        // check if count is higher than base artist and draw line
+        const compareMax = d3.max(dataWithMissingYears, (d: { year: number, count: number }) => d.count) as number;
+        const baseMAx = this.yScale?.domain()[1] as number; 
+        if(compareMax > baseMAx) {
+            this.drawTimeline({ newYscale: compareMax });
+        }
+
         const lineGenerator =  d3.line<{ year: number, count: number }>()
         .curve(d3.curveMonotoneX)
         .x((d: { year: number, count: number }) => {
@@ -419,17 +344,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         .y((d: { year: number, count: number }) => {
             return this.yScale ? this.yScale(d.count) : 0;
         });
-
-        timeline
-            .selectAll('.compare-path')
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
-            .attr('stroke', 'red')
-            .attr('stroke-width', 2)
-            .attr('fill', 'none')
-            .attr('class', 'compare-path');
-
+        
         timeline
             .selectAll('.compare-circle')
             .data(dataWithMissingYears)
@@ -440,7 +355,21 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('r', 6)
             .attr('fill', 'white')
             .attr('stroke', 'red')
+            .attr('stroke-opacity', 0.5)
             .attr('stroke-width', 3)
+            .style('pointer-events', 'none').lower();
+
+        timeline
+            .selectAll('.compare-path')
+            .data(dataWithMissingYears)
+            .join('path')
+            .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
+            .attr('stroke', 'red')
+            .attr('stroke-width', 2)
+            .attr('stroke-opacity', 0.5)
+            .style("stroke-dasharray", ("3, 3"))
+            .attr('fill', 'none')
+            .attr('class', 'compare-path').lower();
             // .on('mouseover', (event: any, d: { year: number, count: number }) => {
             //     tooltip.style('display', 'block');
             //     tooltip.select('text').text(`${d.count} exhibitions in ${d.year}`);
@@ -457,15 +386,15 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         
 
         // find common exhibitions and draw bars
-        const commonExhibitions = this.state.artist.exhibitedExhibitions?.filter((exhibition: Exhibition) => {
-            return this.state.compareWith?.exhibitedExhibitions?.find((e: Exhibition) => e.id === exhibition.id);
+        const commonExhibitions = this.state.compareWith.exhibitedExhibitions?.filter((exhibition: Exhibition) => {
+            return this.state.artist.exhibitedExhibitions?.find((e: Exhibition) => e.id === exhibition.id);
         });
 
-        console.log(commonExhibitions);
+        const uniqueCommonExhibitions = Array.from(new Set(commonExhibitions));
 
         const commonExhibitionsPerYear = new Map<number, number>();
 
-        commonExhibitions?.forEach((exhibition: Exhibition) => {
+        uniqueCommonExhibitions?.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startdate;
             if(commonExhibitionsPerYear.has(year)) {
                 const count = commonExhibitionsPerYear.get(year) || 0;
@@ -489,8 +418,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 return { year, count: 0 };
             }
         });
-
-        console.log(commonExhibitionsDataWithMissingYears);
 
         // draw rectangles for common exhibitions on timeline
         timeline
@@ -521,8 +448,9 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         console.log(artist);
 
         if(artist) {
-            this.setState({ compareWith: artist });
-            this.drawCompare();
+            // this.setState({ compareWith: artist });
+            this.setState(prevState => ({ compareWith: artist }), this.drawCompare);
+            // this.drawCompare();
         }
     }
 
@@ -543,8 +471,10 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         <h3>{this.state.artist.exhibitedExhibitions?.length} exhibitions</h3>
 
                         <svg id="artist-detail-timeline"></svg>
-                        <svg id="artist-detail-network"></svg>
-
+                        { this.showNetwork && 
+                            <NetworkComponent nodes={this.nodes} links={this.links} width={this.width} height={this.height} /> 
+                        }
+                    
                     <select className="flex-shrink-0 z-10 inline-flex items-center py-2 px-4 text-sm font-medium text-center bg-black text-white border border-gray-300" name="artist" id="artist-select" onChange={(e) => this.onArtistChange(e.target.value)}>
                             {this.state.artist.exhibitedWithArtists && this.state.artist.exhibitedWithArtists.map((artist: Artist) => {
                                 return <option className="inline-flex w-full px-4 py-2 text-sm text-white bg-black hover:bg-gray-100" key={artist.id} value={artist.id}>{artist.firstname} {artist.lastname}</option>
