@@ -3,12 +3,12 @@ import _ from 'lodash';
 import { Node } from '../../models/node';
 import { Link } from '../../models/link';
 import * as d3 from 'd3';
-import { ClickEvent } from 'tsparticles-engine';
-class NetworkComponent extends React.Component<{ nodes: Array<Node>, links: Array<Link>, width: number, height: number, requestNode: Function }, { nodes: Array<Node>, links: Array<Link>, width: number, height: number }> {
+
+class NetworkComponent extends React.Component<{ nodes: Array<Node>, links: Array<Link>, width: number, height: number, requestNode?: Function }, { nodes: Array<Node>, links: Array<Link>, width: number, height: number }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private simulation: d3.Simulation<any, any> | undefined;
 
-    constructor(props: { nodes: Array<Node>, links: Array<Link>, width: number, height: number, requestNode: Function }) {
+    constructor(props: { nodes: Array<Node>, links: Array<Link>, width: number, height: number, requestNode?: Function }) {
         super(props);
 
         this.state = {
@@ -53,11 +53,12 @@ class NetworkComponent extends React.Component<{ nodes: Array<Node>, links: Arra
     requestNode(node: string | number) {
         // emit event to parent
         console.log('dblclick', node)
-        this.props.requestNode(node);
+        if (this.props.requestNode) this.props.requestNode(node);
     }
 
 
     init(): void {
+        console.log(this.state.nodes, this.state.links)
         if (this.svgContainer) return;
 
         this.svgContainer = d3.select('#network');
@@ -122,7 +123,7 @@ class NetworkComponent extends React.Component<{ nodes: Array<Node>, links: Arra
             .attr('fill', '#fff')
             .attr('filter', 'url(#solid)')
             .attr('class', 'label')
-            .text((d: Node) => ` ${d.props.firstname} ${d.props.lastname} `)
+            .text((d: Node) => ` ${d.props.data.firstname} ${d.props.data.lastname} `)
 
         this.simulation.on('tick', () => {
             link
@@ -144,7 +145,7 @@ class NetworkComponent extends React.Component<{ nodes: Array<Node>, links: Arra
                 .attr('cy', (d: Node) => d.y!);
 
             label
-                .attr('x', (d: Node) => d.x! - ((d.props.firstname.length + d.props.lastname.length) * 8)/2)
+                .attr('x', (d: Node) => d.x! - ((d.props.data.firstname.length + d.props.data.lastname.length) * 8)/2)
                 .attr('y', (d: Node) => d.y! - 20);
         });
 

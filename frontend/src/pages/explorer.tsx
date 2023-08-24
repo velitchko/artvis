@@ -145,8 +145,7 @@ const ExplorerPage = (props: { id?: string | number }) => {
                 name: n.node.id,
                 type: n.node.__typename,
                 props: {
-                    firstname: n.node.firstname,
-                    lastname: n.node.lastname,
+                    data: n.node,
                 }
             };
             setNodes(nodes.set(node.id, node))
@@ -159,8 +158,7 @@ const ExplorerPage = (props: { id?: string | number }) => {
                         name: e.node.id,
                         type: e.node.__typename,
                         props: {
-                            firstname: e.node.firstname,
-                            lastname: e.node.lastname,
+                            data: e.node,
                         }
                     };
                     nodes.set(node.id, node);
@@ -173,8 +171,7 @@ const ExplorerPage = (props: { id?: string | number }) => {
                         name: n.node.id,
                         type: n.node.__typename,
                         props: {
-                            firstname: n.node.firstname,
-                            lastname: n.node.lastname,
+                            data: n.node,
                         }
                     },
                     target: {
@@ -182,8 +179,7 @@ const ExplorerPage = (props: { id?: string | number }) => {
                         name: e.node.id,
                         type: e.node.__typename,
                         props: {
-                            firstname: e.node.firstname,
-                            lastname: e.node.lastname,
+                            data: e.node,
                         }
                     },
                     props: {
