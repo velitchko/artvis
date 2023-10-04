@@ -17,10 +17,17 @@ const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
 	'bolt+s://artvis-db:7687',
-	neo4j.auth.basic('neo4j', 'root')
+	neo4j.auth.basic('neo4j', 'root'),
+	{
+		encrypted: 'ENCRYPTION_ON',
+		trust: 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES',
+		trustedCertificates: ['../certificates/cert.pem', '../certificates/chain.pem', '../certificates/fullchain.pem', '../certificates/privkey.pem'],
+	}
 );
 const app = express();
+
 app.use(compression());
+
 const httpServer = http.createServer(app);
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
