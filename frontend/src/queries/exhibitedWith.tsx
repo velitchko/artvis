@@ -22,11 +22,6 @@ query Artists ($searchId: String!) {
                 id
             }  
         }
-        exhibitedExhibitions {
-            title,
-            startdate,
-            id
-        }
     }
 }
 `;

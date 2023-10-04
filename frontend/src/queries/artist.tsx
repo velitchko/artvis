@@ -22,6 +22,8 @@ query Artists ($searchId: String!) {
             sex,
             birthdate,
             deathdate,
+            birthplace,
+            deathplace,
             exhibitedExhibitions {
                 title,
                 startdate,
