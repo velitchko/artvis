@@ -45,7 +45,9 @@ class NavigationComponent extends React.Component<{ showHeading: boolean }, { sh
                                 })}
                             </ul>
                         </div>
-                    {this.state.showHeading && <SmallHeadingComponent></SmallHeadingComponent>}
+                    {this.state.showHeading && 
+                        <SmallHeadingComponent></SmallHeadingComponent>
+                        }
                     </div>
                 </nav>
             </React.StrictMode>
