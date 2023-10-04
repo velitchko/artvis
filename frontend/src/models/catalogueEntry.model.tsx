@@ -12,7 +12,7 @@ export type CatalogueEntry = {
 	idExhibition: String;
 	idItem: String;
 	style: String;
-	idPerson: String;
+	id_person: string;
 	technique: String;
     artistsCreated: Array<Artist>;
 	entryInExhibitions: Array<Exhibition>;
