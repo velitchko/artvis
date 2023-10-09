@@ -16,13 +16,8 @@ import compression from 'compression';
 const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
-	'bolt+s://artvis-db:7687',
-	neo4j.auth.basic('neo4j', 'root'),
-	{
-		encrypted: 'ENCRYPTION_ON',
-		trust: 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES',
-		trustedCertificates: ['../certificates/cert.pem', '../certificates/chain.pem', '../certificates/fullchain.pem', '../certificates/privkey.pem'],
-	}
+	'bolt+ssc://artvis-db:7687',
+	neo4j.auth.basic('neo4j', 'root1234')
 );
 const app = express();
 
@@ -55,9 +50,9 @@ neoSchema.getSchema().then(async (schema) => {
 		}),
 	);
 
-	app.use('/api', cors(),	bodyParser.json(), cypherRouter);
+	app.use('/cypher', cors(),	bodyParser.json(), cypherRouter);
 
-	app.use((_, res) => res.redirect('/graphql'));
+	app.use('/api', (_, res) => res.redirect('/graphql'));
 
 
 	// Modified server startup

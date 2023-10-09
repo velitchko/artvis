@@ -1,10 +1,9 @@
 FROM node:18
 
+WORKDIR /usr/backend
 
-COPY package.json .
+COPY . /usr/backend
 
 RUN npm install
 
-COPY . .
-
-ENTRYPOINT npm run start
+CMD npm run start

@@ -5,11 +5,14 @@ const cypherRouter = express.Router()
 
 // middleware that is specific to this router
 cypherRouter.use((req, res, next) => {
-    console.log('Time: ', new Date(Date.now()))
-    next()
+    console.log('Time: ', new Date(Date.now()));
+    console.log('Request Type: ', req.method);
+    console.log('Query: ', req.body.cypher);
+    return next();
 })
 // cypher post query route
-cypherRouter.post('/cypher', (req, res) => {
+cypherRouter.post('/query', (req, res) => {
+    console.log('cypher post query route');
     req.app.get('neo4jDriver')
         .session()
         .run(req.body.cypher)
