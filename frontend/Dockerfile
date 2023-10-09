@@ -1,10 +1,8 @@
 FROM node:18
 
-
-COPY package.json .
+WORKDIR /usr/frontend
+COPY . /usr/frontend
 
 RUN npm install
 
-COPY . .
-
-ENTRYPOINT npm run deploy
+CMD npm run start
