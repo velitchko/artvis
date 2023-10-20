@@ -1119,14 +1119,14 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     render() {
         return (
             <>
-                <div className="fixed w-[94%] h-auto z-10">
+                <div className="fixed w-[94%] h-auto z-50">
                     <div className="w-10/12 h-auto flex-col justify-center mx-auto">
                         <SearchComponent query={GET_ARTIST_BY_NAME} onClick={this.onClick}></SearchComponent>
                     </div>
                 </div>
                 {this.state.artist &&
                 <div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-4 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
-                    <div className="row-span-1 col-span-2 z-50">
+                    <div className="row-span-1 col-span-2 z-40">
                         <div className="w-full h-[80%]" id="timeline-container">
                             <div className="float-left text-left pl-2">
                                 <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
@@ -1143,14 +1143,14 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                             <svg id="artist-detail-timeline"></svg>
                         </div>
                     </div>
-                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-50">
+                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
                         <div className="w-full h-[90vh] sm:h-full" id="ego-net-container">
                             {this.showNetwork &&
                                 <EgoNetworkComponent ref={this.egoNetwork} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} />
                             }
                         </div>
                     </div>
-                    <div className="lg:row-span-3 md:row-span-1 col-span-2 z-40">
+                    <div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
                         <div className="w-full h-full overflow-y-scroll" id="table-container">
                             <TableComponent query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
                         </div>
