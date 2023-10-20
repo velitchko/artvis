@@ -121,7 +121,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         this.circleContainer = everything.append('g').attr('id', 'circle-lines');
         this.artistContainer = everything.append('g').attr('id', 'artists');
         this.donutContainer = everything.append('g').attr('id', 'donut')
-            .attr('transform', `translate(${this.state.width / 2}, ${this.state.height / 2})`)
+            .attr('transform', `rotate(90) translate(${this.state.width / 2}, ${this.state.height / 2})`)
             .attr('transform-origin', 'center');;
         this.outerCircleContainer = everything.append('g').attr('id', 'outer-circle-wrapper');
 
