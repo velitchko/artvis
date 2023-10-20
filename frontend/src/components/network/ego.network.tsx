@@ -436,8 +436,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     tooltip.attr('fill', 'black');
 
                     // get circle cx and cy
-                    const cx = d3.select(`#${id}`).attr('cx');
-                    const cy = d3.select(`#${id}`).attr('cy');
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
 
                     // set tooltip position to mouse position
                     tooltip.attr('x', cx + 15);
@@ -468,7 +468,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
-
                     if (bbox) {
                         // set tooltip width and height to bbox width and height
                         tooltip.attr('width', bbox.width + 20);
