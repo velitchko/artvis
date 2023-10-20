@@ -93,7 +93,20 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
         }).then((res) => {
             this.setState((prevState: any) => {
                 const metaExhibitions = new Array<MetaExhibition>();
-                res.data.exhibitions.forEach((exhibition: Exhibition) => {
+                // create deep copy of res.data.exhibitions
+                const exhibitions = JSON.parse(JSON.stringify(res.data.exhibitions));
+
+                // sort exhibitions by startdate
+                exhibitions.sort((a: Exhibition, b: Exhibition) => {
+                    if(a.startdate < b.startdate) return -1;
+                    if(a.startdate > b.startdate) return 1;
+                    return 0;
+                });
+
+                exhibitions.forEach((exhibition: Exhibition) => {
+                    // if startdate is less than 1905 or enddate is greater than 1915 skip
+                    if(exhibition.startdate < 1905 || exhibition.enddate > 1915) return;
+                    
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
                 });
@@ -172,9 +185,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
 
         return (
             <>
-            <div className="relative h-[85vh] overflow-x-scroll">
-                <table className="w-full overflow-y-scroll text-left text-gray-500">
-                    <thead className="text-xs bg-gray-200 text-gray-700 uppercase">
+                <table className="text-left text-gray-500">
+                    <thead className="text-xs bg-gray-200 text-gray-700 uppercase sticky">
                         <tr>
                             {/* <th scope="col" className="px-6 py-3">
                                 ID
@@ -182,30 +194,30 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                             <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('type')}>Type</button>
                             </th>
-                            <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('startdate')}>Date</button>
                             </th>
-                            {/* <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('enddate')}>End Date</button>
                             </th> */}
-                            <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('title')}>Title</button>
                             </th>
-                            <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Catalogue Entries</button>
                             </th>
-                            <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('percentBase')}>Base %Entries</button>
                             </th>
                             { 
-                            this.state.compareWith && <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            this.state.compareWith && <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('percentCompare')}>Compare %Entries</button>
                             </th> 
                             }
-                            {/* <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('tookPlaceInHosts.length')}>Hosts</button>
                             </th> */}
-                            <th scope="col" className="px-6 py-2  border-r border-gray-300">
+                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
                             </th>
                         </tr>
@@ -282,7 +294,6 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                         ))}  */}
                     </tbody>
                 </table>
-            </div>
             </>
         );
     }
