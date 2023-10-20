@@ -254,9 +254,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             this.rScale?.domain(rExt as Array<number>);
         }
 
-        console.log('rExt', rExt);
-        console.log('rScale', this.rScale?.domain());
-
         const lineGenerator = d3.line<{ year: number, exhibitions: number, items: number }>()
             .curve(d3.curveMonotoneX)
             .x((d: { year: number, exhibitions: number, items: number }) => {
