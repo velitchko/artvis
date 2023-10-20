@@ -232,7 +232,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             }
             )
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            return sum > (numCoEx ? numCoEx : 3);
+            return sum > (numCoEx ? numCoEx : 3) && ( link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
