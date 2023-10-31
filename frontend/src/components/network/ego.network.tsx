@@ -227,12 +227,12 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // calculate unique target nodes from links
         // filter out links of same targetId where the sum of the count property is 1
         const filteredLinks = this.state.links.filter((link: Link) => {
-            const sum = this.state.links.filter((l: Link) => {
-                return l.targetId == link.targetId && link.target.props.data.country != '\\N';
-            }
-            )
+            const sum = this.state.links
+                .filter((l: Link) => {
+                    return l.targetId == link.targetId && link.target.props.data.country != '\\N';
+                })
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            return sum > (numCoEx ? numCoEx : 3) && ( link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
+            return sum >= (numCoEx ? numCoEx : 3) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
@@ -1192,11 +1192,10 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // grab Link data for artist.id from outerCircleContainer
         let found = false;
         // check if artist is in ego network
-        _.uniqBy(this.state.links, (l: Link) => l.target.id).forEach((a: Link) => {
+        _.uniqBy(this.links, (l: Link) => l.target.id).forEach((a: Link) => {
             if(a.target.id == artist?.id) found = true;
         });
         
-
         if (!found) {
             // deselect everything
             this.setState(prevState => ({ selection: false }));
