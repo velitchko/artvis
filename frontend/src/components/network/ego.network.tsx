@@ -99,6 +99,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     init(): void {
         if (this.svgContainer) return;
 
+        console.log(this.state.baseNode, this.state.links)
+
         this.svgContainer = d3.select('#ego-net');
 
         const zoom = d3.zoom<SVGSVGElement, unknown>()
