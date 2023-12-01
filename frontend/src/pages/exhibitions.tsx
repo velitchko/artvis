@@ -34,8 +34,8 @@ const ExhibitionsPage = () => {
         <>
             <React.StrictMode>
                     <NavigationComponent showHeading={ true } />
-                {/* wait to load then rneder artists component  */}
-                <div className="h-[80px]">
+                {/* wait to load then render exhibition component  */}
+                <div className="h-[80px]">{/* distance between header + rest */}
                 </div>
                     { !loading  && <ExhibitionsComponent artist={artistAndExhibitions} />}
             </React.StrictMode>
