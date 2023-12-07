@@ -108,6 +108,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 	drawNetwork() {
 		console.log("draw network");
+		console.log(this.state.artist);
 		const source: Node = {
 			id: this.state.artist.id,
 			name: this.state.artist.firstname + ' ' + this.state.artist.lastname,
@@ -115,122 +116,155 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			props: { data: this.state.artist }
 		};
 
-		/* 		console.log(this.state.artist.exhibitedWithArtists);
-				let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
-				this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
-					artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
-						// check if source artist also exhibited in this exhibition
-						const sourceExhibition = this.state.artist.exhibitedExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
-		
-						if (!sourceExhibition) return;
-		
-						const year = +exhibition.startdate;
-						const key = `${artist.id}`;
-		
-						if (coexhibMap.has(key)) {
-							const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<string> }>;
-							const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<string> }) => d.year === year);
-		
-							if (yearData) {
-								yearData.exhibitionIds.add(exhibition.id);
-							} else {
-								value.add({ year, exhibitionIds: new Set<string>([exhibition.id]) });
-							}
-						} else {
-							coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<string> }>([{ year, exhibitionIds: new Set<string>([exhibition.id]) }]));
+		console.log(this.state.artist.exhibitedWithArtists);
+		let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
+		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition }>> = new Map<string, Set<{ year: number, exhibition: Exhibition }>>();
+		//this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
+		this.state.artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
+			// check if source artist also exhibited in this exhibition
+			//const sourceExhibition = this.state.artist.exhibitedExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
+
+			//if (!sourceExhibition) return;
+
+			const year = +exhibition.startdate;
+			const key = `${exhibition.id}`;
+
+			if (exhibMap.has(key)) {
+				/* const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition }>;
+				const yearData = Array.from(value).find((d: { year: number, exhibition: Exhibition }) => d.year === year);
+
+				if (yearData) {
+					yearData.exhibIds.add(exhibition.id);
+				} else {
+					value.add({ year, exhibition });
+				} */
+			} else {
+				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition }>([{ year, exhibition }]));
+			}
+		});
+		//});
+
+		console.log("exhib map");
+		console.log(exhibMap);
+		let i: number = 0;
+
+		exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition }>, key: string) => {
+			//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
+
+			console.log("exhibmap foreach");
+			console.log(value, key);
+			/* if (!found) {
+				console.log(key + ' not found');
+				return;
+			} */
+
+			value.forEach((item: { year: number, exhibition: Exhibition }) => {
+
+
+				console.log("map value foreach");
+				console.log(item);
+
+				const target: Node = {
+					id: item.exhibition.id,
+					name: item.exhibition.title,
+					type: 'artist',
+					//props: { data: item.exhibition }
+
+					//TODO: change to exhibition, not possible atm because of dependencies in ego.network (artist deathdate etc)
+					props: { data: this.state.artist }
+				};
+
+				// iterate over value set
+				//value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
+
+				//item.exhibitionIds.forEach((exid: string) => {
+
+				/* const target: Node = {
+					id: exid,
+					name: found.firstname + ' ' + found.lastname,
+					type: 'artist',
+					props: { data: found }
+				}; */
+
+
+				const link: Link = {
+					sourceId: `${source.id}`,
+					targetId: `${target.id}`,
+					props: {
+						data: {
+							year: item.year,
+
+							//TODO: change number or remove it from props, atm not possible because of ego-network dependencies (doesn't work with "1")
+							count: 30
 						}
-					});
-				});
-		
-				console.log(coexhibMap);
-		
-				coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<string> }>, key: string) => {
-					const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
-		
-					if (!found) {
-						console.log(key + ' not found');
-						return;
-					}
-		
-					const target: Node = {
-						id: key,
-						name: found.firstname + ' ' + found.lastname,
-						type: 'artist',
-						props: { data: found }
-					};
-		
-					// iterate over value set
-					value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
-						const link: Link = {
-							sourceId: `${source.id}`,
-							targetId: `${target.id}`,
-							props: {
-								data: {
-									year: item.year,
-									count: item.exhibitionIds.size
-								}
-							},
-							source: source,
-							target: target
-						};
-		
-						this.links.push(link);
-					});
-				});
-		
-				console.log(this.links);
-				console.log(source);
-		
-				this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
-		 */
-		const target: Node = {
-			id: '187',
-			name: 'Exhibition Test',
-			type: 'artist',
-			props: { data: this.state.artist }
-		};
+					},
+					source: source,
+					target: target
+				};
 
-		const target2: Node = {
-			id: '3',
-			name: 'Exhibition Test 2',
-			type: 'artist',
-			props: { data: this.state.artist }
-		};
+				this.links.push(link);
 
 
-		const link: Link = {
-			sourceId: `${source.id}`,
-			targetId: `${target.id}`,
-			props: {
-				data: {
-					year: 1915,
-					count: 85
-				}
-			},
-			source: source,
-			target: target
-		};
 
-		this.links.push(link);
+			});
 
-		const link2: Link = {
-			sourceId: `${source.id}`,
-			targetId: `${target.id}`,
-			props: {
-				data: {
-					year: 1914,
-					count: 65
-				}
-			},
-			source: source,
-			target: target2
-		};
 
-		this.links.push(link2);
+
+
+			//});
+		});
 
 		console.log(this.links);
 		console.log(source);
-		console.log(this.showNetwork);
+
+		//this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
+
+		/* 		const target: Node = {
+					id: '187',
+					name: 'Exhibition Test',
+					type: 'artist',
+					props: { data: this.state.artist }
+				};
+		
+				const target2: Node = {
+					id: '3',
+					name: 'Exhibition Test 2',
+					type: 'artist',
+					props: { data: this.state.artist }
+				};
+		
+		
+				const link: Link = {
+					sourceId: `${source.id}`,
+					targetId: `${target.id}`,
+					props: {
+						data: {
+							year: 1915,
+							count: 85
+						}
+					},
+					source: source,
+					target: target
+				};
+		
+				this.links.push(link);
+		
+				const link2: Link = {
+					sourceId: `${source.id}`,
+					targetId: `${target2.id}`,
+					props: {
+						data: {
+							year: 1914,
+							count: 65
+						}
+					},
+					source: source,
+					target: target2
+				};
+		
+				this.links.push(link2); */
+
+
 		this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
 
 

@@ -23,6 +23,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private theta: number;
     private links: Array<Link> = [];
     private color: d3.ScaleOrdinal<string, string>;
+
+
     private minYear = 1905;
     private maxYear = 1915;
 
@@ -99,6 +101,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     init(): void {
         if (this.svgContainer) return;
 
+        console.log("basenode + links:")
         console.log(this.state.baseNode, this.state.links)
 
         this.svgContainer = d3.select('#ego-net');
@@ -164,6 +167,18 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('fill', 'black')
             .attr('font-weight', 'bold')
             .text(this.state.baseNode.name.split(' ')[1]);
+
+        if (this.state.baseNode.name.split(' ')[2]) {
+            text.append('tspan')
+                .attr('x', this.state.width / 2)
+                .attr('y', this.state.height / 2 + 18)
+                .attr('font-size', '12px')
+                .attr('text-anchor', 'middle')
+                .attr('alignment-baseline', 'middle')
+                .attr('fill', 'black')
+                .attr('font-weight', 'bold')
+                .text(this.state.baseNode.name.split(' ')[2]);
+        }
 
         // setup scales 
         this.rScale = d3.scaleSqrt()
