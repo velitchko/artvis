@@ -37,7 +37,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             width: props.width,
             height: props.height,
             coEx: 3,
-            groupBy: 'country',
+            groupBy: 'year',
             selection: false
         };
 
@@ -181,18 +181,23 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         }
 
         // setup scales 
+        //TODO: maybe change to range (75, 300)
+        //size of ego-network (how close years are to each other)
         this.rScale = d3.scaleSqrt()
             .domain([1905, 1915])
             .range([75, 500]);
 
+        //evenly distributes grid lines (for each exhibition) along circle
         this.angleScale = d3.scaleLinear()
             // .domain([0, 100])
             .range([0, 2 * Math.PI]);
 
+        //(base)size of circles in network
         this.nodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             .range([2, 6]);
 
+        //(base) size of circles outside of network
         this.outerNodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             .range([2, 8]);
@@ -227,14 +232,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
 
         switch (prop) {
+            //TODO: get host country
             case 'country':
-                return _.groupBy(links, (link: Link) => link.target.props.data.country);
+                return _.groupBy(links, (link: Link) => link.target.props.exhibition.tookPlaceInHosts[0]);
+            // case 'sex':
+            //     return _.groupBy(links, (link: Link) => link.target.props.data.sex);
+            case 'type':
+                return _.groupBy(links, (link: Link) => link.target.props.exhibition.type);
             case 'year':
-                return _.groupBy(links, (link: Link) => link.target.props.data.country);
-            case 'sex':
-                return _.groupBy(links, (link: Link) => link.target.props.data.sex);
-            case 'age':
-                return _.groupBy(links, (link: Link) => link.target.props.ageGroup);
+                return _.groupBy(links, (link: Link) => link.target.props.exhibition.startdate);
+            case 'title':
+                return _.groupBy(links, (link: Link) => link.target.props.exhibition.title);
             default:
                 return _.groupBy(links);
         }
@@ -360,6 +368,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         return Math.sin(angle) * (this.rScale(date) + (offset ? offset : 0));
     }
 
+    /** draw grid line circles for each year  */
     gridLines(numTargets: number): void {
         if (!this.svgContainer) return;
 
@@ -406,6 +415,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         this.circleContainer.exit().remove();
     }
+
 
     drawCircle(): void {
         if (!this.svgContainer) return;
@@ -481,7 +491,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`(${data.props.data.year}) ${data.props.data.count} co-exhibitions`);
+                        .text(`(${data.props.data.year}) ${data.props.data.count} artworks`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -682,7 +692,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Age ${data.target.props.age}`);
+                        //.text(`Age ${data.target.props.age}`);
+                        .text(`Year ${data.target.props.exhibition.startdate}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -695,8 +706,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .text(`Group ${data.props.group}`);
 
                     // get sum of all counts for links with same targetId
-                    const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
-                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -706,7 +717,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${sum} co-exhibitions`);
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
+
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -903,8 +916,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .text(`Group ${data.props.group}`);
 
                     // get sum of all counts for links with same targetId
-                    const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
-                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -914,7 +927,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${sum} co-exhibitions`);
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -1251,9 +1265,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                     <div className="block">
                         <label htmlFor="co-ex">Group by:</label>
                         <select id="group-by" value={this.state.groupBy} onChange={this.handleGroupByChange}>
+                            <option value="type">Type</option>
+                            <option value="title">Title</option>
+                            <option value="year">Year</option>
                             <option value="country">Country</option>
-                            <option value="sex">Sex</option>
-                            <option value="age">Age Group</option>
                         </select>
                     </div>
                     <div className="block">

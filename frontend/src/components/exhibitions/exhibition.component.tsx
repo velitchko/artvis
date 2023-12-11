@@ -108,7 +108,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 	drawNetwork() {
 		console.log("draw network");
-		console.log(this.state.artist);
+		//console.log(this.state.artist);
 		const source: Node = {
 			id: this.state.artist.id,
 			name: this.state.artist.firstname + ' ' + this.state.artist.lastname,
@@ -118,7 +118,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		console.log(this.state.artist.exhibitedWithArtists);
 		let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
-		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition }>> = new Map<string, Set<{ year: number, exhibition: Exhibition }>>();
+		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>>();
 		//this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
 		this.state.artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
 			// check if source artist also exhibited in this exhibition
@@ -128,18 +128,40 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 			const year = +exhibition.startdate;
 			const key = `${exhibition.id}`;
+			//const artworksCount = +1;
 
 			if (exhibMap.has(key)) {
-				/* const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition }>;
-				const yearData = Array.from(value).find((d: { year: number, exhibition: Exhibition }) => d.year === year);
 
-				if (yearData) {
-					yearData.exhibIds.add(exhibition.id);
-				} else {
-					value.add({ year, exhibition });
-				} */
+
+				const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number }>;
+
+				const artwCount = Array.from(value).find((d: { year: number, exhibition: Exhibition, artworksCount: number }) => d.year === year);;
+
+				const awCount = artwCount?.artworksCount;
+				console.log("value: " + awCount);
+
+
+
+				if (awCount) {
+					let artworksCount = +awCount.toString();
+					console.log("year: " + year + " exhibition: " + exhibition + " artworks: " + artworksCount);
+					//value.delete({ year, exhibition, artworksCount });
+					value.clear();
+					artworksCount = artworksCount + 1;
+					console.log("artworkscount " + artworksCount);
+					value.add({ year, exhibition, artworksCount })
+				}
+
+				// const yearData = Array.from(value).find((d: { year: number, exhibition: Exhibition }) => d.year === year);
+
+				// if (yearData) {
+				// 	yearData.exhibIds.add(exhibition.id);
+				// } else {
+				// 	value.add({ year, exhibition });
+				// } 
 			} else {
-				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition }>([{ year, exhibition }]));
+				const artworksCount = 1;
+				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number }>([{ year, exhibition, artworksCount }]));
 			}
 		});
 		//});
@@ -148,31 +170,34 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		console.log(exhibMap);
 		let i: number = 0;
 
-		exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition }>, key: string) => {
+		exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number }>, key: string) => {
 			//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
 
-			console.log("exhibmap foreach");
-			console.log(value, key);
+			//console.log("exhibmap foreach");
+			//console.log(value, key);
 			/* if (!found) {
 				console.log(key + ' not found');
 				return;
 			} */
 
-			value.forEach((item: { year: number, exhibition: Exhibition }) => {
+			value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number }) => {
 
 
 				console.log("map value foreach");
-				console.log(item);
+				console.log(item.exhibition);
 
+				//TODO: CHANGE type to exhibition
 				const target: Node = {
 					id: item.exhibition.id,
 					name: item.exhibition.title,
 					type: 'artist',
 					//props: { data: item.exhibition }
 
-					//TODO: change to exhibition, not possible atm because of dependencies in ego.network (artist deathdate etc)
-					props: { data: this.state.artist }
+					//TODO: maybe delete artist (not possible atm because of ego-network dependencies)
+					props: { data: this.state.artist, exhibition: item.exhibition }
 				};
+				//console.log("artist:");
+				//console.log(this.state.artist);
 
 				// iterate over value set
 				//value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
@@ -193,9 +218,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 					props: {
 						data: {
 							year: item.year,
-
-							//TODO: change number or remove it from props, atm not possible because of ego-network dependencies (doesn't work with "1")
-							count: 30
+							count: item.artworksCount
 						}
 					},
 					source: source,
