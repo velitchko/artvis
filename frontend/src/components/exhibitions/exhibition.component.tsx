@@ -11,6 +11,7 @@ import { Link } from '../../models/link';
 import { Node } from '../../models/node';
 import EHTableComponent from '../table/exhibition.host.table';
 import ExhibitionNetworkComponent from '../network/exhibition.network';
+import { Host } from '../../models/host.model';
 
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
@@ -63,7 +64,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		if (!width || !height) return;
 
 		this.setState(prevState => ({ width: width, height: height }), () => {
-			console.log("onresize setstate");
+			//console.log("onresize setstate");
 			this.init();
 		});
 	}
@@ -79,13 +80,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			//TODO: get it to work 
 			this.setState({ artist: result.data.artists[0] })
 
-			console.log(result.data.artists[0])
+			//console.log(result.data.artists[0])
 			//this.setState(prevState => ({ artist: result.data.artists[0] }), () => { this.render() });
 		});
 	}
 
 	componentDidMount(): void {
-		console.log("comp did mount");
+		//console.log("comp did mount");
 		// this.width = window.innerWidth * 0.6;
 
 		// get ego-net-container element width and height and set state
@@ -96,7 +97,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		if (!width || !height) return;
 
 		this.setState(prevState => ({ width: width, height: height }), () => {
-			console.log("setState in did mount");
+			//console.log("setState in did mount");
 			this.init();
 		});
 
@@ -107,7 +108,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	}
 
 	drawNetwork() {
-		console.log("draw network");
+		//console.log("draw network");
 		//console.log(this.state.artist);
 		const source: Node = {
 			id: this.state.artist.id,
@@ -116,10 +117,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			props: { data: this.state.artist }
 		};
 
-		console.log(this.state.artist.exhibitedWithArtists);
+		//console.log(this.state.artist.exhibitedWithArtists);
 		let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
 		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>>();
 		//this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
+
+
+		//put exhibitions into a map with exhibition id as key and compute the number of artworks in each exhibition
 		this.state.artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
 			// check if source artist also exhibited in this exhibition
 			//const sourceExhibition = this.state.artist.exhibitedExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
@@ -130,25 +134,22 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			const key = `${exhibition.id}`;
 			//const artworksCount = +1;
 
+			//if the exhibition id is already in the map, increase artworks count by 1
 			if (exhibMap.has(key)) {
-
 
 				const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number }>;
 
 				const artwCount = Array.from(value).find((d: { year: number, exhibition: Exhibition, artworksCount: number }) => d.year === year);;
 
 				const awCount = artwCount?.artworksCount;
-				console.log("value: " + awCount);
-
-
 
 				if (awCount) {
 					let artworksCount = +awCount.toString();
-					console.log("year: " + year + " exhibition: " + exhibition + " artworks: " + artworksCount);
+					//console.log("year: " + year + " exhibition: " + exhibition + " artworks: " + artworksCount);
 					//value.delete({ year, exhibition, artworksCount });
 					value.clear();
 					artworksCount = artworksCount + 1;
-					console.log("artworkscount " + artworksCount);
+					//console.log("artworkscount " + artworksCount);
 					value.add({ year, exhibition, artworksCount })
 				}
 
@@ -159,6 +160,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 				// } else {
 				// 	value.add({ year, exhibition });
 				// } 
+
+				//if the exhibition isn't in the map yet, put it in the map
 			} else {
 				const artworksCount = 1;
 				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number }>([{ year, exhibition, artworksCount }]));
@@ -170,127 +173,115 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		console.log(exhibMap);
 		let i: number = 0;
 
-		exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number }>, key: string) => {
-			//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
+		//if the links from artist to exhibitions have not been set yet
+		if (this.links.length === 0) {
+			exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number }>, key: string) => {
+				//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
 
-			//console.log("exhibmap foreach");
-			//console.log(value, key);
-			/* if (!found) {
-				console.log(key + ' not found');
-				return;
-			} */
-
-			value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number }) => {
-
-
-				console.log("map value foreach");
-				console.log(item.exhibition);
-
-				//TODO: CHANGE type to exhibition
-				const target: Node = {
-					id: item.exhibition.id,
-					name: item.exhibition.title,
-					type: 'artist',
-					//props: { data: item.exhibition }
-
-					//TODO: maybe delete artist (not possible atm because of ego-network dependencies)
-					props: { data: this.state.artist, exhibition: item.exhibition }
-				};
-				//console.log("artist:");
-				//console.log(this.state.artist);
-
-				// iterate over value set
-				//value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
-
-				//item.exhibitionIds.forEach((exid: string) => {
-
-				/* const target: Node = {
-					id: exid,
-					name: found.firstname + ' ' + found.lastname,
-					type: 'artist',
-					props: { data: found }
-				}; */
+				//console.log("exhibmap foreach");
+				//console.log(value, key);
+				/* if (!found) {
+					console.log(key + ' not found');
+					return;
+				} */
 
 
-				const link: Link = {
-					sourceId: `${source.id}`,
-					targetId: `${target.id}`,
-					props: {
-						data: {
-							year: item.year,
-							count: item.artworksCount
+
+				//console.log("exhibmap foreach");
+
+
+				//fill in missing hosts and create links
+				value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number }) => {
+
+					//console.log("map value foreach");
+					let hosts: Host[] = [];
+
+					//if the exhibition already has hosts, set them as hosts
+					if (item.exhibition.tookPlaceInHosts[0]) {
+
+						hosts = [...item.exhibition.tookPlaceInHosts];
+						//console.log(hosts[0].country);
+					}
+					//if the exhibition does not have hosts, insert a dummy host
+					else {
+						const noHost: Host = {
+							id: `-1`,
+							country: "\\N",
+							name: `NA`,
+							latitude: `9999999`,
+							longitude: `9999999`,
+							place: `NA`,
+							place_tgn: `NA`,
+							town: `NA`,
+							type: `NA`,
+							exhibitionsTookPlaceIn: []
 						}
-					},
-					source: source,
-					target: target
-				};
+						console.log("tookplaceinhosts " + item.exhibition.tookPlaceInHosts);
+						hosts = [noHost];
+						//console.log("nohosts " + noHosts[0].country);
+						//item.exhibition.tookPlaceInHosts = noHosts;
+						//noHosts.push(noHost);
+						//console.log("nohosts " + noHosts[1].country);
+						//item.exhibition.tookPlaceInHosts.push(noHost);
 
-				this.links.push(link);
+						//item.exhibition.tookPlaceInHosts[0] = noHost;
+						//console.log(item.exhibition.tookPlaceInHosts[0].country);
+					}
+
+					//TODO: CHANGE type to exhibition
+					const target: Node = {
+						id: item.exhibition.id,
+						name: item.exhibition.title,
+						type: 'artist',
+						//props: { data: item.exhibition }
+
+						//TODO: maybe delete artist (not possible atm because of ego-network dependencies)
+						props: { data: this.state.artist, exhibition: item.exhibition, hosts: hosts }
+					};
+
+					//console.log("artist:");
+					//console.log(this.state.artist);
+
+					// iterate over value set
+					//value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
+
+					//item.exhibitionIds.forEach((exid: string) => {
+
+					/* const target: Node = {
+						id: exid,
+						name: found.firstname + ' ' + found.lastname,
+						type: 'artist',
+						props: { data: found }
+					}; */
 
 
+					const link: Link = {
+						sourceId: `${source.id}`,
+						targetId: `${target.id}`,
+						props: {
+							data: {
+								year: item.year,
+								count: item.artworksCount
+							}
+						},
+						source: source,
+						target: target
+					};
 
+					//console.log("push link");
+					this.links.push(link);
+
+				});
+
+				//});
 			});
-
-
-
-
-			//});
-		});
-
-		console.log(this.links);
-		console.log(source);
+		}
+		//console.log(this.links);
+		//console.log(source);
 
 		//this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
 
-		/* 		const target: Node = {
-					id: '187',
-					name: 'Exhibition Test',
-					type: 'artist',
-					props: { data: this.state.artist }
-				};
-		
-				const target2: Node = {
-					id: '3',
-					name: 'Exhibition Test 2',
-					type: 'artist',
-					props: { data: this.state.artist }
-				};
-		
-		
-				const link: Link = {
-					sourceId: `${source.id}`,
-					targetId: `${target.id}`,
-					props: {
-						data: {
-							year: 1915,
-							count: 85
-						}
-					},
-					source: source,
-					target: target
-				};
-		
-				this.links.push(link);
-		
-				const link2: Link = {
-					sourceId: `${source.id}`,
-					targetId: `${target2.id}`,
-					props: {
-						data: {
-							year: 1914,
-							count: 65
-						}
-					},
-					source: source,
-					target: target2
-				};
-		
-				this.links.push(link2); */
-
-
 		this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
-
-
 	}
 
 	/** get number of exhibitions without counting repetitions */
@@ -304,7 +295,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 	readyToDrawNetwork() {
 		this.showNetwork = true;
-		console.log("ready to draw network");
+		//console.log("ready to draw network");
 		this.forceUpdate();
 	}
 

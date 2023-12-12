@@ -101,8 +101,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     init(): void {
         if (this.svgContainer) return;
 
-        console.log("basenode + links:")
-        console.log(this.state.baseNode, this.state.links)
+        //console.log("basenode + links:")
+        //console.log(this.state.baseNode, this.state.links)
 
         this.svgContainer = d3.select('#ego-net');
 
@@ -181,11 +181,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         }
 
         // setup scales 
-        //TODO: maybe change to range (75, 300)
         //size of ego-network (how close years are to each other)
         this.rScale = d3.scaleSqrt()
             .domain([1905, 1915])
-            .range([75, 500]);
+            //.range([75, 500]);
+            .range([75, 300]);
 
         //evenly distributes grid lines (for each exhibition) along circle
         this.angleScale = d3.scaleLinear()
@@ -206,9 +206,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         const targetNodes = this.filterData(this.state.coEx);
         this.links = targetNodes;
 
-        this.links.forEach(function (value) {
+        /* this.links.forEach(function (value) {
             console.log("filtered links " + value.target.props.exhibition.title);
-        });
+        }); */
 
         this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
         this.drawCircle();
@@ -237,16 +237,19 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
 
-        links.forEach(function (value) {
+        /* links.forEach(function (value) {
             console.log("links " + value.target.props.exhibition.title);
-        });
+        }); */
 
         switch (prop) {
-            //TODO: get host country
             case 'country':
-                return _.groupBy(links, (link: Link) => link.target.props.exhibition.tookPlaceInHosts[0]);
-            // case 'sex':
-            //     return _.groupBy(links, (link: Link) => link.target.props.data.sex);
+                return _.groupBy(links, (link: Link) => link.target.props.hosts[0].country);
+            case 'hosttype':
+                return _.groupBy(links, (link: Link) => link.target.props.hosts[0].type);
+            case 'hostname':
+                return _.groupBy(links, (link: Link) => link.target.props.hosts[0].name);
+            case 'hostcity':
+                return _.groupBy(links, (link: Link) => link.target.props.hosts[0].place);
             case 'type':
                 return _.groupBy(links, (link: Link) => link.target.props.exhibition.type);
             case 'year':
@@ -272,7 +275,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
             //console.log("SUM " + sum + "link " + link.target.props.exhibition.title);
             //TODO make this nicer... only a workaround so it shows all exhibitions and filtering still works...
-            return sum >= 0;//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
+            return sum >= 0 && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
@@ -634,7 +637,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('font-size', '12px')
             .attr('fill', 'black')
             .attr('dy', '0.35em')
-            .text((d: Link) => d.target.name)
+            .text((d: Link) => d.target.name.substring(0, 30) + "...")
             .style('cursor', 'pointer')
             .on('mouseover', (d: PointerEvent) => {
                 // get id from mouseevent target
@@ -735,6 +738,16 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         //.text(`${sum} co-exhibitions`);
                         .text(`${data.props.data.count} artworks`);
 
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 75)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].country}, ${data.target.props.hosts[0].place})`);
+
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -831,6 +844,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // set outerNodeRScale domain to min and max sum
         this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
 
+
+
         // draw circles on the outside one for each unique target node 
         this.outerCircleContainer.selectAll('circle')
             .data(_.uniqBy(this.links, (node: Link) => node.target.id))
@@ -845,8 +860,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // set radius to sum
                 return this.outerNodeRScale(sum);
             })
-            .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 535) + this.state.width / 2)
-            .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 535) + this.state.height / 2)
+            //multiplicator = distance of outer circles to middle, original value 535
+            .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 340) + this.state.width / 2)
+            .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 340) + this.state.height / 2)
             .attr('opacity', 0.75)
             .attr('fill', (d: Link) => this.color(d.props.group))
             .style('cursor', 'pointer');
@@ -910,7 +926,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-weight', 'bold')
                         .text(data.target.name);
 
-                    text.append('tspan')
+                    /* text.append('tspan')
                         .attr('x', cx + 15)
                         .attr('y', cy + 30)
                         .attr('dy', '1em')
@@ -918,11 +934,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Age ${data.target.props.age}`);
+                        .text(`Age ${data.target.props.age}`); */
 
                     text.append('tspan')
                         .attr('x', cx + 15)
-                        .attr('y', cy + 45)
+                        .attr('y', cy + 30)
                         .attr('dy', '1em')
                         .attr('dx', '1em')
                         .attr('font-size', '12px')
@@ -936,7 +952,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                     text.append('tspan')
                         .attr('x', cx + 15)
-                        .attr('y', cy + 60)
+                        .attr('y', cy + 45)
                         .attr('dy', '1em')
                         .attr('dx', '1em')
                         .attr('font-size', '12px')
@@ -944,6 +960,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-weight', 'bold')
                         //.text(`${sum} co-exhibitions`);
                         .text(`${data.props.data.count} artworks`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 60)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].country}, ${data.target.props.hosts[0].place})`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -1080,6 +1107,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });;
 
         // append text to donut chart
+
+        //this.links.forEach((link: Link) => console.log("donut groups " + link.props.group))
+
         this.donutContainer.selectAll('text')
             .data(_.uniqBy(this.links, (node: Link) => node.props.group))
             .join('text')
@@ -1284,12 +1314,15 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                             <option value="title">Title</option>
                             <option value="year">Year</option>
                             <option value="country">Country</option>
+                            <option value="hostcity">City</option>
+                            <option value="hosttype">Host Type</option>
+                            <option value="hostname">Host Name</option>
                         </select>
                     </div>
-                    <div className="block">
+                    {/*<div className="block">
                         <label htmlFor="co-ex">Co-exhibition count: {this.state.coEx}</label>
                         <input id="co-ex" type="range" min="3" max="20" value={this.state.coEx} onChange={this.handleCoExChange} />
-                    </div>
+                    </div>*/}
                 </div>
                 <svg id='ego-net' width={this.state.width} height={this.state.height}></svg>
                 {/* <div id='ego-tooltip' ref={this.tooltip} className="absolute w-auto h-auto font-medium p-2 bg-black text-white"></div> */}
