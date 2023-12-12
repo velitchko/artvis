@@ -195,7 +195,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //(base)size of circles in network
         this.nodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
-            .range([2, 6]);
+            //.range([2, 6]);
+            .range([2, 8]);
 
         //(base) size of circles outside of network
         this.outerNodeRScale = d3.scaleSqrt()
@@ -204,6 +205,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         const targetNodes = this.filterData(this.state.coEx);
         this.links = targetNodes;
+
+        this.links.forEach(function (value) {
+            console.log("filtered links " + value.target.props.exhibition.title);
+        });
 
         this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
         this.drawCircle();
@@ -219,6 +224,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         });
     };
 
+
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState(prevState => ({ groupBy: event.target.value }), () => {
             const targetNodes = this.filterData(this.state.coEx, this.state.groupBy);
@@ -230,6 +236,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     };
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
+
+        links.forEach(function (value) {
+            console.log("links " + value.target.props.exhibition.title);
+        });
 
         switch (prop) {
             //TODO: get host country
@@ -249,15 +259,20 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     }
 
     filterData(numCoEx: number, groupBy?: string): Array<Link> {
+
+        //this.state.links.forEach((link: Link) => { console.log("at filterdata start: " + link.target.props.exhibition.title) });
+
         // calculate unique target nodes from links
         // filter out links of same targetId where the sum of the count property is 1
         const filteredLinks = this.state.links.filter((link: Link) => {
             const sum = this.state.links
                 .filter((l: Link) => {
-                    return l.targetId == link.targetId && link.target.props.data.country != '\\N';
+                    return l.targetId == link.targetId;// && link.target.props.data.country != '\\N';
                 })
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            return sum >= (numCoEx ? numCoEx : 3) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
+            //console.log("SUM " + sum + "link " + link.target.props.exhibition.title);
+            //TODO make this nicer... only a workaround so it shows all exhibitions and filtering still works...
+            return sum >= 0;//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
