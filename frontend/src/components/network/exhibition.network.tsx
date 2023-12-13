@@ -240,7 +240,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         /* links.forEach(function (value) {
             console.log("links " + value.target.props.exhibition.title);
         }); */
-
+        links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
         switch (prop) {
             case 'country':
                 return _.groupBy(links, (link: Link) => link.target.props.hosts[0].country);
@@ -254,8 +254,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return _.groupBy(links, (link: Link) => link.target.props.exhibition.type);
             case 'year':
                 return _.groupBy(links, (link: Link) => link.target.props.exhibition.startdate);
-            case 'title':
-                return _.groupBy(links, (link: Link) => link.target.props.exhibition.title);
+            // case 'title':
+            //     return _.groupBy(links, (link: Link) => link.target.props.exhibition.title);
             default:
                 return _.groupBy(links);
         }
@@ -1308,10 +1308,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             <>
                 <div className="absolute w-auto right-5">
                     <div className="block">
-                        <label htmlFor="co-ex">Group by:</label>
+                        <label htmlFor="co-ex">Group by: </label>
                         <select id="group-by" value={this.state.groupBy} onChange={this.handleGroupByChange}>
                             <option value="type">Type</option>
-                            <option value="title">Title</option>
+                            {/*<option value="title">Title</option>*/}
                             <option value="year">Year</option>
                             <option value="country">Country</option>
                             <option value="hostcity">City</option>
@@ -1319,6 +1319,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                             <option value="hostname">Host Name</option>
                         </select>
                     </div>
+                    {/*<div className="block">
+                        <label htmlFor="order">Order by: </label>
+                        <select id="order-by" value={this.state.orderBy} onChange={this.handleOrderByChange}> 
+                            <option value="title">Title</option>*/}
+                    {/*<option value="country">Country</option>
+                            <option value="type">Type</option>
+                            <option value="hostcity">City</option>
+                            <option value="hosttype">Host Type</option>
+                            <option value="hostname">Host Name</option>*/}
+                    {/*</select>
+                    </div>*/}
                     {/*<div className="block">
                         <label htmlFor="co-ex">Co-exhibition count: {this.state.coEx}</label>
                         <input id="co-ex" type="range" min="3" max="20" value={this.state.coEx} onChange={this.handleCoExChange} />
