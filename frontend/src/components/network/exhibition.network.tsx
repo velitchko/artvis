@@ -7,7 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 
-class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
+class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -28,7 +28,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private minYear = 1905;
     private maxYear = 1915;
 
-    constructor(props: { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }) {
+    constructor(props: { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }) {
         super(props);
 
         this.state = {
@@ -38,6 +38,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             height: props.height,
             coEx: 3,
             groupBy: 'year',
+            orderBy: 'year',
             selection: false
         };
 
@@ -227,7 +228,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState(prevState => ({ groupBy: event.target.value }), () => {
-            const targetNodes = this.filterData(this.state.coEx, this.state.groupBy);
+
+            console.log("state group: " + this.state.groupBy, this.state.orderBy);
+            const targetNodes = this.filterData(this.state.coEx, this.state.groupBy, this.state.orderBy);
             this.links = targetNodes;
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
@@ -235,12 +238,59 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         });
     };
 
+    handleOrderByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+
+        //this.handleGroupByChange(event);
+        this.setState(prevState => ({ orderBy: event.target.value }), () => {
+
+            console.log("state order: " + this.state.groupBy, this.state.orderBy);
+            const targetNodes = this.filterData(this.state.coEx, this.state.groupBy, this.state.orderBy);
+            this.links = targetNodes;
+
+            this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
+            this.drawCircle();
+        });
+    };
+
+    orderBy(orderBy: string, groupBy: string, links: Array<Link>,): Dictionary<Link[]> {
+
+        console.log("orderby " + orderBy + " " + groupBy + " ");
+        switch (orderBy) {
+            case 'year':
+                {
+                    //console.log("switch year");
+                    links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
+                    break;
+                }
+            case 'title':
+                {
+                    //console.log("switch title");
+                    links.sort((a, b) => a.target.props.exhibition.title.localeCompare(b.target.props.exhibition.title));
+                    break;
+                }
+            case 'artworks':
+                {
+                    //console.log("switch title");
+                    links.sort((a, b) => a.props.data.count - b.props.data.count);
+                    break;
+                }
+            default:
+                links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
+                break;
+        }
+
+        return this.groupBy(groupBy, links);
+
+    }
+
+
+
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
 
         /* links.forEach(function (value) {
             console.log("links " + value.target.props.exhibition.title);
         }); */
-        links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
+        //links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
         switch (prop) {
             case 'country':
                 return _.groupBy(links, (link: Link) => link.target.props.hosts[0].country);
@@ -261,7 +311,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         }
     }
 
-    filterData(numCoEx: number, groupBy?: string): Array<Link> {
+    filterData(numCoEx: number, groupBy?: string, orderBy?: string): Array<Link> {
 
         //this.state.links.forEach((link: Link) => { console.log("at filterdata start: " + link.target.props.exhibition.title) });
 
@@ -278,7 +328,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             return sum >= 0 && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
 
-        const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
+
+        //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
+        //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
+        //console.log("filter " + this.state.orderBy + " " + this.state.groupBy);
+
+        const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, filteredLinks);
+
+
 
         let groupData: Array<{ group: string, links: Array<Link> }> = [];
 
@@ -746,7 +803,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].country}, ${data.target.props.hosts[0].place})`);
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
 
 
                     // get bbox of text
@@ -970,7 +1027,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`${sum} co-exhibitions`);
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].country}, ${data.target.props.hosts[0].place})`);
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -1319,17 +1376,19 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                             <option value="hostname">Host Name</option>
                         </select>
                     </div>
-                    {/*<div className="block">
+                    <div className="block">
                         <label htmlFor="order">Order by: </label>
-                        <select id="order-by" value={this.state.orderBy} onChange={this.handleOrderByChange}> 
-                            <option value="title">Title</option>*/}
-                    {/*<option value="country">Country</option>
+                        <select id="order-by" value={this.state.orderBy} onChange={this.handleOrderByChange}>
+                            <option value="title">Title</option>
+                            <option value="year">Year</option>
+                            <option value="artworks"># Artworks</option>
+                            {/*<option value="country">Country</option>
                             <option value="type">Type</option>
                             <option value="hostcity">City</option>
                             <option value="hosttype">Host Type</option>
                             <option value="hostname">Host Name</option>*/}
-                    {/*</select>
-                    </div>*/}
+                        </select>
+                    </div>
                     {/*<div className="block">
                         <label htmlFor="co-ex">Co-exhibition count: {this.state.coEx}</label>
                         <input id="co-ex" type="range" min="3" max="20" value={this.state.coEx} onChange={this.handleCoExChange} />

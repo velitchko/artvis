@@ -17,7 +17,7 @@ type IResults = {
 
 type MetaExhibition = Exhibition & { isCommon: boolean, percentBase: number, percentCompare: number };
 
-class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: string, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, type?: string }, { query: DocumentNode, baseId: string, compareWith: Artist, results: IResults, loaded: boolean, dir: string }> {
+class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: string, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, type?: string }, { query: DocumentNode, baseId: string, compareWith: Artist, exhibitions: Array<Exhibition>, results: IResults, loaded: boolean, dir: string }> {
 
     constructor(props: { query: DocumentNode, baseId: string, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
         super(props);
@@ -34,6 +34,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                 items: []
             },
             query: props.query,
+            exhibitions: props.exhibitions,
             compareWith: props.compareWith,
             dir: 'asc'
         }
@@ -77,6 +78,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
         if (!ids) return;
 
+        //const ids = +this.state.baseId;
+
         this.getResults(this.state.query, ids);
     }
 
@@ -90,6 +93,11 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                     "id_IN": ids
                 }
             }
+            /* client.query({
+                query: query,
+                variables: {
+                    searchId: ids
+                } */
         }).then((res) => {
             this.setState((prevState: any) => {
                 const metaExhibitions = new Array<MetaExhibition>();
@@ -103,7 +111,14 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                     return 0;
                 });
 
+
                 exhibitions.forEach((exhibition: Exhibition) => {
+                    //console.log("exhibitions " + exhibition.tookPlaceInHosts[0]);
+
+
+
+
+
                     // if startdate is less than 1905 or enddate is greater than 1915 skip
                     if (exhibition.startdate < 1905 || exhibition.enddate > 1915) return;
 
@@ -191,34 +206,46 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                             {/* <th scope="col" className="px-6 py-3">
                                 ID
                             </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('type')}>Type</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('startdate')}>Date</button>
                             </th>
                             {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('enddate')}>End Date</button>
                             </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('title')}>Title</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Catalogue Entries</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('percentBase')}>Base %Entries</button>
                             </th>
                             {
-                                this.state.compareWith && <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                                this.state.compareWith && <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                     <button onClick={() => this.sort('percentCompare')}>Compare %Entries</button>
                                 </th>
                             }
                             {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('tookPlaceInHosts.length')}>Hosts</button>
                             </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
+                            </th>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('host')}>Host</button>
+                            </th>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('country')}>Country</button>
+                            </th>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('city')}>City</button>
+                            </th>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('hosttype')}>Hosttype</button>
                             </th>
                         </tr>
                     </thead>
@@ -244,21 +271,23 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                         ))} */}
 
                         {this.state.results.exhibitions && this.state.results.exhibitions.map((exhibition: MetaExhibition) => (
+
                             <tr className={`${this.exhibitionIsCommon(exhibition) ? 'bg-amber-100' : 'bg-white'} border-b`} key={exhibition.id}>
                                 {/* <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                     {exhibition.id}
                                 </th> */}
-                                <td className="px-6 py-4">{exhibition.type}</td>
-                                <td className="px-6 py-4">{exhibition.startdate}</td>
+                                <td className="px-2 py-4">{exhibition.type}</td>
+                                <td className="px-2 py-4">{exhibition.startdate}</td>
                                 {/* <td className="px-6 py-4">{exhibition.enddate}</td> */}
-                                <td className="px-6 py-4">{exhibition.title}</td>
-                                <td className="px-6 py-4 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
-                                <td className="px-6 py-4 text-right">{exhibition.percentBase}%</td>
+                                <td className="px-2 py-4">{exhibition.title}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.percentBase}%</td>
                                 {
-                                    this.state.compareWith && <td className="px-6 py-4 text-right">{exhibition.percentCompare}%</td>
+                                    this.state.compareWith && <td className="px-2 py-4 text-right">{exhibition.percentCompare}%</td>
                                 }
                                 {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
-                                <td className="px-6 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
+                                {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts[0].name}</td>*/}
                             </tr>
 
                         ))}

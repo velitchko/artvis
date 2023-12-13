@@ -12,6 +12,7 @@ import { Node } from '../../models/node';
 import EHTableComponent from '../table/exhibition.host.table';
 import ExhibitionNetworkComponent from '../network/exhibition.network';
 import { Host } from '../../models/host.model';
+import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
