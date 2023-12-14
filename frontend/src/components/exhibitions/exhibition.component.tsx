@@ -13,6 +13,7 @@ import EHTableComponent from '../table/exhibition.host.table';
 import ExhibitionNetworkComponent from '../network/exhibition.network';
 import { Host } from '../../models/host.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
+import ExhibitionMapComponent from '../map/exhibition.map';
 
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
@@ -312,9 +313,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 				{this.state.artist &&
 
-					<div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-4 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
+					<div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-6 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
 						<div className="row-span-1 col-span-2 z-40">
-							<div className="w-full h-[50vh]" id="artistinfo-container">
+							<div className="w-full h-[10vh]" id="artistinfo-container">
 								<div className="float-left text-left pl-2">
 									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
@@ -323,7 +324,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 							</div>
 						</div>
 
-						<div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
+						<div className="lg:row-span-6 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
 							<div className="w-full h-[90vh] sm:h-full" id="ego-net-container">
 								{this.showNetwork &&
 									<ExhibitionNetworkComponent ref={this.exhibitionNetwork} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} />
@@ -332,8 +333,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						</div>
 
 						<div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
-							<div className="w-full h-full overflow-y-scroll" id="table-container">
+							<div className="w-full h-full overflow-y-scroll overflow-x-scroll" id="table-container">
 								<EHTableComponent query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={null} exhibitions={this.state.artist.exhibitedExhibitions} />
+							</div>
+						</div>
+						<div className="lg:row-span-2 md:row-span-1 col-span-2 z-30">
+							<div className="w-full h-full overflow-y-scroll overflow-x-scroll" id="map-container">
+								<ExhibitionMapComponent compareWith={null} exhibitions={this.state.artist.exhibitedExhibitions} />
 							</div>
 						</div>
 					</div>
