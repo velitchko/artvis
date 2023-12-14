@@ -5,6 +5,7 @@ import { DocumentNode } from '@apollo/client';
 import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Host } from '../../models/host.model';
 
 type IResults = {
     artists?: Array<any>,
@@ -111,13 +112,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                     return 0;
                 });
 
-
                 exhibitions.forEach((exhibition: Exhibition) => {
                     //console.log("exhibitions " + exhibition.tookPlaceInHosts[0]);
-
-
-
-
 
                     // if startdate is less than 1905 or enddate is greater than 1915 skip
                     if (exhibition.startdate < 1905 || exhibition.enddate > 1915) return;
@@ -194,6 +190,28 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
     exhibitionIsCommon(e: MetaExhibition): boolean {
         // create array of exhibition ids and isCommon property 
         return e.isCommon ? true : false;
+    }
+
+    checkForHost(hosts: Host[]): Host {
+
+        const noHost: Host = {
+            id: `-1`,
+            country: "\\N",
+            name: `NA`,
+            latitude: `9999999`,
+            longitude: `9999999`,
+            place: `NA`,
+            place_tgn: `NA`,
+            town: `NA`,
+            type: `NA`,
+            exhibitionsTookPlaceIn: []
+        }
+
+        if (hosts[0]) {
+            return hosts[0];
+        }
+        else return noHost;
+
     }
 
     render() {
@@ -287,10 +305,21 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                                 }
                                 {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
                                 <td className="px-2 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
-                                {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts[0].name}</td>*/}
+                                {/*<td className="px-6 py-4">{exhibition.tookPlaceInHosts[0].name}</td>*/}
+
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).name}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).country}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).place}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).type}</td>
+
                             </tr>
 
                         ))}
+
+
+
+
+
 
                         {/* {results.catalogues && results.catalogues.map((catalogue: any) => (
                             <tr className="bg-white border-b" key={catalogue.id}>
