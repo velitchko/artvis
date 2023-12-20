@@ -1,10 +1,10 @@
 import { Exhibition } from "./exhibition.model";
 
 export type Host = {
-    country: String;
+	country: String;
 	id: String;
-	latitude: String;
-	longitude: String;
+	latitude: string;
+	longitude: string;
 	name: String;
 	place: String;
 	place_tgn: String;
