@@ -19,6 +19,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private rScale: d3.ScalePower<number, number>;
     private angleScale: d3.ScaleLinear<number, number>;
     private nodeRScale: d3.ScalePower<number, number>;
+    private basenodeRScale: d3.ScalePower<number, number>;
     private outerNodeRScale: d3.ScalePower<number, number>;
     private theta: number;
     private links: Array<Link> = [];
@@ -47,6 +48,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.angleScale = d3.scaleLinear();
         this.rScale = d3.scaleSqrt();
         this.nodeRScale = d3.scaleSqrt();
+        this.basenodeRScale = d3.scaleSqrt();
         this.outerNodeRScale = d3.scaleSqrt();
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
@@ -197,6 +199,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.nodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             //.range([2, 6]);
+            .range([2, 8]);
+
+        this.basenodeRScale = d3.scaleSqrt()
+            // .domain([0, 100])
+            //.range([2, 6]);
+            //.range([2, 12]);
             .range([2, 8]);
 
         //(base) size of circles outside of network
@@ -409,7 +417,15 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.angleScale.domain([0, unique.length]); // == index of target node
 
         // set nodeRScale domain to maxCount
-        this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+        //this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+
+        this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
+
+        this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
+
+        //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.percentage)), Math.max(...grouped.map(g => g.props.data.percentage))]);
+        //this.basenodeRScale.domain([0, 100]);
+
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
@@ -503,6 +519,30 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .selectAll('circle')
             .data(this.links)
             .join('circle')
+            .attr('id', (d: Link) => `basenode-${d.target.id}-${d.props.data.year}`)
+            .transition().duration(250)
+            .attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
+            //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
+            .attr('cx', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                return x;
+            })
+            .attr('cy', (d: Link) => {
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return y;
+            })
+            .attr('opacity', 0.25)
+            .attr('fill', (d: Link) => this.color(d.props.group));
+
+
+        this.artistContainer
+            .selectAll('.circle')
+            .data(this.links)
+            .join('circle')
             .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
             .transition().duration(250)
             .attr('r', (d: Link) => this.nodeRScale(d.props.data.count))
@@ -518,8 +558,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            .attr('opacity', 0.75)
+            .attr('opacity', 1)
             .attr('fill', (d: Link) => this.color(d.props.group));
+
 
         this.artistContainer.selectAll('circle')
             .on('mouseover', (d: PointerEvent) => {
