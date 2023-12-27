@@ -417,15 +417,15 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.angleScale.domain([0, unique.length]); // == index of target node
 
         // set nodeRScale domain to maxCount
-        //this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+        this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
 
-        this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
+        //this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
 
-        this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
+        //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
 
         //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.percentage)), Math.max(...grouped.map(g => g.props.data.percentage))]);
         //this.basenodeRScale.domain([0, 100]);
-
+        this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
@@ -521,7 +521,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .join('circle')
             .attr('id', (d: Link) => `basenode-${d.target.id}-${d.props.data.year}`)
             .transition().duration(250)
-            .attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
+            //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
+            .attr('r', (d: Link) => this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100))
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
             .attr('cx', (d: Link) => {
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
@@ -535,7 +536,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            .attr('opacity', 0.25)
+            .attr('opacity', 1)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
 
@@ -558,7 +559,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            .attr('opacity', 1)
+            .attr('opacity', 0.5)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
 
