@@ -17,6 +17,7 @@ import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
 
+type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
 
@@ -26,6 +27,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	private margin: { bottom: number, left: number, right: number, top: number };
 	private width: number = 500;
 	private height: number = 0;
+	private exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>;
+	private exhibStatistics: Array<MetaExhibition>;
 
 	constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
 		super(props);
@@ -40,6 +43,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		};
 
 		this.links = new Array<Link>();
+		this.exhibStatistics = new Array<MetaExhibition>();
+		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		this.width = 500;
 		this.height = 200;
 
@@ -123,7 +128,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		//console.log(this.state.artist.exhibitedWithArtists);
 		let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
-		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
+		//let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		//this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
 
 
@@ -152,9 +157,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			//console.log("percent " + percentage);
 
 			//if the exhibition id is already in the map, increase artworks count by 1
-			if (exhibMap.has(key)) {
+			if (this.exhibMap.has(key)) {
 
-				const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>;
+				const value = this.exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>;
 
 				const artwCount = Array.from(value).find((d: { year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }) => d.year === year);;
 
@@ -181,18 +186,18 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 				//if the exhibition isn't in the map yet, put it in the map
 			} else {
 				const artworksCount = 1;
-				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>([{ year, exhibition, artworksCount, baseLength, entries, percentage }]));
+				this.exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>([{ year, exhibition, artworksCount, baseLength, entries, percentage }]));
 			}
 		});
 		//});
 
 		console.log("exhib map");
-		console.log(exhibMap);
+		console.log(this.exhibMap);
 		let i: number = 0;
 
 		//if the links from artist to exhibitions have not been set yet
 		if (this.links.length === 0) {
-			exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>, key: string) => {
+			this.exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>, key: string) => {
 				//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
 
 				//console.log("exhibmap foreach");
@@ -209,6 +214,11 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 				//fill in missing hosts and create links
 				value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }) => {
+
+					const exhib: MetaExhibition = { ...item.exhibition, artworksTotal: item.baseLength, artworksBase: item.artworksCount, isCommon: false, percentBase: item.percentage, percentCompare: 0 };
+
+					this.exhibStatistics.push(exhib);
+
 
 					//console.log("map value foreach");
 					let hosts: Host[] = [];
@@ -297,6 +307,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		}
 		//console.log(this.links);
 		//console.log(source);
+		console.log(this.exhibStatistics);
 
 		//this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
 
@@ -356,7 +367,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						</div>
 						<div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
 							<div className="w-full h-full" id="map-container">
-								<ExhibitionMapComponent compareWith={null} exhibitions={this.state.artist.exhibitedExhibitions} />
+								<ExhibitionMapComponent compareWith={null} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
 							</div>
 						</div>
 					</div>

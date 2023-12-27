@@ -9,18 +9,26 @@ import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 import data from '../../resources/map.geo.json';
 
-class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }> {
+type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
+
+//class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }> {
+
+class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }> {
 
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
     private borderContainer: d3.Selection<any, any, any, any> | undefined;
+
+    private rScale: d3.ScalePower<number, number>;
 
     private tooltip: d3.Selection<any, any, any, any> | undefined;
     private color: d3.ScaleOrdinal<string, string>;
 
     private exhibitions: Array<Exhibition> = [];
 
-    constructor(props: { compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
+    //constructor(props: { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
+    constructor(props: { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
+
         super(props);
 
         this.state = {
@@ -29,10 +37,14 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             coEx: 3,
             selection: false,
             exhibitions: props.exhibitions,
-            compareWith: props.compareWith
+            compareWith: props.compareWith,
+            //exhibitionMap: props.exhibitionMap
+            exhibStatistics: props.exhibStatistics
         };
 
         this.svgContainer = undefined;
+
+        this.rScale = d3.scaleSqrt();
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
         this.tooltip = undefined;
@@ -41,6 +53,12 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     init(): void {
         if (this.svgContainer) return;
+
+        this.rScale = d3.scaleSqrt()
+            // .domain([0, 100])
+            //.range([2, 6]);
+            .range([2, 8]);
+        //this.rScale.domain([0, 100]);
 
         this.svgContainer = d3.select('#map');
 
@@ -86,6 +104,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.circleContainer
             .selectAll('map-markers')
             .data(this.exhibitions)
+            //.data(this.state.exhibStatistics)
             .enter()
             .append("circle")
             .attr('cx', (d: Exhibition) => {
@@ -115,6 +134,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 return projection([long, lat])![1];
             })
             .attr("r", 2)
+            //.attr('r', (d: MetaExhibition) => this.rScale(d.artworksBase))
             .style("fill", "crimson");
 
     }
