@@ -19,6 +19,10 @@ query Artists($searchId: String!) {
           type
           place_tgn
         }
+        catalogueEntriesEntryIn {
+          id,
+          id_person
+      } 
         organizer
       }
       birthdate

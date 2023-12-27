@@ -15,6 +15,7 @@ import { Host } from '../../models/host.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
+import { CatalogueEntry } from '../../models/catalogueEntry.model';
 
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
@@ -122,7 +123,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		//console.log(this.state.artist.exhibitedWithArtists);
 		let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
-		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number }>>();
+		let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		//this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
 
 
@@ -137,12 +138,25 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			const key = `${exhibition.id}`;
 			//const artworksCount = +1;
 
+			const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+
+			//TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
+			// get amount of catalogueEntries with id_person === id
+			const entries = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === this.state.artist.id)?.length;
+
+			// calculate percentage
+			const percentage = (entries / baseLength) * 100;
+
+			//console.log("base " + baseLength);
+			//console.log("entries " + entries);
+			//console.log("percent " + percentage);
+
 			//if the exhibition id is already in the map, increase artworks count by 1
 			if (exhibMap.has(key)) {
 
-				const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number }>;
+				const value = exhibMap.get(key) as Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>;
 
-				const artwCount = Array.from(value).find((d: { year: number, exhibition: Exhibition, artworksCount: number }) => d.year === year);;
+				const artwCount = Array.from(value).find((d: { year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }) => d.year === year);;
 
 				const awCount = artwCount?.artworksCount;
 
@@ -153,7 +167,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 					value.clear();
 					artworksCount = artworksCount + 1;
 					//console.log("artworkscount " + artworksCount);
-					value.add({ year, exhibition, artworksCount })
+					value.add({ year, exhibition, artworksCount, baseLength, entries, percentage })
 				}
 
 				// const yearData = Array.from(value).find((d: { year: number, exhibition: Exhibition }) => d.year === year);
@@ -167,7 +181,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 				//if the exhibition isn't in the map yet, put it in the map
 			} else {
 				const artworksCount = 1;
-				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number }>([{ year, exhibition, artworksCount }]));
+				exhibMap.set(key, new Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>([{ year, exhibition, artworksCount, baseLength, entries, percentage }]));
 			}
 		});
 		//});
@@ -178,7 +192,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		//if the links from artist to exhibitions have not been set yet
 		if (this.links.length === 0) {
-			exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number }>, key: string) => {
+			exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>, key: string) => {
 				//const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
 
 				//console.log("exhibmap foreach");
@@ -194,7 +208,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 				//fill in missing hosts and create links
-				value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number }) => {
+				value.forEach((item: { year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }) => {
 
 					//console.log("map value foreach");
 					let hosts: Host[] = [];
@@ -264,7 +278,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						props: {
 							data: {
 								year: item.year,
-								count: item.artworksCount
+								count: item.artworksCount,
+								baseLength: item.baseLength,
+								percentage: item.percentage
 							}
 						},
 						source: source,

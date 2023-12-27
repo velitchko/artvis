@@ -114,7 +114,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                 return projection([long, lat])![1];
             })
-            .attr("r", 3)
+            .attr("r", 2)
             .style("fill", "crimson");
 
     }
