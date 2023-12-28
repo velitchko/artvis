@@ -972,6 +972,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const id = (d.target as SVGCircleElement).id;
 
                 const data = d3.select(`#${id}`).datum() as Link;
+
                 if (!data) return;
 
                 if (!this.state.selection) {

@@ -307,6 +307,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		}
 		//console.log(this.links);
 		//console.log(source);
+		console.log("component statistics")
 		console.log(this.exhibStatistics);
 
 		//this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
@@ -367,7 +368,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						</div>
 						<div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
 							<div className="w-full h-full" id="map-container">
-								<ExhibitionMapComponent compareWith={null} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
+								{this.showNetwork &&
+									<ExhibitionMapComponent compareWith={null} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
+								}
 							</div>
 						</div>
 					</div>

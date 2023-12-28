@@ -25,6 +25,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
     private color: d3.ScaleOrdinal<string, string>;
 
     private exhibitions: Array<Exhibition> = [];
+    private exhibStats: Array<MetaExhibition> = [];
 
     //constructor(props: { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
     constructor(props: { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
@@ -57,8 +58,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.rScale = d3.scaleSqrt()
             // .domain([0, 100])
             //.range([2, 6]);
-            .range([2, 8]);
-        //this.rScale.domain([0, 100]);
+            .range([1, 6]);
 
         this.svgContainer = d3.select('#map');
 
@@ -97,17 +97,22 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             });
 
 
-        this.exhibitions = this.checkExhibitions(this.state.exhibitions);
 
+        this.exhibitions = this.checkExhibitions(this.state.exhibitions);
+        this.exhibStats = this.state.exhibStatistics;
+
+        this.rScale.domain([Math.min(...this.exhibStats.map(g => g.artworksBase)), Math.max(...this.exhibStats.map(g => g.artworksBase))]);
 
         //draw markers for exhibitions on map
         this.circleContainer
-            .selectAll('map-markers')
-            .data(this.exhibitions)
-            //.data(this.state.exhibStatistics)
-            .enter()
-            .append("circle")
-            .attr('cx', (d: Exhibition) => {
+            .selectAll('circle')
+            //.data(this.exhibitions)
+            .data(this.exhibStats)
+            //.enter()
+            //.append('circle')
+            .join('circle')
+            .attr('id', (d: MetaExhibition) => `node-${d.id}-${d.startdate}-${d.artworksTotal}`)
+            .attr('cx', (d: MetaExhibition) => {
 
                 //for undefined hosts, so they are not shown on the map
                 let long = -999.0;
@@ -120,7 +125,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                 return projection([long, lat])![0];
             })
-            .attr('cy', (d: Exhibition) => {
+            .attr('cy', (d: MetaExhibition) => {
 
                 //for undefined hosts, so they are not shown on the map
                 let long = -999.0;
@@ -133,10 +138,136 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                 return projection([long, lat])![1];
             })
-            .attr("r", 2)
-            //.attr('r', (d: MetaExhibition) => this.rScale(d.artworksBase))
+            //.attr("r", 2)
+            .attr('r', (d: MetaExhibition) => this.rScale(d.artworksBase))
             .style("fill", "crimson");
 
+
+        //tooltip
+        //TODO: fix tooltip so all exhibitions in same place are shown in tooltip
+        this.circleContainer
+            .selectAll('circle')
+            .on('mouseover', (d: PointerEvent) => {
+
+                // get data from d 
+                const id = (d.target as SVGCircleElement).id;
+
+                const data = d3.select(`#${id}`).datum() as MetaExhibition;
+
+                if (!data) return;
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(data.title);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '2em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`(${data.startdate}) ${data.artworksBase} artworks`);
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+
+                // highlight all links with same targetId
+                // const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                // links.forEach((link: Link) => {
+                //     const id = `node-${link.target.id}-${link.props.data.year}`;
+                //     const circle = this.svgContainer?.select(`#${id}`);
+
+                //     if (!circle) return;
+
+                //     circle.attr('stroke', 'black');
+                //     circle.attr('stroke-width', 2);
+                // });
+
+                // pass year to mouseOverCallBack
+                this.mouseOverCallBack(data.startdate);
+                //this.highlightCircle(data.startdate);
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+                // lower tooltip 
+                this.tooltip?.lower();
+
+                // clear all highlights
+                this.circleContainer?.selectAll('circle').attr('stroke', 'none');
+
+                // pass year to mouseOverCallBack
+                this.mouseOverCallBack(0);
+                //this.highlightCircle(0);
+            });
+
+        this.circleContainer.exit().remove();
+
+
+
+
+    }
+
+    highlightCircle(year: number): void {
+        // select the circle with the same year as the year passed in
+        // change the stroke to yellow and make it dashed update stroke-width to 2
+
+        if (!this.circleContainer) return;
+
+        if (year == 0) {
+            this.circleContainer.selectAll('circle')
+                .attr('stroke', '#e3e3e3')
+                .attr('fill', 'none')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', 0)
+                .lower();
+            return;
+        } else {
+            this.circleContainer?.select('#circle-' + year)
+                .attr('stroke', 'orange')
+                .attr('stroke-width', 4)
+                .attr('stroke-dasharray', 5)
+                .raise();
+        }
+    }
+
+    mouseOverCallBack(year: number) {
+        if (this.props.mouseOverCallBack) this.props.mouseOverCallBack(year);
     }
 
     componentDidMount(): void {
