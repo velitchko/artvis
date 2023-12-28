@@ -8,6 +8,7 @@ import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 import data from '../../resources/map.geo.json';
+import { Host } from '../../models/host.model';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -115,31 +116,41 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             .attr('cx', (d: MetaExhibition) => {
 
                 //for undefined hosts, so they are not shown on the map
-                let long = -999.0;
-                let lat = -999.0;
+                let long = -999999999.0;
+                let lat = -99999999999.0;
 
                 if (d.tookPlaceInHosts[0]) {
                     long = parseFloat(d.tookPlaceInHosts[0].longitude);
                     lat = parseFloat(d.tookPlaceInHosts[0].latitude);
-                }
 
+                }
                 return projection([long, lat])![0];
+
+
             })
             .attr('cy', (d: MetaExhibition) => {
 
                 //for undefined hosts, so they are not shown on the map
-                let long = -999.0;
-                let lat = -999.0;
+                let long = -99999999.0;
+                let lat = -999999999.0;
 
                 if (d.tookPlaceInHosts[0]) {
                     long = parseFloat(d.tookPlaceInHosts[0].longitude);
                     lat = parseFloat(d.tookPlaceInHosts[0].latitude);
-                }
 
+                }
                 return projection([long, lat])![1];
+
+
             })
             //.attr("r", 2)
             .attr('r', (d: MetaExhibition) => this.rScale(d.artworksBase))
+            .attr('opacity', (d: MetaExhibition) => {
+                if (d.tookPlaceInHosts[0]) {
+                    return 0.5;
+                } //hide exhibitions without hosts
+                else return 0;
+            })
             .style("fill", "crimson");
 
 
@@ -182,7 +193,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(data.title);
+                        .text(`${data.title} (${data.startdate})`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -192,7 +203,17 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`(${data.startdate}) ${data.artworksBase} artworks`);
+                        .text(`${data.tookPlaceInHosts[0].name}, ${data.tookPlaceInHosts[0].place}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '3em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.artworksBase} artworks of ${data.artworksTotal} in total`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -285,6 +306,29 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         // this.init();
     }
+
+    /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
+    checkForHost(hosts: Host[]): Host {
+
+        const noHost: Host = {
+            id: `-1`,
+            country: "\\N",
+            name: `NA`,
+            latitude: `9999999`,
+            longitude: `9999999`,
+            place: `NA`,
+            place_tgn: `NA`,
+            town: `NA`,
+            type: `NA`,
+            exhibitionsTookPlaceIn: []
+        }
+
+        if (hosts[0]) {
+            return hosts[0];
+        }
+        else return noHost;
+    }
+
 
     onResize = () => {
         // get map-container element width and height and set state
