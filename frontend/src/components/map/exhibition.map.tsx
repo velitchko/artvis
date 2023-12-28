@@ -21,6 +21,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
     private borderContainer: d3.Selection<any, any, any, any> | undefined;
 
     private rScale: d3.ScalePower<number, number>;
+    private mapRScale: d3.ScalePower<number, number>;
 
     private tooltip: d3.Selection<any, any, any, any> | undefined;
     private color: d3.ScaleOrdinal<string, string>;
@@ -47,6 +48,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.svgContainer = undefined;
 
         this.rScale = d3.scaleSqrt();
+        this.mapRScale = d3.scaleSqrt();
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
         this.tooltip = undefined;
@@ -60,6 +62,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             // .domain([0, 100])
             //.range([2, 6]);
             .range([1, 6]);
+
+        this.mapRScale = d3.scaleSqrt()
+            // .domain([0, 100])
+            //.range([2, 6]);
+            .range([1, 4]);
 
         this.svgContainer = d3.select('#map');
 
@@ -103,12 +110,18 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.exhibStats = this.state.exhibStatistics;
 
         this.rScale.domain([Math.min(...this.exhibStats.map(g => g.artworksBase)), Math.max(...this.exhibStats.map(g => g.artworksBase))]);
+        this.mapRScale.domain([Math.min(...this.exhibStats.map(g => g.artworksTotal)), Math.max(...this.exhibStats.map(g => g.artworksTotal))]);
 
 
         //PIE CHARTS________________________________________________
         // Pie chart variables:
         let arc = d3.arc<MetaExhibition>()
             .innerRadius(0)
+            // .outerRadius((d: any) => {
+            //     console.log("data");
+            //     console.log(d);
+            //     return this.mapRScale(d.data);
+            // })
             .outerRadius(3);
 
         let pie = d3.pie()
@@ -138,13 +151,10 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         let pies = points.selectAll('.pies')
             .data((d: MetaExhibition) => {
-
-                console.log("d");
-                console.log(d);
-
                 //return (pie([100, 10, 50, 60, 75]));
                 //return pie([d.artworksBase]);
                 return pie([d.artworksBase, d.artworksTotal - d.artworksBase]);
+                //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
             })
             //.data(pie([100, 10, 50, 60, 75]))
             .enter()
