@@ -104,6 +104,68 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         this.rScale.domain([Math.min(...this.exhibStats.map(g => g.artworksBase)), Math.max(...this.exhibStats.map(g => g.artworksBase))]);
 
+
+        //PIE CHARTS________________________________________________
+        // Pie chart variables:
+        let arc = d3.arc<MetaExhibition>()
+            .innerRadius(0)
+            .outerRadius(3);
+
+        let pie = d3.pie()
+            .sort(null)
+            .value((d: any) => { return d; });
+
+
+        let color = d3.schemeCategory10;
+
+        let points = this.circleContainer.selectAll('g')
+            .data(this.exhibStats)
+            .enter()
+            .append('g')
+            .attr('transform', (d: MetaExhibition) => {
+                let long = -999999999.0;
+                let lat = -99999999999.0;
+
+                if (d.tookPlaceInHosts[0]) {
+                    long = parseFloat(d.tookPlaceInHosts[0].longitude);
+                    lat = parseFloat(d.tookPlaceInHosts[0].latitude);
+
+                }
+                return 'translate(' + projection([long, lat]) + ')'
+                //return 'translate(0,0)';
+            })
+            .attr('class', 'pies');
+
+        let pies = points.selectAll('.pies')
+            .data((d: MetaExhibition) => {
+
+                console.log("d");
+                console.log(d);
+
+                //return (pie([100, 10, 50, 60, 75]));
+                //return pie([d.artworksBase]);
+                return pie([d.artworksBase, d.artworksTotal - d.artworksBase]);
+            })
+            //.data(pie([100, 10, 50, 60, 75]))
+            .enter()
+            .append('g')
+            .attr('class', 'arc');
+
+        //this.circleContainer.selectAll('.pies')
+        pies.append('path')
+            .attr('d', (d: any) => {
+                return arc(d);
+            })
+            .attr("fill", function (d, i) {
+                return color[i + 1];
+            })
+            .attr('opacity', 0.0);
+        //PIE CHARTS END__________________________________________________________
+
+
+
+
+        //CIRCLE MARKS___________________________________________________________
         //draw markers for exhibitions on map
         this.circleContainer
             .selectAll('circle')
@@ -152,6 +214,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 else return 0;
             })
             .style("fill", "crimson");
+
+        //CIRCLE MARKS END_______________________________________________________________
 
 
         //tooltip
