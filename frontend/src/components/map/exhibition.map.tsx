@@ -223,14 +223,16 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 } //hide exhibitions without hosts
                 else return 0;
             })
-            .style("fill", "crimson");
+            .style("fill", "crimson")
+            .append("title").append('tspan')
+            .text((d: MetaExhibition) => `${d.title} (${d.startdate})\n${this.checkForHost(d.tookPlaceInHosts).name}, ${this.checkForHost(d.tookPlaceInHosts).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
 
         //CIRCLE MARKS END_______________________________________________________________
 
 
         //tooltip
         //TODO: fix tooltip so all exhibitions in same place are shown in tooltip
-        this.circleContainer
+        /* this.circleContainer
             .selectAll('circle')
             .on('mouseover', (d: PointerEvent) => {
 
@@ -251,6 +253,12 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                     // get circle cx and cy
                     const cx = +d3.select(`#${id}`).attr('cx');
                     const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // const cx = d3.pointer(d, d3.zoomTransform(d.target as SVGCircleElement))[0];
+                    // const cy = d3.pointer(d, d3.zoomTransform(d.target as SVGCircleElement))[1];
+                    //tooltip.attr("transform", `translate(${[cx, cy]})`);
+
+                    // console.log("cx + cy " + cx + " " + cy);
 
                     // set tooltip position to mouse position
                     tooltip.attr('x', cx + 15);
@@ -329,14 +337,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 // pass year to mouseOverCallBack
                 this.mouseOverCallBack(0);
                 //this.highlightCircle(0);
-            });
+            }); */
 
         this.circleContainer.exit().remove();
-
-
-
-
     }
+
 
     highlightCircle(year: number): void {
         // select the circle with the same year as the year passed in
@@ -381,7 +386,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         // this.init();
     }
 
-    /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
+    /** Checks if there is a host, otherwise returns dummy host (for filling the tooltip with data) */
     checkForHost(hosts: Host[]): Host {
 
         const noHost: Host = {
@@ -418,7 +423,14 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     zoomed($event: d3.D3ZoomEvent<SVGSVGElement, unknown>) {
         if (!this.svgContainer) return;
-        this.svgContainer.select('#map-everything').attr('transform', `translate(${$event.transform.x}, ${$event.transform.y}) scale(${$event.transform.k})`);
+        //this.svgContainer.select('#map-everything').attr('transform', `translate(${$event.transform.x}, ${$event.transform.y}) scale(${$event.transform.k})`);
+
+        //only scale map + markers, not the tooltips
+        //console.log("x y " + $event.transform.x + " " + $event.transform.y);
+        this.svgContainer.select('#map-borders').attr('transform', `translate(${$event.transform.x}, ${$event.transform.y}) scale(${$event.transform.k})`);
+        this.svgContainer.select('#map-markers').attr('transform', `translate(${$event.transform.x}, ${$event.transform.y}) scale(${$event.transform.k})`);
+        //this.svgContainer.select('#map-tooltip').selectAll('rect').attr('transform', `translate(${$event.transform.x}, ${$event.transform.y}) scale(${$event.transform.k})`);
+
     }
 
 
