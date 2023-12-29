@@ -6,8 +6,10 @@ import * as d3 from 'd3';
 import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
+import { Exhibition } from '../../models/exhibition.model';
 
 class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }> {
+
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -24,7 +26,6 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private theta: number;
     private links: Array<Link> = [];
     private color: d3.ScaleOrdinal<string, string>;
-
 
     private minYear = 1905;
     private maxYear = 1915;
@@ -515,6 +516,67 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
 
+        //PIE CHARTS________________________________________________
+        // Pie chart variables:
+        let piearc = d3.arc<Link>()
+            .innerRadius(0)
+            // .outerRadius((d: any) => {
+            //     console.log("data");
+            //     console.log(d);
+            //     return this.mapRScale(d.data);
+            // })
+            .outerRadius(6);
+
+        let pie = d3.pie()
+            .sort(null)
+            .value((d: any) => { return d; });
+
+
+        let color = d3.schemeCategory10;
+
+        let points = this.artistContainer.selectAll('g')
+            .data(this.links)
+            .enter()
+            .append('g')
+            .attr('transform', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return 'translate(' + x + ',' + y + ')';
+                //return 'translate(0,0)';
+            })
+            .attr('class', 'pies');
+
+        let pies = points.selectAll('.pies')
+            .data((d: Link) => {
+                //return (pie([100, 10, 50, 60, 75]));
+                //return pie([d.artworksBase]);
+                return pie([d.props.data.count, d.props.data.baseLength - d.props.data.count]);
+                //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
+            })
+            //.data(pie([100, 10, 50, 60, 75]))
+            .enter()
+            .append('g')
+            .attr('class', 'arc');
+
+        //this.circleContainer.selectAll('.pies')
+        pies.append('path')
+            .attr('d', (d: any) => {
+                return piearc(d);
+            })
+            .attr("fill", function (d, i) {
+                return color[i + 1];
+            })
+            .attr('opacity', 0.75);
+        //PIE CHARTS END__________________________________________________________
+
+
+
+        //CIRCLES START_____________________________________________________
+        //draw circles showing the percentage of artworks by this artist
         this.artistContainer
             .selectAll('circle')
             .data(this.links)
@@ -536,10 +598,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            .attr('opacity', 1)
+            //.attr('opacity', 1)
+            .attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
-
+        //draw circles showing the amount of exhibited artworks
         this.artistContainer
             .selectAll('.circle')
             .data(this.links)
@@ -559,8 +622,13 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            .attr('opacity', 0.5)
+            //.attr('opacity', 0.5)
+            .attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
+
+        //CIRCLES END______________________________________________________________________________
+
+
 
 
         this.artistContainer.selectAll('circle')
@@ -598,7 +666,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(data.target.name);
+                        .text(`${data.target.props.exhibition.title} (${data.props.data.year})`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -608,7 +676,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`(${data.props.data.year}) ${data.props.data.count} artworks`);
+                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '3em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.props.data.count} artworks of ${data.props.data.baseLength} in total`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
