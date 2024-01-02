@@ -133,8 +133,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         let points = this.circleContainer.selectAll('g')
             .data(this.exhibStats)
-            .enter()
-            .append('g')
+            //           .enter()
+            //          .append('g')
+            .join('g')
             .attr('transform', (d: MetaExhibition) => {
                 let long = -999999999.0;
                 let lat = -99999999999.0;
@@ -149,7 +150,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             })
             .attr('class', 'pies');
 
-        let pies = points.selectAll('.pies')
+        //        let pies = points.selectAll('.pies')
+        let pies = points.selectAll('path')
             .data((d: MetaExhibition) => {
                 //return (pie([100, 10, 50, 60, 75]));
                 //return pie([d.artworksBase]);
@@ -157,12 +159,13 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
             })
             //.data(pie([100, 10, 50, 60, 75]))
-            .enter()
-            .append('g')
-            .attr('class', 'arc');
+            //           .enter()
+            //           .append('g')
+            //           .attr('class', 'arc');
 
-        //this.circleContainer.selectAll('.pies')
-        pies.append('path')
+            //this.circleContainer.selectAll('.pies')
+            //      pies.append('path')
+            .join('path')
             .attr('d', (d: any) => {
                 return arc(d);
             })
@@ -170,6 +173,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 return color[i + 1];
             })
             .attr('opacity', 0.0);
+        // .attr('opacity', 0.7);
         //PIE CHARTS END__________________________________________________________
 
 

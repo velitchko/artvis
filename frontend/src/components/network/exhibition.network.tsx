@@ -516,6 +516,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
 
+        //TODO bugfix... pie charts don't change position when groupby or orderby is changed
         //PIE CHARTS________________________________________________
         // Pie chart variables:
         let piearc = d3.arc<Link>()
@@ -527,17 +528,25 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             // })
             .outerRadius(6);
 
-        let pie = d3.pie()
+        let pie = d3.pie<Link>()
             .sort(null)
-            .value((d: any) => { return d; });
+            .value((d: any) => {
+                console.log(d);
+                return d;
+            });
 
 
         let color = d3.schemeCategory10;
 
+        console.log("links ");
+        console.log(this.links);
+
         let points = this.artistContainer.selectAll('g')
+            //let points = this.artistContainer.selectAll('.pies')
             .data(this.links)
-            .enter()
-            .append('g')
+            //          .enter()
+            //         .append('g')
+            .join('g')
             .attr('transform', (d: Link) => {
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
                 d.target.x = x;
@@ -545,12 +554,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
                 d.target.y = y;
 
+                console.log("x, y " + x + " " + y);
                 return 'translate(' + x + ',' + y + ')';
                 //return 'translate(0,0)';
             })
-            .attr('class', 'pies');
+            .attr('class', 'pies')
+            .attr('id', (d: Link) => `pie-${d.target.id}-${d.props.data.year}`);
 
-        let pies = points.selectAll('.pies')
+        let pies = points.selectAll('path')
             .data((d: Link) => {
                 //return (pie([100, 10, 50, 60, 75]));
                 //return pie([d.artworksBase]);
@@ -558,20 +569,37 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
             })
             //.data(pie([100, 10, 50, 60, 75]))
-            .enter()
-            .append('g')
-            .attr('class', 'arc');
+            //           .join('g')
+            //           .enter()
+            //          .append('g')
+            //.join('g')
+            //          .attr('class', 'arc');
 
-        //this.circleContainer.selectAll('.pies')
-        pies.append('path')
+            //this.circleContainer.selectAll('.pies')
+            //       pies.append('path')
+            // pies.selectAll('path')
+
+            .join('path')
+            //       pies.exit().remove();
+            //       pies.join('path')
+            //pies.selectAll('.arc')
+
+            //.join('path')
             .attr('d', (d: any) => {
                 return piearc(d);
             })
             .attr("fill", function (d, i) {
+
+
                 return color[i + 1];
+
+
             })
+            //.attr("fill", (d: any) => this.color(d.props.group))
             .attr('opacity', 0.75);
+        //.attr('opacity', 0.0);
         //PIE CHARTS END__________________________________________________________
+
 
 
 
@@ -590,6 +618,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
                 d.target.x = x;
 
+                console.log("x circle" + x);
                 return x;
             })
             .attr('cy', (d: Link) => {
@@ -610,6 +639,16 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
             .transition().duration(250)
             .attr('r', (d: Link) => this.nodeRScale(d.props.data.count))
+            /* .attr('transform', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return 'translate(' + x + ',' + y + ')';
+                //return 'translate(0,0)';
+            }) */
             .attr('cx', (d: Link) => {
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
                 d.target.x = x;
@@ -627,6 +666,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //CIRCLES END______________________________________________________________________________
+
+
 
 
 
@@ -1034,6 +1075,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const sum = this.links.filter((link: Link) => link.targetId == d.targetId)
                     .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
+                console.log("outer r " + sum);
                 // set radius to sum
                 return this.outerNodeRScale(sum);
             })
@@ -1269,6 +1311,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('stroke', 'none')
             .attr('stroke-width', 1)
             .attr('d', (d: any) => {
+                console.log("donut arc " + d)
                 return arc(d);
             })
             .style('cursor', 'pointer')
@@ -1292,7 +1335,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .data(_.uniqBy(this.links, (node: Link) => node.props.group))
             .join('text')
             .attr('class', 'donut-label')
-            .attr('id', (d: any) => `donut-label-${d.props.group}`)
+            .attr('id', (d: any) => `do nut-label-${d.props.group}`)
             // set text to d.props.group
             .text((d: any) => d.props.group)
             .attr('font-size', '12px')
@@ -1304,6 +1347,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('transform', (d: Link) => {
                 const x2 = arc.centroid(d)[0];
                 const y2 = arc.centroid(d)[1];
+
+                console.log("donut transform " + x2 + " " + y2);
 
                 return `rotate(-90, ${x2}, ${y2})`;
             });
