@@ -29,6 +29,16 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	private height: number = 0;
 	private exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>;
 	private exhibStatistics: Array<MetaExhibition>;
+	private baseItemCountExtentAbs: [number, number];
+	private baseItemCountExtentAvg: [number, number];
+	private compareItemCountExtentAbs: [number, number];
+	private compareItemCountExtentAvg: [number, number];
+	private minYear: number = 0;
+	private maxYear: number = 0;
+	private yScale: d3.ScaleLinear<number, number, never> | undefined;
+	private xScale: d3.ScaleLinear<number, number, never> | undefined;
+	private loadingExternalData: boolean = false;
+
 
 	constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
 		super(props);
@@ -48,6 +58,16 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		this.width = 500;
 		this.height = 200;
 
+		this.baseItemCountExtentAbs = [0, 0];
+		this.baseItemCountExtentAvg = [0, 0];
+		this.compareItemCountExtentAbs = [0, 0];
+		this.compareItemCountExtentAvg = [0, 0];
+		this.minYear = 1905;
+		this.maxYear = 1915;
+		this.yScale = undefined;
+		this.xScale = undefined;
+
+
 		this.margin = {
 			top: 30,
 			bottom: 30,
@@ -66,7 +86,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	}
 
 	onResize = () => {
-		// get ego-net-container element width and height and set state
+		// get artistinfo-container element width and height and set state
 		const width = document.getElementById('artistinfo-container')?.clientWidth;
 		const height = document.getElementById('artistinfo-container')?.clientHeight;
 
@@ -78,21 +98,54 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		});
 	}
 
+
 	onArtistChange(artistId: string) {
+		// client.query({
+		// 	query: GET_ARTIST,
+		// 	variables: {
+		// 		searchId: artistId
+		// 	}
+		// }).then(result => {
+		// 	//TODO: get it to work 
+		// 	this.setState({ artist: result.data.artists[0] })
 
-		client.query({
-			query: GET_ARTIST,
-			variables: {
-				searchId: artistId
-			}
-		}).then(result => {
-			//TODO: get it to work 
-			this.setState({ artist: result.data.artists[0] })
+		// 	//console.log(result.data.artists[0])
+		// 	//this.setState(prevState => ({ artist: result.data.artists[0] }), () => { this.render() });
+		// });
 
-			//console.log(result.data.artists[0])
-			//this.setState(prevState => ({ artist: result.data.artists[0] }), () => { this.render() });
-		});
+		this.setState({ compareWith: null });
+
+		const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
+
+		if (artist) {
+			// this.setState({ compareWith: artist });
+			this.setState(prevState => ({ compareWith: artist }), () => {
+				//this.drawCompare();
+				this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+			});
+			// this.drawCompare();
+		} else {
+			console.log('artist not found');
+			this.loadingExternalData = true;
+			// query artist by id
+			client.query({
+				query: GET_ARTIST,
+				variables: {
+					searchId: artistId
+				}
+			}).then(result => {
+				this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
+					//this.drawCompare();
+					this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+				});
+				this.loadingExternalData = false;
+			});
+
+		}
 	}
+
+
+
 
 	componentDidMount(): void {
 		//console.log("comp did mount");
@@ -102,7 +155,6 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		const width = document.getElementById('artistinfo-container')?.clientWidth;
 		const height = document.getElementById('artistinfo-container')?.clientHeight;
 
-		// TODO uncomment 
 		if (!width || !height) return;
 
 		this.setState(prevState => ({ width: width, height: height }), () => {
@@ -353,6 +405,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
 									<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
 								</div>
+								{this.state.compareWith &&
+									<div className="float-right text-right pr-2">
+										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+										<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
+										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
+									</div>
+								}
 							</div>
 						</div>
 
