@@ -516,7 +516,6 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
 
-        //TODO bugfix... pie charts don't change position when groupby or orderby is changed
         //PIE CHARTS________________________________________________
         // Pie chart variables:
         let piearc = d3.arc<Link>()
@@ -534,6 +533,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 console.log(d);
                 return d;
             });
+        // .value((d: Link) => {
+
+        //     console.log(d);
+        //     return d.props.data.count;
+        // });
 
 
         let color = d3.schemeCategory10;
@@ -562,10 +566,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('id', (d: Link) => `pie-${d.target.id}-${d.props.data.year}`);
 
         let pies = points.selectAll('path')
+            //            .data(pie(this.links))
             .data((d: Link) => {
                 //return (pie([100, 10, 50, 60, 75]));
                 //return pie([d.artworksBase]);
                 return pie([d.props.data.count, d.props.data.baseLength - d.props.data.count]);
+                //               return pie(d);
                 //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
             })
             //.data(pie([100, 10, 50, 60, 75]))
@@ -590,14 +596,21 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             })
             .attr("fill", function (d, i) {
 
+                if (i === 0) {
+                    return color[i + 1];
+                    //color(d.props.group)
+                }
+                else {
+                    return color[i + 1];
+                }
 
-                return color[i + 1];
+                //return color[i + 1];
 
 
             })
             //.attr("fill", (d: any) => this.color(d.props.group))
-            .attr('opacity', 0.75);
-        //.attr('opacity', 0.0);
+            // .attr('opacity', 0.75);
+            .attr('opacity', 0.0);
         //PIE CHARTS END__________________________________________________________
 
 
@@ -627,8 +640,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            //.attr('opacity', 1)
-            .attr('opacity', 0.0)
+            .attr('opacity', 1)
+            //.attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //draw circles showing the amount of exhibited artworks
@@ -661,8 +674,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
-            //.attr('opacity', 0.5)
-            .attr('opacity', 0.0)
+            .attr('opacity', 0.5)
+            // .attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //CIRCLES END______________________________________________________________________________
@@ -1271,18 +1284,26 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .startAngle((d: Link) => {
                 let first: Link | undefined;
                 let last: Link | undefined;
+
+                //console.log("d title" + d.target.props.exhibition.title);
+
                 for (let i = 0; i < this.links.length; i++) {
                     if (this.links[i].props.group == d.props.group) {
                         first = this.links[i];
+                        console.log(i);
                         break;
                     }
                 }
                 for (let i = this.links.indexOf(first as Link); i < this.links.length; i++) {
                     if (this.links[i].props.group != d.props.group) {
-                        last = this.links[i + 1];
+                        //last = this.links[i + 1];
+                        last = this.links[i];
                         break;
                     }
                 }
+
+                //console.log("last " + last?.target.props.exhibition.title);
+                //console.log("first " + first?.target.props.exhibition.title);
                 // handle last element
                 if (!last) {
                     last = this.links[this.links.length - 1];
@@ -1302,14 +1323,34 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return this.getAngle(first?.props.originalIndex) - 0.01;
             })
 
+        // let donutpie = d3.pie<Link>()
+        //     .sort(null)
+        //     .value((d: any) => {
+        //         console.log(d);
+        //         return d;
+        //     });
+
         this.donutContainer.selectAll('path')
             .data(_.uniqBy(this.links, (node: Link) => node.props.group))
+            // .data(this.links)
             .join('path')
             .attr('class', 'donut')
             .attr('fill', (d: any) => this.color(d.props.group))
             .attr('id', (d: any) => `donut-${d.props.group}`)
             .attr('stroke', 'none')
             .attr('stroke-width', 1)
+
+            // .data((d: Link) => {
+            //     //return (pie([100, 10, 50, 60, 75]));
+            //     //return pie([d.artworksBase]);
+            //     return donutpie(d.props.group);
+            //     //               return pie(d);
+            //     //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
+            // })
+
+
+            // .join('path')
+
             .attr('d', (d: any) => {
                 console.log("donut arc " + d)
                 return arc(d);
@@ -1330,6 +1371,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // append text to donut chart
 
         //this.links.forEach((link: Link) => console.log("donut groups " + link.props.group))
+
 
         this.donutContainer.selectAll('text')
             .data(_.uniqBy(this.links, (node: Link) => node.props.group))
