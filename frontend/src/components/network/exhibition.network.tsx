@@ -238,7 +238,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState(prevState => ({ groupBy: event.target.value }), () => {
 
-            console.log("state group: " + this.state.groupBy, this.state.orderBy);
+            //console.log("state group: " + this.state.groupBy, this.state.orderBy);
             const targetNodes = this.filterData(this.state.coEx, this.state.groupBy, this.state.orderBy);
             this.links = targetNodes;
 
@@ -252,7 +252,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //this.handleGroupByChange(event);
         this.setState(prevState => ({ orderBy: event.target.value }), () => {
 
-            console.log("state order: " + this.state.groupBy, this.state.orderBy);
+            //console.log("state order: " + this.state.groupBy, this.state.orderBy);
             const targetNodes = this.filterData(this.state.coEx, this.state.groupBy, this.state.orderBy);
             this.links = targetNodes;
 
@@ -263,7 +263,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
     orderBy(orderBy: string, groupBy: string, links: Array<Link>,): Dictionary<Link[]> {
 
-        console.log("orderby " + orderBy + " " + groupBy + " ");
+        //console.log("orderby " + orderBy + " " + groupBy + " ");
         switch (orderBy) {
             case 'year':
                 {
@@ -530,7 +530,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         let pie = d3.pie<Link>()
             .sort(null)
             .value((d: any) => {
-                console.log(d);
+                // console.log(d);
                 return d;
             });
         // .value((d: Link) => {
@@ -542,8 +542,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         let color = d3.schemeCategory10;
 
-        console.log("links ");
-        console.log(this.links);
+        //console.log("links ");
+        //console.log(this.links);
 
         let points = this.artistContainer.selectAll('g')
             //let points = this.artistContainer.selectAll('.pies')
@@ -558,7 +558,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
                 d.target.y = y;
 
-                console.log("x, y " + x + " " + y);
+                //("x, y " + x + " " + y);
                 return 'translate(' + x + ',' + y + ')';
                 //return 'translate(0,0)';
             })
@@ -631,7 +631,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
                 d.target.x = x;
 
-                console.log("x circle" + x);
+                //console.log("x circle" + x);
                 return x;
             })
             .attr('cy', (d: Link) => {
@@ -1088,7 +1088,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const sum = this.links.filter((link: Link) => link.targetId == d.targetId)
                     .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
-                console.log("outer r " + sum);
+                //console.log("outer r " + sum);
                 // set radius to sum
                 return this.outerNodeRScale(sum);
             })
@@ -1290,7 +1290,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 for (let i = 0; i < this.links.length; i++) {
                     if (this.links[i].props.group == d.props.group) {
                         first = this.links[i];
-                        console.log(i);
+                        //console.log(i);
                         break;
                     }
                 }
@@ -1352,7 +1352,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             // .join('path')
 
             .attr('d', (d: any) => {
-                console.log("donut arc " + d)
+                //console.log("donut arc " + d)
                 return arc(d);
             })
             .style('cursor', 'pointer')
@@ -1390,7 +1390,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const x2 = arc.centroid(d)[0];
                 const y2 = arc.centroid(d)[1];
 
-                console.log("donut transform " + x2 + " " + y2);
+                //console.log("donut transform " + x2 + " " + y2);
 
                 return `rotate(-90, ${x2}, ${y2})`;
             });

@@ -425,7 +425,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 						<div className="lg:row-span-2 md:row-span-1 col-span-2 z-30">
 							<div className="w-full h-full overflow-y-scroll overflow-x-scroll" id="table-container">
-								<EHTableComponent query={GET_EXHIBITIONS_AND_HOSTS} baseId={this.state.artist.id} compareWith={null} exhibitions={this.state.artist.exhibitedExhibitions} />
+								<EHTableComponent query={GET_EXHIBITIONS_AND_HOSTS} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
 							</div>
 						</div>
 						<div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
