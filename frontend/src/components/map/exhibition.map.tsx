@@ -56,6 +56,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
 
     init(): void {
+
         if (this.svgContainer) return;
 
         this.rScale = d3.scaleSqrt()
@@ -228,6 +229,15 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 else return 0;
             })
             .style("fill", "crimson")
+            /* .style("fill", (d: MetaExhibition) => {
+
+                //console.log("compareWith ");
+                //console.log(this.state.compareWith);
+                //console.log(this.props.compareWith);
+                const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
+                return common ? "yellow" : "crimson";
+
+            }) */
             .append("title").append('tspan')
             .text((d: MetaExhibition) => `${d.title} (${d.startdate})\n${this.checkForHost(d.tookPlaceInHosts).name}, ${this.checkForHost(d.tookPlaceInHosts).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
 
@@ -389,6 +399,65 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         // this.init();
     }
+
+    componentDidUpdate(prevProps: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }>, prevState: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }>, snapshot?: any): void {
+
+        //console.log("component did update");
+        //console.log(prevProps.compareWith);
+        //console.log(this.props.compareWith);
+        // set state if props.compareWith changes and update results.exhibitions
+        if (prevProps.compareWith !== this.props.compareWith) {
+            this.setState((prevState: any) => {
+                // update results.exhibitions
+                /* const exhibitions = new Array<MetaExhibition>();
+                prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
+                    const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
+                    
+                    const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                    metaExhibition.isCommon = isCommon ? true : false;
+                    metaExhibition.percentBase = exhibition.percentBase;
+                    metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
+                    
+                    // const percentBase = this.state..artistsExhibited?.length / this.props.compareWith?.exhibitedExhibitions?.length;
+                    exhibitions.push(metaExhibition);
+                }); */
+                // sort by isCommon
+                /* exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                    if(a.isCommon && !b.isCommon) return -1;
+                    if(!a.isCommon && b.isCommon) return 1;
+                    return 0;
+                });
+ */
+                this.colorCommonExhibitions();
+                //this.init();
+                return { ...prevState, compareWith: this.props.compareWith }
+                //return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
+
+            });
+
+        }
+    }
+
+    /** Colors circles on map according to if 2 specified artists have common exhibitions (yellow) or not (red) */
+    colorCommonExhibitions() {
+        if (!this.svgContainer) return;
+        //console.log("color common");
+
+        this.circleContainer?.selectAll('circle')
+            .data(this.exhibStats)
+            .style("fill", (d: MetaExhibition) => {
+
+                //console.log("compareWith ");
+                //console.log(this.state.compareWith);
+                //console.log(this.props.compareWith);
+                const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
+                return common ? "wheat" : "crimson";
+
+            });
+
+
+    }
+
 
     /** Checks if there is a host, otherwise returns dummy host (for filling the tooltip with data) */
     checkForHost(hosts: Host[]): Host {
