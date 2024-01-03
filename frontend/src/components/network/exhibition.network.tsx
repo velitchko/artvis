@@ -684,7 +684,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
 
-
+        //Tooltips + highlight year circle ______________________________________________________
         this.artistContainer.selectAll('circle')
             .on('mouseover', (d: PointerEvent) => {
                 // get data from d 
@@ -753,7 +753,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                     this.tooltip.raise();
                 }
 
-                // highlight all links with same targetId
+                /* // highlight all links with same targetId
                 const links = this.links.filter((link: Link) => link.targetId == data.targetId);
                 links.forEach((link: Link) => {
                     const id = `node-${link.target.id}-${link.props.data.year}`;
@@ -763,10 +763,34 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                     circle.attr('stroke', 'black');
                     circle.attr('stroke-width', 2);
+                }); */
+                // highlight all circles of this exhibition in network
+                const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                links.forEach((link: Link) => {
+                    const circles = this.artistContainer?.selectAll('circle')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!circles) return;
+
+                    circles.attr('stroke', 'black');
+                    circles.attr('stroke-width', 2);
+
+                    const outercircles = this.outerCircleContainer?.selectAll('circle')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!outercircles) return;
+
+                    outercircles.attr('stroke', 'black');
+                    outercircles.attr('stroke-width', 2);
+
                 });
 
                 // pass year to mouseOverCallBack
-                this.mouseOverCallBack(data.props.data.year);
+                //this.mouseOverCallBack(data.props.data.year);
                 this.highlightCircle(data.props.data.year);
             })
             .on('mouseout', (d: PointerEvent) => {
@@ -776,16 +800,24 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // lower tooltip 
                 this.tooltip?.lower();
 
-                // clear all highlights
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
                 this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
 
                 // pass year to mouseOverCallBack
-                this.mouseOverCallBack(0);
+                //this.mouseOverCallBack(0);
                 this.highlightCircle(0);
             });
 
         this.artistContainer.exit().remove();
 
+        //Tooltips END_____________________________________________________________
+
+
+        //Exhibitions titles outer circle_________________________________________
         this.artistContainer.selectAll('.artist-label')
             .data(_.uniqBy(this.links, (node: Link) => node.target.id))
             .join('text')
@@ -890,7 +922,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                     circle.attr('stroke-width', 2);
                     circle.attr('stroke-opacity', 1);
 
-                    // highlight all links with same targetId 
+                    // highlight all circles of this exhibition in network
                     const links = this.links.filter((link: Link) => link.targetId == data.targetId);
                     links.forEach((link: Link) => {
                         const circles = this.artistContainer?.selectAll('circle')
@@ -902,6 +934,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                         circles.attr('stroke', 'black');
                         circles.attr('stroke-width', 2);
+
+                        const outercircles = this.outerCircleContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!outercircles) return;
+
+                        outercircles.attr('stroke', 'black');
+                        outercircles.attr('stroke-width', 2);
+
                     });
                 }
 
@@ -1011,56 +1054,57 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 // lower tooltip
                 this.tooltip?.lower();
-            })
-            .on('click', (d: PointerEvent) => {
-                // set state.selection to true
-                this.setState(prevState => ({ selection: true }));
+            });
+        /* .on('click', (d: PointerEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
 
-                // reset font weight of all labels
+            // reset font weight of all labels
+            this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // reset all labels font weight to normal
                 this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
 
-                // ctrl+click to deselect
-                if (d.ctrlKey) {
-                    // set state.selection to false
-                    this.setState(prevState => ({ selection: false }));
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
 
-                    // unhightlight all nodes 
-                    this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
-                    this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
-                    this.artistContainer?.selectAll('circle').attr('stroke', 'none');
-                    this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+                // lower tooltip
+                this.tooltip?.lower();
 
-                    // reset all labels font weight to normal
-                    this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
 
-                    // reset opacity of all nodes
-                    this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
-                    this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+                // return
+                return;
+            }
 
-                    // lower tooltip
-                    this.tooltip?.lower();
+            const id = (d.target as SVGCircleElement).id;
 
-                    // reset opacity of labels
-                    this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+            const data = d3.select(`#${id}`).datum() as Link;
 
-                    // return
-                    return;
-                }
+            if (!data) return;
 
-                const id = (d.target as SVGCircleElement).id;
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
 
-                const data = d3.select(`#${id}`).datum() as Link;
+            // set current label font weight to bold
+            const label = this.artistContainer?.select(`#${id}`);
 
-                if (!data) return;
-
-                this.requestNode(data.targetId);
-                this.getSecondaryLinks(data);
-
-                // set current label font weight to bold
-                const label = this.artistContainer?.select(`#${id}`);
-
-                if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
-            });
+            if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
+        }); */
+        //EXHIBITION LABELS END_________________________________________________________
 
         if (!this.outerCircleContainer) return;
 
@@ -1076,7 +1120,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
 
 
-
+        //OUTER CIRCLE CONTAINER_____________________________________________________________________
         // draw circles on the outside one for each unique target node 
         this.outerCircleContainer.selectAll('circle')
             .data(_.uniqBy(this.links, (node: Link) => node.target.id))
@@ -1233,47 +1277,50 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 // lower tooltip
                 this.tooltip?.lower();
-            })
-            .on('click', (d: MouseEvent) => {
-                // set state.selection to true
-                this.setState(prevState => ({ selection: true }));
-
-                // ctrl+click to deselect
-                if (d.ctrlKey) {
-                    // set state.selection to false
-                    this.setState(prevState => ({ selection: false }));
-
-                    // unhightlight all nodes 
-                    this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
-                    this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
-                    this.artistContainer?.selectAll('circle').attr('stroke', 'none');
-                    this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
-
-                    // reset opacity of all nodes
-                    this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
-                    this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
-
-                    // reset opacity of labels
-                    this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
-
-                    // lower tooltip
-                    this.tooltip?.lower();
-
-                    return;
-                }
-
-                const id = (d.target as SVGCircleElement).id;
-
-                const data = d3.select(`#${id}`).datum() as Link;
-
-                if (!data) return;
-
-                this.requestNode(data.targetId);
-                this.getSecondaryLinks(data);
             });
+        /* .on('click', (d: MouseEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
+
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+
+                // lower tooltip
+                this.tooltip?.lower();
+
+                return;
+            }
+
+            const id = (d.target as SVGCircleElement).id;
+
+            const data = d3.select(`#${id}`).datum() as Link;
+
+            if (!data) return;
+
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
+        }); */
 
         this.outerCircleContainer.exit().remove();
+        //OUTER CIRCLE END______________________________________________________________
 
+
+        //DONUT_______________________________________________________________________
         // donut chart
         if (!this.donutContainer) return;
 
@@ -1396,9 +1443,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });
 
         this.donutContainer.exit().remove();
+
+        //DONUT END__________________________________________________________________
     }
 
-    getSecondaryLinks(node: Link): void {
+    /* getSecondaryLinks(node: Link): void {
         // for each targetNode make a request to get the exhibitedWithArtists for that node
         client.query({
             query: GET_ARTIST_EXHIBITED_WITH,
@@ -1433,9 +1482,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });
             this.drawSecondaryLinks(`${node.target.id}`, links);
         });
-    }
+    } */
 
-    drawSecondaryLinks(id: string, links: Array<Link>): void {
+    /* drawSecondaryLinks(id: string, links: Array<Link>): void {
         const baseNode = this.links.find((link: Link) => link.targetId == id);
 
         if (!baseNode) return;
@@ -1504,8 +1553,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // bring circles to front
         this.artistContainer?.raise();
         this.outerCircleContainer?.raise();
-    }
+    } */
 
+    /** Highlight year circle (dashed orange) */
     highlightCircle(year: number): void {
         // select the circle with the same year as the year passed in
         // change the stroke to yellow and make it dashed update stroke-width to 2
@@ -1529,7 +1579,111 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         }
     }
 
-    highlightArtist(artist: Artist | null): void {
+    /** highlight common exhibitions */
+    highlightCommonExhibitions(compareWith: Artist | null): void {
+        const commonExhibitions = new Array<Link>();
+        let found = false;
+        // check if artist is in ego network
+        //_.uniqBy(this.links, (l: Link) => l.target.id).forEach((a: Link) => {
+        //compareWith?.exhibitedExhibitions?.forEach((e: Exhibition) => {
+
+        //get all Links with common exhibitions of both artists
+        this.links.forEach((l: Link) => {
+            //const link = compareWith?.exhibitedExhibitions?.find((artist: Artist) => artist.id === artistId);
+            const link = compareWith?.exhibitedExhibitions?.find((e: Exhibition) => l.target.id === e.id);
+
+            if (link) commonExhibitions.push(l);
+
+            found = true;
+
+            /* compareWith?.exhibitedExhibitions?.forEach((e: Exhibition) => {
+                if (a.target.props.exhibition.id === e.id) {
+                    console.log("id " + a.target.props.exhibition.id);
+                    found = true;
+                    commonExhibitions.push(a);
+                }
+
+            }); */
+        });
+
+        console.log("found");
+        console.log(found);
+        console.log(commonExhibitions);
+
+
+        // if (!found) {
+
+        // deselect everything
+        this.setState(prevState => ({ selection: false }));
+
+        // unhightlight all nodes 
+        this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
+        this.artistContainer?.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
+
+        // reset opacity of all nodes
+        this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+        this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+
+        // reset opacity of labels
+        this.artistContainer?.selectAll('.artist-label').attr('opacity', 1).attr('font-weight', 'normal');
+        // return;
+        //   }
+        //    else {
+        if (!this.outerCircleContainer) return;
+
+        //if common exhibitions were found, highlight them in network
+        if (found) {
+            this.setState(prevState => ({ selection: true }));
+            // highlight all links from the links array 
+            commonExhibitions.forEach((link: Link) => {
+                const id = `outer-circle-${link.target.id}`;
+                const outer = this.outerCircleContainer?.select(`#${id}`);
+
+                if (!outer) return;
+
+                outer
+                    .attr('opacity', 1)
+                    .attr('stroke', 'black')
+                    .attr('stroke-width', 2)
+                    .attr('stroke-opacity', 1);
+
+
+                const label = this.artistContainer?.select(`#artist-label-${link.target.id}`);
+                if (!label) return;
+
+                label.attr('font-weight', 'bold')
+                    .attr('opacity', 1);
+
+            });
+
+
+            const circles = this.artistContainer?.selectAll('circle')
+                .filter((d: any) => {
+                    return commonExhibitions.find((link: Link) => link.target.id == d.target.id) ? true : false;
+                });
+
+            if (!circles) return;
+
+            circles
+                .attr('stroke', 'black')
+                .attr('stroke-width', 2)
+                .attr('stroke-opacity', 1);
+            //const data = this.outerCircleContainer.select(`#outer-circle-${compareWith?.id}`).datum() as Link;
+
+
+            /* // set current label font weight to bold
+            const label = this.artistContainer?.select(`#artist-label-${compareWith?.id}`);
+    
+            if (label) label.attr('font-weight', 'bold').attr('opacity', 1); */
+
+            //  }
+        }
+    }
+
+
+
+
+    /* highlightArtist(artist: Artist | null): void {
         // grab Link data for artist.id from outerCircleContainer
         let found = false;
         // check if artist is in ego network
@@ -1566,7 +1720,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         const label = this.artistContainer?.select(`#artist-label-${artist?.id}`);
 
         if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
-    }
+    } */
 
     render() {
         return (

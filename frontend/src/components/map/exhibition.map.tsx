@@ -28,6 +28,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     private exhibitions: Array<Exhibition> = [];
     private exhibStats: Array<MetaExhibition> = [];
+    private commonExhibitions: Array<MetaExhibition> = [];
 
     //constructor(props: { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
     constructor(props: { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
@@ -89,6 +90,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.circleContainer = everything.append('g').attr('id', 'map-markers');
         this.tooltip = everything.append('g').attr('id', 'map-tooltip');
 
+
+        //TODO: put at least circles in a separate function
         //map projection
         let projection = d3.geoMercator();
 
@@ -428,6 +431,34 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                     return 0;
                 });
  */
+
+                /*             const commonExhibitions = new Array<MetaExhibition>();
+                            //console.log("exhibStats");
+                            //console.log(this.exhibStats);
+                            this.exhibStats.forEach((exhibition: MetaExhibition) => {
+            
+                                const metaExhibition: MetaExhibition = { ...exhibition };
+            
+                                const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                                metaExhibition.isCommon = isCommon ? true : false;
+            
+                                commonExhibitions.push(metaExhibition);
+            
+                            });
+            
+                            commonExhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                                if (a.isCommon && !b.isCommon) return 1;
+                                if (!a.isCommon && b.isCommon) return -1;
+                                return 0;
+                            }); */
+
+                /* this.exhibStats.sort((a: MetaExhibition, b: MetaExhibition) => {
+                    if (a.isCommon && !b.isCommon) return 1;
+                    if (!a.isCommon && b.isCommon) return -1;
+                    return 0;
+                }); */
+                //console.log(this.exhibStats);
+
                 this.colorCommonExhibitions();
                 //this.init();
                 return { ...prevState, compareWith: this.props.compareWith }
@@ -445,13 +476,26 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         this.circleContainer?.selectAll('circle')
             .data(this.exhibStats)
+            /* .attr('stroke', (d: MetaExhibition) => {
+                const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
+                return common ? "wheat" : "crimson";
+            })
+            .attr('stroke-width', (d: MetaExhibition) => {
+                const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
+                return common ? 4 : 0;
+
+            }) */
             .style("fill", (d: MetaExhibition) => {
+
+                //console.log(d.isCommon + " " + d.title + " " + d.id + " " + this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id)?.title);
 
                 //console.log("compareWith ");
                 //console.log(this.state.compareWith);
                 //console.log(this.props.compareWith);
                 const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
-                return common ? "wheat" : "crimson";
+                return common ? "yellow" : "crimson";
+                // return common ? "wheat" : "crimson";
+                //return d.isCommon ? "yellow" : "crimson";
 
             });
 

@@ -121,7 +121,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			// this.setState({ compareWith: artist });
 			this.setState(prevState => ({ compareWith: artist }), () => {
 				//this.drawCompare();
-				this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+				//this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+				this.exhibitionNetwork.current?.highlightCommonExhibitions(this.state.compareWith);
 			});
 			// this.drawCompare();
 		} else {
@@ -136,7 +137,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			}).then(result => {
 				this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
 					//this.drawCompare();
-					this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+					//this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+					this.exhibitionNetwork.current?.highlightCommonExhibitions(this.state.compareWith);
 				});
 				this.loadingExternalData = false;
 			});
