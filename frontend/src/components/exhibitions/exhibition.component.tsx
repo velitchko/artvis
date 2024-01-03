@@ -378,6 +378,20 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		return uniqueExhibitions.length;
 	}
 
+	/** get number of common exhibitions of 2 artists */
+	getCommonExhibitionNumber(compareWith?: Artist): number {
+		if (!compareWith) return 0;
+		let count = 0;
+
+		this.links.forEach((l: Link) => {
+			const link = compareWith?.exhibitedExhibitions?.find((e: Exhibition) => l.target.id === e.id);
+
+			if (link) count++;
+		});
+
+		return count;
+	}
+
 	readyToDrawNetwork() {
 		this.showNetwork = true;
 		//console.log("ready to draw network");
@@ -401,7 +415,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 					<div className="grid grid-flow-row-dense lg:grid-cols-4 lg:grid-rows-6 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
 						<div className="row-span-1 col-span-2 z-30">
-							<div className="w-full h-[9vh]" id="artistinfo-container">
+							<div className="w-full h-[14vh]" id="artistinfo-container">
 								<div className="float-left text-left pl-2">
 									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
@@ -412,7 +426,15 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
 										<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
 										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
+
 									</div>
+								}
+								{this.state.compareWith &&
+
+									<div className="float-bottom text-center pl-5 h-100%">
+										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getCommonExhibitionNumber(this.state.compareWith)} common exhibitions</h3>
+									</div>
+
 								}
 							</div>
 						</div>
