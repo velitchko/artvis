@@ -431,8 +431,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 								}
 								{this.state.compareWith &&
 
-									<div className="float-bottom text-center pl-5 h-100%">
-										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getCommonExhibitionNumber(this.state.compareWith)} common exhibitions</h3>
+									<div className="h-[100%] text-center">
+										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getCommonExhibitionNumber(this.state.compareWith)} common <br />exhibitions</h3>
 									</div>
 
 								}
