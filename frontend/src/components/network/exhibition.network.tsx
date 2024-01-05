@@ -200,13 +200,13 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.nodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             //.range([2, 6]);
-            .range([2, 8]);
+            .range([2, 10]);
 
         this.basenodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             //.range([2, 6]);
             //.range([2, 12]);
-            .range([2, 8]);
+            .range([2, 10]);
 
         //(base) size of circles outside of network
         this.outerNodeRScale = d3.scaleSqrt()
@@ -420,6 +420,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // set nodeRScale domain to maxCount
         this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
 
+        //console.log("min " + Math.min(...grouped.map(g => g.props.data.count)) + ", max " + Math.max(...grouped.map(g => g.props.data.count)));
+
         //this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
 
         //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.baseLength)), Math.max(...grouped.map(g => g.props.data.baseLength))]);
@@ -623,9 +625,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .data(this.links)
             .join('circle')
             .attr('id', (d: Link) => `basenode-${d.target.id}-${d.props.data.year}`)
+            .attr('class', "basenode")
             .transition().duration(250)
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
-            .attr('r', (d: Link) => this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100))
+            .attr('r', (d: Link) => {
+
+                //console.log("rscale " + this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100) + ", count " + d.props.data.count + ", percentage " + d.props.data.percentage + " " + d.props.data.count * d.props.data.percentage / 100);
+                return this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100);
+            })
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
             .attr('cx', (d: Link) => {
                 const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
