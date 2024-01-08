@@ -21,7 +21,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private rScale: d3.ScalePower<number, number>;
     private angleScale: d3.ScaleLinear<number, number>;
     private nodeRScale: d3.ScalePower<number, number>;
-    private basenodeRScale: d3.ScalePower<number, number>;
+    private percentNodeRScale: d3.ScalePower<number, number>;
     private outerNodeRScale: d3.ScalePower<number, number>;
     private theta: number;
     private links: Array<Link> = [];
@@ -49,7 +49,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.angleScale = d3.scaleLinear();
         this.rScale = d3.scaleSqrt();
         this.nodeRScale = d3.scaleSqrt();
-        this.basenodeRScale = d3.scaleSqrt();
+        this.percentNodeRScale = d3.scaleSqrt();
         this.outerNodeRScale = d3.scaleSqrt();
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
@@ -202,7 +202,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             //.range([2, 6]);
             .range([2, 10]);
 
-        this.basenodeRScale = d3.scaleSqrt()
+        this.percentNodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
             //.range([2, 6]);
             //.range([2, 12]);
@@ -244,9 +244,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
+            this.removeHighlight();
         });
     };
 
+    //TODO: fix highlights when order by/group by is changed
     handleOrderByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
 
         //this.handleGroupByChange(event);
@@ -258,6 +260,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
+            this.removeHighlight();
         });
     };
 
@@ -428,7 +431,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.percentage)), Math.max(...grouped.map(g => g.props.data.percentage))]);
         //this.basenodeRScale.domain([0, 100]);
-        this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+        this.percentNodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
@@ -624,14 +627,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .selectAll('circle')
             .data(this.links)
             .join('circle')
-            .attr('id', (d: Link) => `basenode-${d.target.id}-${d.props.data.year}`)
-            .attr('class', "basenode")
+            .attr('id', (d: Link) => `percentnode-${d.target.id}-${d.props.data.year}`)
+            .attr('class', "percentnode")
             .transition().duration(250)
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
             .attr('r', (d: Link) => {
 
                 //console.log("rscale " + this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100) + ", count " + d.props.data.count + ", percentage " + d.props.data.percentage + " " + d.props.data.count * d.props.data.percentage / 100);
-                return this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100);
+                return this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100);
             })
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
             .attr('cx', (d: Link) => {
@@ -1685,6 +1688,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
             //  }
         }
+    }
+
+    removeHighlight(): void {
+        // unhightlight all nodes 
+        this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+        this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+        this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+        this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+        // reset font weight of all labels
+        this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
     }
 
 
