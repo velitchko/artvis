@@ -8,7 +8,7 @@ import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 
-class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }> {
+class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }> {
 
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
@@ -30,12 +30,13 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private minYear = 1905;
     private maxYear = 1915;
 
-    constructor(props: { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }) {
+    constructor(props: { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }) {
         super(props);
 
         this.state = {
             baseNode: props.baseNode,
             links: props.links,
+            compareWith: props.compareWith,
             width: props.width,
             height: props.height,
             coEx: 3,
@@ -245,6 +246,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
             this.removeHighlight();
+            this.highlightCommonExhibitions(this.state.compareWith);
         });
     };
 
@@ -261,6 +263,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
             this.removeHighlight();
+            this.highlightCommonExhibitions(this.state.compareWith);
         });
     };
 
@@ -614,7 +617,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
             })
             //.attr("fill", (d: any) => this.color(d.props.group))
-            // .attr('opacity', 0.75);
+
+            //live
+            //.attr('opacity', 0.75);
             .attr('opacity', 0.0);
         //PIE CHARTS END__________________________________________________________
 
@@ -650,6 +655,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
+            //live
             .attr('opacity', 1)
             //.attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
@@ -684,8 +690,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
                 return y;
             })
+            //live
             .attr('opacity', 0.5)
-            // .attr('opacity', 0.0)
+            //.attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //CIRCLES END______________________________________________________________________________
@@ -1564,6 +1571,72 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.artistContainer?.raise();
         this.outerCircleContainer?.raise();
     } */
+
+    componentDidUpdate(prevProps: Readonly<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }>, prevState: Readonly<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }>, snapshot?: any): void {
+
+        //console.log("component did update");
+        //console.log(prevProps.compareWith);
+        //console.log(this.props.compareWith);
+        // set state if props.compareWith changes and update results.exhibitions
+        if (prevProps.compareWith !== this.props.compareWith) {
+            this.setState((prevState: any) => {
+                // update results.exhibitions
+                /* const exhibitions = new Array<MetaExhibition>();
+                prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
+                    const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
+                    
+                    const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                    metaExhibition.isCommon = isCommon ? true : false;
+                    metaExhibition.percentBase = exhibition.percentBase;
+                    metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
+                    
+                    // const percentBase = this.state..artistsExhibited?.length / this.props.compareWith?.exhibitedExhibitions?.length;
+                    exhibitions.push(metaExhibition);
+                }); */
+                // sort by isCommon
+                /* exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                    if(a.isCommon && !b.isCommon) return -1;
+                    if(!a.isCommon && b.isCommon) return 1;
+                    return 0;
+                });
+ */
+
+                /*             const commonExhibitions = new Array<MetaExhibition>();
+                            //console.log("exhibStats");
+                            //console.log(this.exhibStats);
+                            this.exhibStats.forEach((exhibition: MetaExhibition) => {
+            
+                                const metaExhibition: MetaExhibition = { ...exhibition };
+            
+                                const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                                metaExhibition.isCommon = isCommon ? true : false;
+            
+                                commonExhibitions.push(metaExhibition);
+            
+                            });
+            
+                            commonExhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                                if (a.isCommon && !b.isCommon) return 1;
+                                if (!a.isCommon && b.isCommon) return -1;
+                                return 0;
+                            }); */
+
+                /* this.exhibStats.sort((a: MetaExhibition, b: MetaExhibition) => {
+                    if (a.isCommon && !b.isCommon) return 1;
+                    if (!a.isCommon && b.isCommon) return -1;
+                    return 0;
+                }); */
+                //console.log(this.exhibStats);
+
+                this.highlightCommonExhibitions(this.props.compareWith);
+                //this.init();
+                return { ...prevState, compareWith: this.props.compareWith }
+                //return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
+
+            });
+
+        }
+    }
 
     /** Highlight year circle (dashed orange) */
     highlightCircle(year: number): void {

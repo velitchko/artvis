@@ -442,7 +442,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						<div className="lg:row-span-6 md:row-span-1 lg:col-span-2 sm:col-span-1 z-40">
 							<div className="w-full h-[90vh] sm:h-full" id="ego-net-container">
 								{this.showNetwork &&
-									<ExhibitionNetworkComponent ref={this.exhibitionNetwork} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} />
+									<ExhibitionNetworkComponent ref={this.exhibitionNetwork} baseNode={this.state.baseNode} links={this.state.links} compareWith={this.state.compareWith} requestNode={this.onArtistChange.bind(this)} />
 								}
 							</div>
 						</div>
