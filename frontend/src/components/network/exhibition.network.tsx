@@ -548,8 +548,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // });
 
 
-        let color = d3.schemeCategory10;
+        //let color = d3.schemeCategory10;
 
+        let color = ["#1f77b4", "#cbd5e8"];
         //console.log("links ");
         //console.log(this.links);
 
@@ -603,14 +604,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return piearc(d);
             })
             .attr("fill", function (d, i) {
-
-                if (i === 0) {
-                    return color[i + 1];
+                return color[i];
+                /* if (i === 0) {
+                    return color[i];
                     //color(d.props.group)
                 }
                 else {
                     return color[i + 1];
-                }
+                } */
 
                 //return color[i + 1];
 
@@ -619,8 +620,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             //.attr("fill", (d: any) => this.color(d.props.group))
 
             //live
-            //.attr('opacity', 0.75);
-            .attr('opacity', 0.0);
+            .attr('opacity', 0.75);
+        //.attr('opacity', 0.0);
         //PIE CHARTS END__________________________________________________________
 
 
@@ -656,8 +657,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return y;
             })
             //live
-            .attr('opacity', 1)
-            //.attr('opacity', 0.0)
+            //.attr('opacity', 1)
+            .attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //draw circles showing the amount of exhibited artworks
@@ -691,8 +692,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return y;
             })
             //live
-            .attr('opacity', 0.5)
-            //.attr('opacity', 0.0)
+            //.attr('opacity', 0.5)
+            .attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //CIRCLES END______________________________________________________________________________
