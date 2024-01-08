@@ -179,6 +179,15 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
             // use dir to sort ascending or descending
         }
+        else if (property.split('.')[1] === 'host') {
+
+            sorted = _.sortBy(this.state.results.exhibitions, 'tookPlaceInHosts[0].' + sortBy);
+
+            // if descending, reverse the array
+            if (this.state.dir === 'desc') sorted.reverse();
+
+            // use dir to sort ascending or descending
+        }
         else {
             // else sort by property
             sorted = _.sortBy(this.state.results.exhibitions, sortBy);
@@ -262,16 +271,16 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
                             {/* TODO: FIX SORTING of host properties (atm sorted by host/no host + year?)*/}
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('tookPlaceInHosts.name')}>Host</button>
+                                <button onClick={() => this.sort('name.host')}>Host</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('tookPlaceInHosts.country')}>Country</button>
+                                <button onClick={() => this.sort('country.host')}>Country</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('tookPlaceInHosts.city')}>City</button>
+                                <button onClick={() => this.sort('place.host')}>City</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('tookPlaceInHosts.type')}>Hosttype</button>
+                                <button onClick={() => this.sort('type.host')}>Hosttype</button>
                             </th>
                         </tr>
                     </thead>
