@@ -7,7 +7,8 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
-import data from '../../resources/map.geo.json';
+//import data from '../../resources/map.geo.json';
+import data from '../../resources/complete-map.geo.json';
 import { Host } from '../../models/host.model';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
