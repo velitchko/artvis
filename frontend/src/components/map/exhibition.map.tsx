@@ -116,6 +116,22 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.rScale.domain([Math.min(...this.exhibStats.map(g => g.artworksBase)), Math.max(...this.exhibStats.map(g => g.artworksBase))]);
         this.mapRScale.domain([Math.min(...this.exhibStats.map(g => g.artworksTotal)), Math.max(...this.exhibStats.map(g => g.artworksTotal))]);
 
+        this.drawCircles();
+
+    }
+
+
+    drawCircles(): void {
+        if (!this.svgContainer) return;
+
+        if (!this.circleContainer) return;
+
+        let projection = d3.geoMercator();
+
+        //sort descending by artworksbase so bigger circles are drawn before smaller ones and there are less problems with overlap
+        this.exhibStats.sort((a, b) => { return b.artworksBase - a.artworksBase });
+        console.log("sorted");
+        console.log(this.exhibStats);
 
         //PIE CHARTS________________________________________________
         // Pie chart variables:
@@ -357,8 +373,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             }); */
 
         this.circleContainer.exit().remove();
-    }
 
+
+
+
+    }
 
     highlightCircle(year: number): void {
         // select the circle with the same year as the year passed in

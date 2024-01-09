@@ -620,8 +620,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             //.attr("fill", (d: any) => this.color(d.props.group))
 
             //live
-            .attr('opacity', 0.75);
-        //.attr('opacity', 0.0);
+            //.attr('opacity', 0.75);
+            .attr('opacity', 0.0);
         //PIE CHARTS END__________________________________________________________
 
 
@@ -657,8 +657,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return y;
             })
             //live
-            //.attr('opacity', 1)
-            .attr('opacity', 0.0)
+            .attr('opacity', 1)
+            //.attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //draw circles showing the amount of exhibited artworks
@@ -692,8 +692,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return y;
             })
             //live
-            //.attr('opacity', 0.5)
-            .attr('opacity', 0.0)
+            .attr('opacity', 0.5)
+            //.attr('opacity', 0.0)
             .attr('fill', (d: Link) => this.color(d.props.group));
 
         //CIRCLES END______________________________________________________________________________
