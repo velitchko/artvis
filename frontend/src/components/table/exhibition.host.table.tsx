@@ -249,6 +249,13 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                                 <button onClick={() => this.sort('enddate')}>End Date</button>
                             </th> */}
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('place.host')}>City</button>
+                            </th>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('country.host')}>Country</button>
+                            </th>
+
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('title')}>Title</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
@@ -268,16 +275,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
                             </th>
-
-                            {/* TODO: FIX SORTING of host properties (atm sorted by host/no host + year?)*/}
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('name.host')}>Host</button>
-                            </th>
-                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('country.host')}>Country</button>
-                            </th>
-                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('place.host')}>City</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('type.host')}>Hosttype</button>
@@ -314,6 +313,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                                 <td className="px-2 py-4">{exhibition.type}</td>
                                 <td className="px-2 py-4">{exhibition.startdate}</td>
                                 {/* <td className="px-6 py-4">{exhibition.enddate}</td> */}
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).place}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).country}</td>
                                 <td className="px-2 py-4">{exhibition.title}</td>
                                 <td className="px-2 py-4 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
                                 <td className="px-2 py-4 text-right">{exhibition.percentBase}%</td>
@@ -323,10 +324,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                                 {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
                                 <td className="px-2 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
                                 {/*<td className="px-6 py-4">{exhibition.tookPlaceInHosts[0].name}</td>*/}
-
                                 <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).name}</td>
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).country}</td>
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).place}</td>
                                 <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).type}</td>
 
                             </tr>
