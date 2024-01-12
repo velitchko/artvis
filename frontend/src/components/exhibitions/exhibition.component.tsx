@@ -16,6 +16,7 @@ import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -418,6 +419,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 					<div className="grid grid-flow-row-dense lg:grid-cols-4 lg:grid-rows-6 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
 						<div className="row-span-1 col-span-2 z-30">
 							<div className="w-full h-[14vh]" id="artistinfo-container">
+
 								<div className="float-left text-left pl-2">
 									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-indigo-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
@@ -437,6 +439,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getCommonExhibitionNumber(this.state.compareWith)} common <br />exhibitions</h3>
 									</div>
 
+								}
+								{this.showNetwork &&
+									<ExhibitionLinechartComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
 								}
 							</div>
 						</div>
