@@ -38,6 +38,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	private yScale: d3.ScaleLinear<number, number, never> | undefined;
 	private xScale: d3.ScaleLinear<number, number, never> | undefined;
 	private loadingExternalData: boolean = false;
+	private artistColor: string;
 
 
 	constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -66,6 +67,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		this.maxYear = 1915;
 		this.yScale = undefined;
 		this.xScale = undefined;
+		this.artistColor = "#1f77b4";
 
 
 		this.margin = {
@@ -417,13 +419,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						<div className="row-span-1 col-span-2 z-30">
 							<div className="w-full h-[14vh]" id="artistinfo-container">
 								<div className="float-left text-left pl-2">
-									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
+									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-indigo-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
 									<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
 								</div>
 								{this.state.compareWith &&
 									<div className="float-right text-right pr-2">
-										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
 										<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
 										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
 
