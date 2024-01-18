@@ -421,7 +421,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 							<div className="w-full h-[14vh]" id="artistinfo-container">
 
 								<div className="float-left text-left pl-2">
-									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-indigo-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
+									<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-indigo-700 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 									<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
 									<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
 								</div>
