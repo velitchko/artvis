@@ -85,9 +85,9 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         this.maxYear = 1915;
 
         this.margin = {
-            top: 30,
-            bottom: 30,
-            left: 30,
+            top: -1,
+            bottom: 50,
+            left: 10,
             right: 30
         };
     }
@@ -166,7 +166,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
     }
 
 
-    drawTimeline(update?: { newYScale?: number, newRScale?: Array<number> }) {
+    //drawTimeline(update?: { newYScale?: number, newRScale?: Array<number> }) {
+    drawTimeline(update?: { newYScale?: number, newYScaleTotal?: number }) {
         if (!this.svgTimeLineContainer) return;
 
         if (!this.exhibStats) return;
@@ -209,11 +210,11 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             }
         });
 
-        console.log("items per year");
-        console.log(exhibsPerYear);
+        // console.log("items per year");
+        // console.log(exhibsPerYear);
 
-        console.log(artworksPerYear);
-        console.log(artworksPerYearTotal);
+        // console.log(artworksPerYear);
+        // console.log(artworksPerYearTotal);
 
         const averageArtworks = new Map<number, number>();
         const averageArtworksTotal = new Map<number, number>();
@@ -235,9 +236,9 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         }
 
-        console.log("linechart data: ");
-        console.log(averageArtworks);
-        console.log(averageArtworksTotal);
+        // console.log("linechart data: ");
+        // console.log(averageArtworks);
+        // console.log(averageArtworksTotal);
 
         //const itemsPerYearCumulated = new Map<number, number>();
         //const itemsPerYearTotalCumulated = new Map<number, number>();
@@ -377,15 +378,15 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         // // this.yScale?.domain(this.state.countExtent as Array<number>);
         update && update.newYScale ? this.yScale?.domain([0, update.newYScale]) : this.yScale?.domain([0, yExt[1] as number]);
-        update && update.newYScale ? this.yScaleTotal?.domain([0, update.newYScale]) : this.yScaleTotal?.domain([0, yExtTotal[1] as number]);
+        update && update.newYScaleTotal ? this.yScaleTotal?.domain([0, update.newYScaleTotal]) : this.yScaleTotal?.domain([0, yExtTotal[1] as number]);
 
         const rExt = [Math.min(this.baseItemCountExtentAbs[0], this.baseItemCountExtentAvg[0]), Math.max(this.baseItemCountExtentAbs[1], this.baseItemCountExtentAvg[1])];
 
-        if (update && update.newRScale) {
-            this.rScale?.domain([update.newRScale[0], update.newRScale[1]])
-        } else {
-            this.rScale?.domain(rExt as Array<number>);
-        }
+        // if (update && update.newRScale) {
+        //     this.rScale?.domain([update.newRScale[0], update.newRScale[1]])
+        // } else {
+        //     this.rScale?.domain(rExt as Array<number>);
+        // }
 
 
 
@@ -417,6 +418,10 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         const pathsTotal = this.baseTimelineContainer.selectAll('.total-path');
 
+        console.log("normal scales");
+        console.log(update?.newYScale + " " + this.yScale?.domain()[1] + " " + update?.newYScaleTotal + " " + this.yScaleTotal?.domain()[1]);
+
+
         pathsTotal
             .data(itemsTotalData)
             .join('path')
@@ -425,7 +430,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             .attr('id', 'base-path')
             .attr('stroke', 'lightgray')
             .attr('stroke-width', 2)
-            .attr('stroke-opacity', 0.75)
+            .attr('stroke-opacity', 0.05)
             .attr('fill', 'none');
         pathsTotal.exit().remove();
 
@@ -438,7 +443,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             .attr('id', 'base-path')
             .attr('stroke', '#1f77b4')
             .attr('stroke-width', 1.5)
-            .attr('stroke-opacity', 0.75)
+            .attr('stroke-opacity', 0.05)
             .attr('fill', 'none');
         paths.exit().remove();
 
@@ -462,9 +467,9 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
     }
 
     drawCompare(artist: Artist) {
-        console.log("comparewith");
+        // console.log("comparewith");
 
-        console.log(this.props.compareWith);
+        // console.log(this.props.compareWith);
 
         // draw bars on each year to compare with other artist
         if (!this.svgTimeLineContainer) return;
@@ -475,7 +480,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         if (!artist) return;
 
-        console.log("compare linechart");
+        // console.log("compare linechart");
 
         // const timeline = this.svgTimeLineContainer.select('.timeline-container').append('g').attr('id', 'compare-timeline');
 
@@ -523,8 +528,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         });
 
 
-        console.log("exhib map linecharts");
-        console.log(exhibMap);
+        // console.log("exhib map linecharts");
+        // console.log(exhibMap);
         let i: number = 0;
 
         exhibMap.forEach((value: Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>, key: string) => {
@@ -542,8 +547,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         });
 
 
-        console.log("compare exhibstats");
-        console.log(compExhibStats);
+        // console.log("compare exhibstats");
+        // console.log(compExhibStats);
 
         const compareArtworksPerYear = new Map<number, number>();
         const compareExhibsPerYear = new Map<number, number>();
@@ -580,11 +585,11 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             }
         });
 
-        console.log("items per year");
-        console.log(compareExhibsPerYear);
+        // console.log("items per year");
+        // console.log(compareExhibsPerYear);
 
-        console.log(compareArtworksPerYear);
-        console.log(compareArtworksPerYearTotal);
+        // console.log(compareArtworksPerYear);
+        // console.log(compareArtworksPerYearTotal);
 
         const compareAverageArtworks = new Map<number, number>();
         const compareAverageArtworksTotal = new Map<number, number>();
@@ -606,9 +611,9 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         }
 
-        console.log("linechart data: ");
-        console.log(compareAverageArtworks);
-        console.log(compareAverageArtworksTotal);
+        // console.log("linechart data: ");
+        // console.log(compareAverageArtworks);
+        // console.log(compareAverageArtworksTotal);
 
 
 
@@ -661,36 +666,60 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         /* update && update.newYScale ? this.yScale?.domain([0, update.newYScale]) : this.yScale?.domain([0, yExt[1] as number]);
         update && update.newYScale ? this.yScaleTotal?.domain([0, update.newYScale]) : this.yScaleTotal?.domain([0, yExtTotal[1] as number]);
  */
-        const rExt = [Math.min(this.baseItemCountExtentAbs[0], this.baseItemCountExtentAvg[0]), Math.max(this.baseItemCountExtentAbs[1], this.baseItemCountExtentAvg[1])];
+        //const rExt = [Math.min(this.baseItemCountExtentAbs[0], this.baseItemCountExtentAvg[0]), Math.max(this.baseItemCountExtentAbs[1], this.baseItemCountExtentAvg[1])];
 
 
         // check if count is higher than base artist and draw line
         const compareYMax = d3.max(compareItemsTotalData, (d: { year: number, count: number }) => d.count) as number;
-        const baseYMax = this.yScale?.domain()[1] as number;
+        //const baseYMax = this.yScale?.domain()[1] as number;
+        const baseYMax = this.yScaleTotal?.domain()[1] as number;
 
-        console.log("max");
+        const compareY = d3.max(compareItemsData, (d: { year: number, count: number }) => d.count) as number;
+        const baseY = this.yScale?.domain()[1] as number;
+
+
+        console.log("max base");
+        console.log(compareY + " " + baseY);
+
+        console.log("max total");
         console.log(compareYMax + " " + baseYMax);
 
-        let update: { newYScale?: number, newRScale?: Array<number> } | undefined = undefined;
+        //let update: { newYScale?: number, newRScale?: Array<number> } | undefined = undefined;
+        let update: { newYScale?: number, newYScaleTotal?: number } | undefined = undefined;
+        update = {};
 
-        if (compareYMax !== baseYMax) {
-            update = {};
-            update.newYScale = Math.max(compareYMax, baseYMax)
+        if ((compareY !== baseY) || (compareYMax !== baseYMax)) {
+            //           update = {};
+            update.newYScale = Math.max(compareY, baseY);
+            update.newYScaleTotal = Math.max(compareYMax, baseYMax);
         }
 
-        // if there is a difference between compare and base item count extents, update rScale
-        if (this.compareItemCountExtentAbs[0] < this.baseItemCountExtentAbs[0] ||
-            this.compareItemCountExtentAbs[1] > this.baseItemCountExtentAbs[1] ||
-            this.compareItemCountExtentAvg[0] < this.baseItemCountExtentAvg[0] ||
-            this.compareItemCountExtentAvg[1] > this.baseItemCountExtentAvg[1]) {
 
-            if (!update) update = {};
 
-            update.newRScale = [
-                Math.min(this.compareItemCountExtentAvg[0], this.baseItemCountExtentAvg[0], this.compareItemCountExtentAbs[0], this.baseItemCountExtentAbs[0]),
-                Math.max(this.compareItemCountExtentAvg[1], this.baseItemCountExtentAvg[1], this.compareItemCountExtentAbs[1], this.baseItemCountExtentAbs[1])
-            ]
-        }
+
+        // if (compareY !== baseY) {
+        //     //           update = {};
+        //     update.newYScale = Math.max(compareY, baseY)
+        // }
+
+        // if (compareYMax !== baseYMax) {
+        //     //           update = {};
+        //     update.newYScaleTotal = Math.max(compareYMax, baseYMax)
+        // }
+
+        //if there is a difference between compare and base item count extents, update rScale
+        // if (this.compareItemCountExtentAbs[0] < this.baseItemCountExtentAbs[0] ||
+        //     this.compareItemCountExtentAbs[1] > this.baseItemCountExtentAbs[1] ||
+        //     this.compareItemCountExtentAvg[0] < this.baseItemCountExtentAvg[0] ||
+        //     this.compareItemCountExtentAvg[1] > this.baseItemCountExtentAvg[1]) {
+
+        //     if (!update) update = {};
+
+        //     // update.newRScale = [
+        //     //     Math.min(this.compareItemCountExtentAvg[0], this.baseItemCountExtentAvg[0], this.compareItemCountExtentAbs[0], this.baseItemCountExtentAbs[0]),
+        //     //     Math.max(this.compareItemCountExtentAvg[1], this.baseItemCountExtentAvg[1], this.compareItemCountExtentAbs[1], this.baseItemCountExtentAbs[1])
+        //     // ]
+        // }
 
         if (update) {
             console.log('update', update);
@@ -731,6 +760,10 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             })
             .y((d: { year: number, count: number }) => this.yScaleTotal ? this.yScaleTotal(d.count) : 0);
 
+
+        console.log("comparescales");
+        console.log(update.newYScale + " " + this.yScale?.domain()[1] + " " + update.newYScaleTotal + " " + this.yScaleTotal?.domain()[1]);
+
         const comparePathsTotal = this.baseTimelineContainer.selectAll('.compare-total-path');
 
         comparePathsTotal
@@ -741,7 +774,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             .attr('id', 'base-path')
             .attr('stroke', 'lightgray')
             .attr('stroke-width', 2)
-            .attr('stroke-opacity', 0.75)
+            .attr('stroke-opacity', 0.05)
             .style('stroke-dasharray', ('3, 3'))
             .attr('fill', 'none');
         comparePathsTotal.lower();
@@ -756,7 +789,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             .attr('id', 'base-path')
             .attr('stroke', 'orange')
             .attr('stroke-width', 1.5)
-            .attr('stroke-opacity', 0.75)
+            .attr('stroke-opacity', 0.05)
             .style('stroke-dasharray', ('3, 3'))
             .attr('fill', 'none');
 
@@ -972,15 +1005,18 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             return exhibitions;
         }
         else return new Array<Exhibition>;
+        //<div className="float-left text-left pl-2">
+        //</div>
     }
 
 
     render() {
         return (
             <>
-                <div className="float-left text-left pl-2">
+                <div className="absolute -z-10">
+                    <svg id='artist-detail-timeline' width={this.state.width} height={this.state.height}></svg>
                 </div>
-                <svg id='artist-detail-timeline' width={this.state.width} height={this.state.height}></svg>
+
             </>
         )
     }
