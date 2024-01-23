@@ -85,8 +85,10 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         this.maxYear = 1915;
 
         this.margin = {
-            top: -1,
-            bottom: 50,
+            top: 35,
+            //top: 30,
+            bottom: 10,
+            //bottom: 50,
             left: 10,
             right: 30
         };
@@ -128,7 +130,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         this.yAxis = this.svgTimeLineContainer.append('g');
 
         this.xAxis
-            .attr('transform', `translate(0, ${this.state.height - this.margin.bottom})`)
+            //.attr('transform', `translate(0, ${this.state.height - this.margin.bottom})`)
+            .attr('transform', `translate(0, ${this.margin.bottom})`)
             .attr('class', 'x-axis');
 
         this.yAxis
@@ -454,8 +457,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
 
 
-        /* // add axis
-        const xAxis = d3.axisBottom(this.xScale as d3.AxisScale<number>);
+        // add axis
+        /* const xAxis = d3.axisBottom(this.xScale as d3.AxisScale<number>);
         const yAxis = d3.axisLeft(this.yScale as d3.AxisScale<number>);
 
         // format ticks

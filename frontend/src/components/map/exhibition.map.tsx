@@ -15,13 +15,14 @@ type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, a
 
 //class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }> {
 
-class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }> {
+class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }, { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean, marks: string }> {
 
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
     private borderContainer: d3.Selection<any, any, any, any> | undefined;
 
     private rScale: d3.ScalePower<number, number>;
+    private totalRScale: d3.ScalePower<number, number>;
     private mapRScale: d3.ScalePower<number, number>;
 
     private tooltip: d3.Selection<any, any, any, any> | undefined;
@@ -30,9 +31,10 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
     private exhibitions: Array<Exhibition> = [];
     private exhibStats: Array<MetaExhibition> = [];
     private commonExhibitions: Array<MetaExhibition> = [];
+    private toggle: Array<string> = [];
 
     //constructor(props: { compareWith: Artist | null, exhibitionMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
-    constructor(props: { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }) {
+    constructor(props: { compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean, marks: string }) {
 
         super(props);
 
@@ -44,16 +46,19 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             exhibitions: props.exhibitions,
             compareWith: props.compareWith,
             //exhibitionMap: props.exhibitionMap
-            exhibStatistics: props.exhibStatistics
+            exhibStatistics: props.exhibStatistics,
+            marks: "circles"
         };
 
         this.svgContainer = undefined;
 
         this.rScale = d3.scaleSqrt();
         this.mapRScale = d3.scaleSqrt();
+        this.totalRScale = d3.scaleSqrt();
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
         this.tooltip = undefined;
+        this.toggle = ["Circles", "Halfcircles"];
     }
 
 
@@ -70,6 +75,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             // .domain([0, 100])
             //.range([2, 6]);
             .range([1, 4]);
+
+        this.totalRScale = d3.scaleSqrt()
+            // .domain([0, 100])
+            //.range([2, 6]);
+            .range([1, 6]);
 
         this.svgContainer = d3.select('#map');
 
@@ -116,7 +126,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         this.rScale.domain([Math.min(...this.exhibStats.map(g => g.artworksBase)), Math.max(...this.exhibStats.map(g => g.artworksBase))]);
         this.mapRScale.domain([Math.min(...this.exhibStats.map(g => g.artworksTotal)), Math.max(...this.exhibStats.map(g => g.artworksTotal))]);
-
+        this.totalRScale.domain([Math.min(...this.exhibStats.map(g => g.artworksTotal)), Math.max(...this.exhibStats.map(g => g.artworksTotal))]);
         this.drawCircles();
 
     }
@@ -134,69 +144,69 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         console.log("sorted");
         console.log(this.exhibStats);
 
-        //PIE CHARTS________________________________________________
-        // Pie chart variables:
-        let arc = d3.arc<MetaExhibition>()
-            .innerRadius(0)
-            // .outerRadius((d: any) => {
-            //     console.log("data");
-            //     console.log(d);
-            //     return this.mapRScale(d.data);
-            // })
-            .outerRadius(3);
-
-        let pie = d3.pie()
-            .sort(null)
-            .value((d: any) => { return d; });
-
-
-        let color = d3.schemeCategory10;
-
-        let points = this.circleContainer.selectAll('g')
-            .data(this.exhibStats)
-            //           .enter()
-            //          .append('g')
-            .join('g')
-            .attr('transform', (d: MetaExhibition) => {
-                let long = -999999999.0;
-                let lat = -99999999999.0;
-
-                if (d.tookPlaceInHosts[0]) {
-                    long = parseFloat(d.tookPlaceInHosts[0].longitude);
-                    lat = parseFloat(d.tookPlaceInHosts[0].latitude);
-
-                }
-                return 'translate(' + projection([long, lat]) + ')'
-                //return 'translate(0,0)';
-            })
-            .attr('class', 'pies');
-
-        //        let pies = points.selectAll('.pies')
-        let pies = points.selectAll('path')
-            .data((d: MetaExhibition) => {
-                //return (pie([100, 10, 50, 60, 75]));
-                //return pie([d.artworksBase]);
-                return pie([d.artworksBase, d.artworksTotal - d.artworksBase]);
-                //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
-            })
-            //.data(pie([100, 10, 50, 60, 75]))
-            //           .enter()
-            //           .append('g')
-            //           .attr('class', 'arc');
-
-            //this.circleContainer.selectAll('.pies')
-            //      pies.append('path')
-            .join('path')
-            .attr('d', (d: any) => {
-                return arc(d);
-            })
-            .attr("fill", function (d, i) {
-                return color[i + 1];
-            })
-            .attr('opacity', 0.0);
-        // .attr('opacity', 0.7);
-        //PIE CHARTS END__________________________________________________________
-
+        /*         //PIE CHARTS________________________________________________
+                // Pie chart variables:
+                let arc = d3.arc<MetaExhibition>()
+                    .innerRadius(0)
+                    // .outerRadius((d: any) => {
+                    //     console.log("data");
+                    //     console.log(d);
+                    //     return this.mapRScale(d.data);
+                    // })
+                    .outerRadius(3);
+        
+                let pie = d3.pie()
+                    .sort(null)
+                    .value((d: any) => { return d; });
+        
+        
+                let color = d3.schemeCategory10;
+        
+                let points = this.circleContainer.selectAll('g')
+                    .data(this.exhibStats)
+                    //           .enter()
+                    //          .append('g')
+                    .join('g')
+                    .attr('transform', (d: MetaExhibition) => {
+                        let long = -999999999.0;
+                        let lat = -99999999999.0;
+        
+                        if (d.tookPlaceInHosts[0]) {
+                            long = parseFloat(d.tookPlaceInHosts[0].longitude);
+                            lat = parseFloat(d.tookPlaceInHosts[0].latitude);
+        
+                        }
+                        return 'translate(' + projection([long, lat]) + ')'
+                        //return 'translate(0,0)';
+                    })
+                    .attr('class', 'pies');
+        
+                //        let pies = points.selectAll('.pies')
+                let pies = points.selectAll('path')
+                    .data((d: MetaExhibition) => {
+                        //return (pie([100, 10, 50, 60, 75]));
+                        //return pie([d.artworksBase]);
+                        return pie([d.artworksBase, d.artworksTotal - d.artworksBase]);
+                        //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
+                    })
+                    //.data(pie([100, 10, 50, 60, 75]))
+                    //           .enter()
+                    //           .append('g')
+                    //           .attr('class', 'arc');
+        
+                    //this.circleContainer.selectAll('.pies')
+                    //      pies.append('path')
+                    .join('path')
+                    .attr('d', (d: any) => {
+                        return arc(d);
+                    })
+                    .attr("fill", function (d, i) {
+                        return color[i + 1];
+                    })
+                    .attr('opacity', 0.0);
+                // .attr('opacity', 0.7);
+                //PIE CHARTS END__________________________________________________________
+         */
 
 
 
@@ -248,7 +258,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 } //hide exhibitions without hosts
                 else return 0;
             })
-            .style("fill", "crimson")
+            .style("fill", "#1f77b4")
+            //.style("fill", "crimson")
             /* .style("fill", (d: MetaExhibition) => {
 
                 //console.log("compareWith ");
@@ -380,6 +391,289 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     }
 
+    drawHalfcircles() {
+        if (!this.svgContainer) return;
+
+        if (!this.circleContainer) return;
+
+        let projection = d3.geoMercator();
+
+        this.exhibStats.sort((a, b) => { return b.artworksBase - a.artworksBase });
+
+        const artworksPerCityTotal = new Map<string, number>();
+        const artworksPerCity = new Map<string, number>();
+
+        this.exhibStats.forEach((exhibition: MetaExhibition) => {
+            if (exhibition.tookPlaceInHosts[0]) {
+                const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+
+                if (artworksPerCityTotal.has(latLong)) {
+                    const count = artworksPerCityTotal.get(latLong) || 0;
+                    artworksPerCityTotal.set(latLong, count + exhibition.artworksTotal);
+                } else {
+                    artworksPerCityTotal.set(latLong, exhibition.artworksTotal);
+                }
+
+                if (artworksPerCity.has(latLong)) {
+                    const count = artworksPerCity.get(latLong) || 0;
+                    artworksPerCity.set(latLong, count + exhibition.artworksBase);
+                } else {
+                    artworksPerCity.set(latLong, exhibition.artworksBase);
+                }
+            }
+        });
+
+        console.log("artworks per city");
+        console.log(artworksPerCity);
+        console.log("artworks per city total");
+        console.log(artworksPerCityTotal);
+
+        //maps to arrays
+        const artworks: Array<{ latitude: string, longitude: string, count: number }> = [];
+        artworksPerCity.forEach((value: number, key: string) => {
+            const latLong = key.split(",");
+            const item = { latitude: latLong[0], longitude: latLong[1], count: value };
+
+            artworks.push(item);
+
+
+        });
+
+        console.log(artworks);
+
+        const artworksTotal: Array<{ latitude: string, longitude: string, count: number }> = [];
+        artworksPerCityTotal.forEach((value: number, key: string) => {
+            const latLong = key.split(",");
+            const item = { latitude: latLong[0], longitude: latLong[1], count: value };
+
+            artworksTotal.push(item);
+        });
+
+        const totalHalfCircles = this.circleContainer?.selectAll('.total-half-circle');
+
+        totalHalfCircles
+            .data(artworksTotal)
+            .join('path')
+            .attr('fill', 'gray')
+            .attr('fill-opacity', 1)
+            .attr('stroke', '#1f77b4')
+            .attr('stroke-opacity', 0.5)
+            .attr('stroke-width', 0.05)
+            .attr('class', 'total-half-circle')
+            .attr('id', (d: { latitude: string, longitude: string, count: number }) => `total-half-circle-${d.latitude + "-" + d.longitude}`)
+            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+                const outerRadius = d.count === 0 ? 3 : this.totalRScale ? this.totalRScale(d.count) : 3;
+                return d3.arc()({
+                    innerRadius: 0,
+                    outerRadius: outerRadius,
+                    startAngle: -Math.PI,
+                    endAngle: 0
+                }) as string;
+            })
+            .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
+                return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
+            })
+            .append("title").append('tspan')
+            .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks in total`);
+        /* .on('mouseover', (event: any, d: { latitude: string, longitude: string, count: number }) => {
+            if (this.tooltip) {
+                const tooltip = this.tooltip.append('rect');
+                tooltip.attr('fill', 'black');
+                // this.tooltip.style('display', 'block');
+                // set tooltip border to red and fill to white
+                const xPos = this.xScale ? this.xScale(d.year) : 0;
+                const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
+
+                tooltip
+                    .attr('fill', 'black')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 15)
+
+                // append text to tooltip
+                const text = this.tooltip.append('text');
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 15)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${this.state.artist.firstname} ${this.state.artist.lastname} (${d.year})`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 30)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${d.exhibitions} exhibitions`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 45)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${d.items} artworks`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 60)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
+
+                // get bbox of text
+                const bbox = text.node()?.getBBox();
+
+                if (bbox) {
+                    // set tooltip width and height to bbox width and height
+                    tooltip.attr('width', bbox.width + 20);
+                    tooltip.attr('height', bbox.height + 5);
+                }
+
+                this.tooltip.raise();
+            }
+
+            this.showTimeCallBack(d.year);
+            this.highlightCircleInNetwork(d.year);
+        }) */
+
+
+        /* .on('mouseout', () => {
+            this.tooltip?.selectAll('rect').remove();
+            this.tooltip?.selectAll('text').remove();
+            // lower tooltip 
+            this.tooltip?.lower();
+
+            this.showTimeCallBack(0);
+            this.highlightCircleInNetwork(0);
+        }); */
+
+        const artistHalfCircles = this.circleContainer?.selectAll('.artist-half-circle');
+
+        artistHalfCircles
+            .data(artworks)
+            .join('path')
+            .attr('fill', '#1f77b4')
+            .attr('fill-opacity', 1)
+            .attr('stroke', 'gray')
+            .attr('stroke-opacity', 0.5)
+            .attr('stroke-width', 0.05)
+            .attr('class', 'artist-half-circle')
+            .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
+            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+                const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
+                return d3.arc()({
+                    innerRadius: 0,
+                    outerRadius: outerRadius,
+                    startAngle: Math.PI,
+                    endAngle: 0
+                }) as string;
+            })
+            .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
+                return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
+            })
+            .append("title").append('tspan')
+            .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);;
+        /* .on('mouseover', (event: any, d: { year: number, exhibitions: number, items: number }) => {
+            if (this.tooltip) {
+                const tooltip = this.tooltip.append('rect');
+                tooltip.attr('fill', 'black');
+                // this.tooltip.style('display', 'block');
+                // set tooltip border to red and fill to white
+                const xPos = this.xScale ? this.xScale(d.year) : 0;
+                const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
+
+                tooltip
+                    .attr('fill', 'black')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 15)
+
+                // append text to tooltip
+                const text = this.tooltip.append('text');
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 15)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${this.state.artist.firstname} ${this.state.artist.lastname} (${d.year})`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 30)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${d.exhibitions} exhibitions`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 45)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`${d.items} artworks`);
+
+                text.append('tspan')
+                    .attr('x', xPos + 15)
+                    .attr('y', yPos + 60)
+                    .attr('dy', '1em')
+                    .attr('dx', '1em')
+                    .attr('font-size', '12px')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
+
+                // get bbox of text
+                const bbox = text.node()?.getBBox();
+
+                if (bbox) {
+                    // set tooltip width and height to bbox width and height
+                    tooltip.attr('width', bbox.width + 20);
+                    tooltip.attr('height', bbox.height + 5);
+                }
+
+                this.tooltip.raise();
+            }
+            this.showTimeCallBack(d.year);
+            this.highlightCircleInNetwork(d.year);
+        }) */
+
+        /*  .on('mouseout', () => {
+             this.tooltip?.selectAll('rect').remove();
+             this.tooltip?.selectAll('text').remove();
+             // lower tooltip 
+             this.tooltip?.lower();
+
+             this.showTimeCallBack(0);
+             this.highlightCircleInNetwork(0);
+         }); */
+
+        totalHalfCircles.exit().remove();
+        artistHalfCircles.exit().remove();
+
+    }
+
+
+
     highlightCircle(year: number): void {
         // select the circle with the same year as the year passed in
         // change the stroke to yellow and make it dashed update stroke-width to 2
@@ -478,13 +772,22 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                     return 0;
                 }); */
                 //console.log(this.exhibStats);
-
-                this.colorCommonExhibitions();
+                this.drawCompare(this.props.compareWith)
+                //this.colorCommonExhibitions();
                 //this.init();
                 return { ...prevState, compareWith: this.props.compareWith }
                 //return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
 
             });
+
+        }
+    }
+
+    drawCompare(compareWith: Artist | null): void {
+        if (this.state.marks === "circles") {
+            this.colorCommonExhibitions();
+        }
+        else {
 
         }
     }
@@ -513,7 +816,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 //console.log(this.state.compareWith);
                 //console.log(this.props.compareWith);
                 const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
-                return common ? "yellow" : "crimson";
+                //return common ? "yellow" : "crimson";
+                return common ? "#ff7f0e" : "#1f77b4";
                 // return common ? "wheat" : "crimson";
                 //return d.isCommon ? "yellow" : "crimson";
 
@@ -570,7 +874,6 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     }
 
-
     //TODO return unique exhibitions, not 1 for each artwork
     checkExhibitions(exhibitions: Array<Exhibition> | undefined): Array<Exhibition> {
 
@@ -580,11 +883,47 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         else return new Array<Exhibition>;
     }
 
+    handleMarkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        console.log("marker change " + event.target.value);
+
+        this.setState(prevState => ({ marks: event.target.value }), () => {
+            if (event.target.value === "circles") {
+                this.circleContainer?.selectAll('.artist-half-circle').remove();
+                this.circleContainer?.selectAll('.total-half-circle').remove();
+                this.drawCircles();
+
+
+            }
+            else {
+                this.circleContainer?.selectAll('circle').remove();
+                this.drawHalfcircles();
+            }
+
+            console.log(this.props.compareWith)
+            if (this.state.compareWith) {
+                console.log("drawcompare");
+                this.drawCompare(this.props.compareWith);
+            }
+
+            console.log("marks state");
+            console.log(this.state.marks);
+        });
+
+
+    };
+
 
     render() {
         return (
             <>
-                <div className="float-left text-left pl-2">
+
+                <div className="absolute w-auto left-5">
+                    <div className="block">
+                        <select id="order-by" onChange={this.handleMarkChange}>
+                            <option value="circles">Circles</option>
+                            <option value="halfcircles">Halfcircles</option>
+                        </select>
+                    </div>
                 </div>
                 <svg id='map' width={this.state.width} height={this.state.height}></svg>
             </>

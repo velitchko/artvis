@@ -440,9 +440,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 										<div className="h-[100%] text-center">
 											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getCommonExhibitionNumber(this.state.compareWith)} common <br />exhibitions</h3>
 										</div>
-
 									}
 								</div>
+
 
 								{this.showNetwork &&
 									<ExhibitionLinechartComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />

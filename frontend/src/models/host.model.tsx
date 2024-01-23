@@ -6,7 +6,7 @@ export type Host = {
 	latitude: string;
 	longitude: string;
 	name: String;
-	place: String;
+	place: string;
 	place_tgn: String;
 	town: String;
 	type: String;

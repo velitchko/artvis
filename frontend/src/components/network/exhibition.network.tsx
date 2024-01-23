@@ -1157,7 +1157,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             //multiplicator = distance of outer circles to middle, original value 535
             .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 340) + this.state.width / 2)
             .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 340) + this.state.height / 2)
-            .attr('opacity', 0.75)
+            //.attr('opacity', 0.75)
+            .attr('opacity', 0)
             .attr('fill', (d: Link) => this.color(d.props.group))
             .style('cursor', 'pointer');
 
@@ -1573,6 +1574,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.outerCircleContainer?.raise();
     } */
 
+
+
+
     componentDidUpdate(prevProps: Readonly<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }>, prevState: Readonly<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }>, snapshot?: any): void {
 
         //console.log("component did update");
@@ -1628,6 +1632,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                     return 0;
                 }); */
                 //console.log(this.exhibStats);
+
 
                 this.highlightCommonExhibitions(this.props.compareWith);
                 //this.init();
