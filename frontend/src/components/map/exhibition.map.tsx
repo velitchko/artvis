@@ -10,6 +10,8 @@ import { Exhibition } from '../../models/exhibition.model';
 //import data from '../../resources/map.geo.json';
 import data from '../../resources/complete-map.geo.json';
 import { Host } from '../../models/host.model';
+import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -719,76 +721,267 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     componentDidUpdate(prevProps: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }>, prevState: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }>, snapshot?: any): void {
 
-        //console.log("component did update");
+        console.log("component did update");
         //console.log(prevProps.compareWith);
         //console.log(this.props.compareWith);
         // set state if props.compareWith changes and update results.exhibitions
         if (prevProps.compareWith !== this.props.compareWith) {
-            this.setState((prevState: any) => {
-                // update results.exhibitions
-                /* const exhibitions = new Array<MetaExhibition>();
-                prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
-                    const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
-                    
-                    const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
-                    metaExhibition.isCommon = isCommon ? true : false;
-                    metaExhibition.percentBase = exhibition.percentBase;
-                    metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
-                    
-                    // const percentBase = this.state..artistsExhibited?.length / this.props.compareWith?.exhibitedExhibitions?.length;
-                    exhibitions.push(metaExhibition);
-                }); */
-                // sort by isCommon
-                /* exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
-                    if(a.isCommon && !b.isCommon) return -1;
-                    if(!a.isCommon && b.isCommon) return 1;
-                    return 0;
+            //this.setState((prevState: any) => {
+            // update results.exhibitions
+            /* const exhibitions = new Array<MetaExhibition>();
+            prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
+                const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
+                
+                const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                metaExhibition.isCommon = isCommon ? true : false;
+                metaExhibition.percentBase = exhibition.percentBase;
+                metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
+                
+                // const percentBase = this.state..artistsExhibited?.length / this.props.compareWith?.exhibitedExhibitions?.length;
+                exhibitions.push(metaExhibition);
+            }); */
+            // sort by isCommon
+            /* exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                if(a.isCommon && !b.isCommon) return -1;
+                if(!a.isCommon && b.isCommon) return 1;
+                return 0;
+            });
+*/
+
+            /*             const commonExhibitions = new Array<MetaExhibition>();
+                        //console.log("exhibStats");
+                        //console.log(this.exhibStats);
+                        this.exhibStats.forEach((exhibition: MetaExhibition) => {
+        
+                            const metaExhibition: MetaExhibition = { ...exhibition };
+        
+                            const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                            metaExhibition.isCommon = isCommon ? true : false;
+        
+                            commonExhibitions.push(metaExhibition);
+        
+                        });
+        
+                        commonExhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                            if (a.isCommon && !b.isCommon) return 1;
+                            if (!a.isCommon && b.isCommon) return -1;
+                            return 0;
+                        }); */
+
+            /* this.exhibStats.sort((a: MetaExhibition, b: MetaExhibition) => {
+                if (a.isCommon && !b.isCommon) return 1;
+                if (!a.isCommon && b.isCommon) return -1;
+                return 0;
+            }); */
+            //console.log(this.exhibStats);
+            const artistId = this.props.compareWith?.id;
+
+            client.query({
+                query: GET_EXHIBITIONS_BY_ARTIST,
+                variables: {
+                    searchId: artistId
+                }
+            }).then(result => {
+                this.setState(prevState => ({ ...prevState, compareWith: result.data.artists[0] }), () => {
+                    this.drawCompare(result.data.artists[0]);
                 });
- */
-
-                /*             const commonExhibitions = new Array<MetaExhibition>();
-                            //console.log("exhibStats");
-                            //console.log(this.exhibStats);
-                            this.exhibStats.forEach((exhibition: MetaExhibition) => {
-            
-                                const metaExhibition: MetaExhibition = { ...exhibition };
-            
-                                const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
-                                metaExhibition.isCommon = isCommon ? true : false;
-            
-                                commonExhibitions.push(metaExhibition);
-            
-                            });
-            
-                            commonExhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
-                                if (a.isCommon && !b.isCommon) return 1;
-                                if (!a.isCommon && b.isCommon) return -1;
-                                return 0;
-                            }); */
-
-                /* this.exhibStats.sort((a: MetaExhibition, b: MetaExhibition) => {
-                    if (a.isCommon && !b.isCommon) return 1;
-                    if (!a.isCommon && b.isCommon) return -1;
-                    return 0;
-                }); */
-                //console.log(this.exhibStats);
-                this.drawCompare(this.props.compareWith)
-                //this.colorCommonExhibitions();
-                //this.init();
-                return { ...prevState, compareWith: this.props.compareWith }
-                //return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
 
             });
+
+            //this.colorCommonExhibitions();
+            //this.init();
+            //return { ...prevState, compareWith: this.props.compareWith }
+
+            //this.drawCompare(this.props.compareWith)
+            //this.colorCommonExhibitions();
+            //this.init();
+            //return { ...prevState, compareWith: this.props.compareWith }
+            //return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
+
+            //});
 
         }
     }
 
     drawCompare(compareWith: Artist | null): void {
+        /* console.log("compare with");
+        console.log(compareWith);
+
+        console.log("drawcompare state");
+        console.log(this.state.compareWith);
+
+        console.log("drawcompare props");
+        console.log(this.props.compareWith); */
+
+        //just color the circles of the common exhibitions
         if (this.state.marks === "circles") {
             this.colorCommonExhibitions();
         }
+        //draw common artist half circles
         else {
+            //get common exhibitions and numbers for compare artist
+            if (compareWith) {
+                this.circleContainer?.selectAll('.artist-half-circle').remove();
 
+                const commonExhibitions: Array<MetaExhibition> = [];
+
+                this.exhibStats.forEach((exhibition: MetaExhibition) => {
+                    const common = compareWith?.exhibitedExhibitions?.find((exhib: Exhibition) => exhibition.id == exhib.id);
+
+                    if (common) {
+                        console.log(common.catalogueEntriesEntryIn);
+                        const entries = common.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === compareWith.id)?.length;
+                        console.log("entries" + entries);
+                        //TODO stuffed number of artworks of ccompare artist into field for percentages for now... maybe change
+                        const metaExhibition: MetaExhibition = { ...exhibition, isCommon: true, percentCompare: entries };
+                        commonExhibitions.push(metaExhibition);
+                    }
+
+                });
+                console.log("common");
+                console.log(commonExhibitions);
+
+
+                const artworksBase = new Map<string, number>();
+                const artworksCompare = new Map<string, number>();
+
+                commonExhibitions.forEach((exhibition: MetaExhibition) => {
+                    if (exhibition.tookPlaceInHosts[0]) {
+                        console.log("in host");
+                        const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+
+                        if (artworksCompare.has(latLong)) {
+                            const count = artworksCompare.get(latLong) || 0;
+                            artworksCompare.set(latLong, count + exhibition.percentCompare);
+                        } else {
+                            artworksCompare.set(latLong, exhibition.percentCompare);
+                        }
+                    }
+                });
+
+                this.exhibStats.forEach((exhibition: MetaExhibition) => {
+                    if (exhibition.tookPlaceInHosts[0]) {
+                        const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+
+                        if (artworksBase.has(latLong)) {
+                            const count = artworksBase.get(latLong) || 0;
+                            artworksBase.set(latLong, count + exhibition.artworksBase);
+                        } else {
+                            artworksBase.set(latLong, exhibition.artworksBase);
+                        }
+                    }
+                });
+                console.log("artworksbase");
+                console.log(artworksBase);
+
+                console.log("artworkscompare");
+                console.log(artworksCompare);
+
+
+                const artworks: Array<{ latitude: string, longitude: string, count: number }> = [];
+                artworksBase.forEach((value: number, key: string) => {
+                    const latLong = key.split(",");
+                    const item = { latitude: latLong[0], longitude: latLong[1], count: value };
+
+                    artworks.push(item);
+
+
+                });
+
+                if (!this.svgContainer) return;
+
+                if (!this.circleContainer) return;
+
+                let projection = d3.geoMercator();
+
+                const artistHalfCircles = this.circleContainer?.selectAll('.artist-half-circle');
+                const compareHalfCircles = this.circleContainer?.selectAll('.compare-half-circle');
+
+
+
+                artistHalfCircles
+                    .data(artworks)
+                    .join('path')
+                    .attr('fill', '#1f77b4')
+                    .attr('fill-opacity', 1)
+                    .attr('stroke', 'gray')
+                    .attr('stroke-opacity', 0.5)
+                    .attr('stroke-width', 0.05)
+                    .attr('class', 'artist-half-circle')
+                    .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
+                    .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+                        const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
+                        return d3.arc()({
+                            innerRadius: 0,
+                            outerRadius: outerRadius,
+                            startAngle: Math.PI,
+                            endAngle: 0
+                        }) as string;
+                    })
+                    .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
+                        return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
+                    })
+                    .append("title").append('tspan')
+                    .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);;
+
+
+
+                artworksBase.forEach((value: number, key: string) => {
+                    if (artworksCompare.has(key)) {
+                        const compare = artworksCompare.get(key) || 0;
+                        const latLong = key.split(",");
+                        const baseData = { latitude: latLong[0], longitude: latLong[1], artist: "base", count: value };
+                        const compareData = { latitude: latLong[0], longitude: latLong[1], artist: "compare", count: compare };
+
+                        const data: Array<{ latitude: string, longitude: string, artist: string, count: number }> = [];
+                        if (compare > value) {
+                            data.push(compareData);
+                            data.push(baseData);
+                        }
+                        else {
+                            data.push(baseData);
+                            data.push(compareData);
+                        }
+
+                        artistHalfCircles
+                            .data(data)
+                            .join('path')
+                            .attr('fill', (d: { latitude: string, longitude: string, artist: string, count: number }) => {
+                                if (d.artist === "base") {
+                                    return '#1f77b4';
+                                }
+                                else {
+                                    return "#ff7f0e";
+                                }
+                            })
+                            .attr('fill-opacity', 1)
+                            .attr('stroke', 'gray')
+                            .attr('stroke-opacity', 0.5)
+                            .attr('stroke-width', 0.05)
+                            .attr('class', 'artist-half-circle')
+                            .attr('id', (d: { latitude: string, longitude: string, artist: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
+                            .attr('d', (d: { latitude: string, longitude: string, artist: string, count: number }) => {
+                                const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
+                                return d3.arc()({
+                                    innerRadius: 0,
+                                    outerRadius: outerRadius,
+                                    startAngle: Math.PI,
+                                    endAngle: 0
+                                }) as string;
+                            })
+                            .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
+                                return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
+                            })
+                            .append("title").append('tspan')
+                            .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);;
+
+
+                    }
+                });
+
+
+
+            }
         }
     }
 
@@ -818,6 +1011,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
                 //return common ? "yellow" : "crimson";
                 return common ? "#ff7f0e" : "#1f77b4";
+                //return common ? "yellow" : "#1f77b4";
                 // return common ? "wheat" : "crimson";
                 //return d.isCommon ? "yellow" : "crimson";
 
@@ -886,7 +1080,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
     handleMarkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         console.log("marker change " + event.target.value);
 
-        this.setState(prevState => ({ marks: event.target.value }), () => {
+        this.setState(prevState => ({ ...prevState, marks: event.target.value }), () => {
             if (event.target.value === "circles") {
                 this.circleContainer?.selectAll('.artist-half-circle').remove();
                 this.circleContainer?.selectAll('.total-half-circle').remove();
@@ -899,10 +1093,13 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 this.drawHalfcircles();
             }
 
+            /* console.log("props comparewith");
             console.log(this.props.compareWith)
+            console.log("state comparewith");
+            console.log(this.state.compareWith); */
             if (this.state.compareWith) {
                 console.log("drawcompare");
-                this.drawCompare(this.props.compareWith);
+                this.drawCompare(this.state.compareWith);
             }
 
             console.log("marks state");

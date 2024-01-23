@@ -421,8 +421,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         const pathsTotal = this.baseTimelineContainer.selectAll('.total-path');
 
-        console.log("normal scales");
-        console.log(update?.newYScale + " " + this.yScale?.domain()[1] + " " + update?.newYScaleTotal + " " + this.yScaleTotal?.domain()[1]);
+        //console.log("normal scales");
+        //console.log(update?.newYScale + " " + this.yScale?.domain()[1] + " " + update?.newYScaleTotal + " " + this.yScaleTotal?.domain()[1]);
 
 
         pathsTotal
@@ -681,11 +681,11 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         const baseY = this.yScale?.domain()[1] as number;
 
 
-        console.log("max base");
+        /* console.log("max base");
         console.log(compareY + " " + baseY);
 
         console.log("max total");
-        console.log(compareYMax + " " + baseYMax);
+        console.log(compareYMax + " " + baseYMax); */
 
         //let update: { newYScale?: number, newRScale?: Array<number> } | undefined = undefined;
         let update: { newYScale?: number, newYScaleTotal?: number } | undefined = undefined;
@@ -764,9 +764,9 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             .y((d: { year: number, count: number }) => this.yScaleTotal ? this.yScaleTotal(d.count) : 0);
 
 
-        console.log("comparescales");
+        /* console.log("comparescales");
         console.log(update.newYScale + " " + this.yScale?.domain()[1] + " " + update.newYScaleTotal + " " + this.yScaleTotal?.domain()[1]);
-
+ */
         const comparePathsTotal = this.baseTimelineContainer.selectAll('.compare-total-path');
 
         comparePathsTotal
