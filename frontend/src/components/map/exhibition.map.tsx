@@ -1010,8 +1010,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 //console.log(this.props.compareWith);
                 const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
                 //return common ? "yellow" : "crimson";
-                return common ? "#ff7f0e" : "#1f77b4";
-                //return common ? "yellow" : "#1f77b4";
+                //return common ? "#ff7f0e" : "#1f77b4";
+                return common ? "yellow" : "#1f77b4";
                 // return common ? "wheat" : "crimson";
                 //return d.isCommon ? "yellow" : "crimson";
 
@@ -1114,11 +1114,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         return (
             <>
 
-                <div className="absolute w-auto left-5">
+                <div className="absolute w-auto left-3">
                     <div className="block">
                         <select id="order-by" onChange={this.handleMarkChange}>
-                            <option value="circles">Circles</option>
-                            <option value="halfcircles">Halfcircles</option>
+                            <option value="circles">Artist's exhibited paintings</option>
+                            <option value="halfcircles">Total vs. artist's paintings in exhibitions</option>
                         </select>
                     </div>
                 </div>

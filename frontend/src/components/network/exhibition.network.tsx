@@ -1661,9 +1661,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             return;
         } else {
             this.circleContainer?.select('#circle-' + year)
-                .attr('stroke', 'orange')
-                .attr('stroke-width', 4)
-                .attr('stroke-dasharray', 5)
+                .attr('stroke', 'black')
+                .attr('stroke-opacity', 0.2)
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', 2)
                 .raise();
         }
     }
