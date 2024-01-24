@@ -402,6 +402,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         this.exhibStats.sort((a, b) => { return b.artworksBase - a.artworksBase });
 
+        console.log("half circles exhibsort");
+        console.log(this.exhibStats);
+
         const artworksPerCityTotal = new Map<string, number>();
         const artworksPerCity = new Map<string, number>();
 
@@ -430,6 +433,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         console.log("artworks per city total");
         console.log(artworksPerCityTotal);
 
+
+
+
         //maps to arrays
         const artworks: Array<{ latitude: string, longitude: string, count: number }> = [];
         artworksPerCity.forEach((value: number, key: string) => {
@@ -441,6 +447,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         });
 
+        artworks.sort((a, b) => b.count - a.count);
+
+        console.log("sorted artworks");
         console.log(artworks);
 
         const artworksTotal: Array<{ latitude: string, longitude: string, count: number }> = [];
@@ -451,13 +460,17 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             artworksTotal.push(item);
         });
 
+        artworksTotal.sort((a, b) => b.count - a.count);
+        console.log("sorted artworkstotal");
+        console.log(artworksTotal);
+
         const totalHalfCircles = this.circleContainer?.selectAll('.total-half-circle');
 
         totalHalfCircles
             .data(artworksTotal)
             .join('path')
             .attr('fill', 'gray')
-            .attr('fill-opacity', 1)
+            .attr('fill-opacity', 0.75)
             .attr('stroke', '#1f77b4')
             .attr('stroke-opacity', 0.5)
             .attr('stroke-width', 0.05)
@@ -567,7 +580,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             .data(artworks)
             .join('path')
             .attr('fill', '#1f77b4')
-            .attr('fill-opacity', 1)
+            .attr('fill-opacity', 0.75)
             .attr('stroke', 'gray')
             .attr('stroke-opacity', 0.5)
             .attr('stroke-width', 0.05)
@@ -829,9 +842,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                     const common = compareWith?.exhibitedExhibitions?.find((exhib: Exhibition) => exhibition.id == exhib.id);
 
                     if (common) {
-                        console.log(common.catalogueEntriesEntryIn);
+                        //console.log(common.catalogueEntriesEntryIn);
                         const entries = common.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === compareWith.id)?.length;
-                        console.log("entries" + entries);
+                        //console.log("entries" + entries);
                         //TODO stuffed number of artworks of ccompare artist into field for percentages for now... maybe change
                         const metaExhibition: MetaExhibition = { ...exhibition, isCommon: true, percentCompare: entries };
                         commonExhibitions.push(metaExhibition);
@@ -878,6 +891,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 console.log(artworksCompare);
 
 
+
+
                 const artworks: Array<{ latitude: string, longitude: string, count: number }> = [];
                 artworksBase.forEach((value: number, key: string) => {
                     const latLong = key.split(",");
@@ -887,6 +902,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
 
                 });
+
+                artworks.sort((a, b) => b.count - a.count);
 
                 if (!this.svgContainer) return;
 
@@ -899,11 +916,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
 
 
-                artistHalfCircles
+                /* artistHalfCircles
                     .data(artworks)
                     .join('path')
                     .attr('fill', '#1f77b4')
-                    .attr('fill-opacity', 1)
+                    .attr('fill-opacity', 0.75)
                     .attr('stroke', 'gray')
                     .attr('stroke-opacity', 0.5)
                     .attr('stroke-width', 0.05)
@@ -922,11 +939,16 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                         return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
                     })
                     .append("title").append('tspan')
-                    .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);;
+                    .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`); */
 
 
 
-                artworksBase.forEach((value: number, key: string) => {
+                const artBaseSorted = new Map([...artworksBase.entries()].sort((a, b) => b[1] - a[1]));
+                console.log("artbase sorted");
+                console.log(artBaseSorted);
+
+                artBaseSorted.forEach((value: number, key: string) => {
+                    //draw common exhibitions with circles for both artists
                     if (artworksCompare.has(key)) {
                         const compare = artworksCompare.get(key) || 0;
                         const latLong = key.split(",");
@@ -954,7 +976,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                                     return "#ff7f0e";
                                 }
                             })
-                            .attr('fill-opacity', 1)
+                            .attr('fill-opacity', 0.75)
                             .attr('stroke', 'gray')
                             .attr('stroke-opacity', 0.5)
                             .attr('stroke-width', 0.05)
@@ -973,8 +995,50 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                                 return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
                             })
                             .append("title").append('tspan')
-                            .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);;
+                            .text((d: { latitude: string, longitude: string, artist: string, count: number }) => {
+                                if (d.artist === "base") {
+                                    return `${d.count} artworks by the artist`;
+                                }
+                                else {
+                                    return `${d.count} artworks by the compared artist`
+                                }
+                            });
 
+
+                    }
+                    //the compare artist has no exhibitions in this place -> only draw artists half circle
+                    else {
+
+                        const latLong = key.split(",");
+                        const data: Array<{ latitude: string, longitude: string, count: number }> = [];
+                        const baseData = { latitude: latLong[0], longitude: latLong[1], count: value };
+
+                        data.push(baseData);
+
+                        artistHalfCircles
+                            .data(data)
+                            .join('path')
+                            .attr('fill', '#1f77b4')
+                            .attr('fill-opacity', 0.75)
+                            .attr('stroke', 'gray')
+                            .attr('stroke-opacity', 0.5)
+                            .attr('stroke-width', 0.05)
+                            .attr('class', 'artist-half-circle')
+                            .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
+                            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+                                const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
+                                return d3.arc()({
+                                    innerRadius: 0,
+                                    outerRadius: outerRadius,
+                                    startAngle: Math.PI,
+                                    endAngle: 0
+                                }) as string;
+                            })
+                            .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
+                                return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
+                            })
+                            .append("title").append('tspan')
+                            .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`);
 
                     }
                 });
@@ -1098,12 +1162,12 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             console.log("state comparewith");
             console.log(this.state.compareWith); */
             if (this.state.compareWith) {
-                console.log("drawcompare");
+                //console.log("drawcompare");
                 this.drawCompare(this.state.compareWith);
             }
 
-            console.log("marks state");
-            console.log(this.state.marks);
+            /* console.log("marks state");
+            console.log(this.state.marks); */
         });
 
 
@@ -1117,7 +1181,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 <div className="absolute w-auto left-3">
                     <div className="block">
                         <select id="order-by" onChange={this.handleMarkChange}>
-                            <option value="circles">Artist's exhibited paintings</option>
+                            <option value="circles">Number of artist's exhibited paintings</option>
                             <option value="halfcircles">Total vs. artist's paintings in exhibitions</option>
                         </select>
                     </div>
