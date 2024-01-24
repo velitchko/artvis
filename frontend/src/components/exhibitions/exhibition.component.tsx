@@ -118,6 +118,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		//this.setState({ compareWith: null });
 
+		//TODO: change logic... query for exhibitions by artist
 		const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
 
 		if (artist) {

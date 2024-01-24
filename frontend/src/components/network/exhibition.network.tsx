@@ -1655,6 +1655,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             this.circleContainer.selectAll('circle')
                 .attr('stroke', '#e3e3e3')
                 .attr('fill', 'none')
+                .attr('stroke-opacity', 1)
                 .attr('stroke-width', 1)
                 .attr('stroke-dasharray', 0)
                 .lower();
