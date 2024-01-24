@@ -116,7 +116,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		// 	//this.setState(prevState => ({ artist: result.data.artists[0] }), () => { this.render() });
 		// });
 
-		this.setState({ compareWith: null });
+		//this.setState({ compareWith: null });
 
 		const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
 

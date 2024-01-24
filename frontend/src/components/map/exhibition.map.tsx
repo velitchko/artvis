@@ -586,7 +586,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             .attr('stroke-width', 0.05)
             .attr('class', 'artist-half-circle')
             .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
-            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {//rscale
                 const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
                 return d3.arc()({
                     innerRadius: 0,
@@ -914,35 +914,6 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const artistHalfCircles = this.circleContainer?.selectAll('.artist-half-circle');
                 const compareHalfCircles = this.circleContainer?.selectAll('.compare-half-circle');
 
-
-
-                /* artistHalfCircles
-                    .data(artworks)
-                    .join('path')
-                    .attr('fill', '#1f77b4')
-                    .attr('fill-opacity', 0.75)
-                    .attr('stroke', 'gray')
-                    .attr('stroke-opacity', 0.5)
-                    .attr('stroke-width', 0.05)
-                    .attr('class', 'artist-half-circle')
-                    .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
-                    .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
-                        const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
-                        return d3.arc()({
-                            innerRadius: 0,
-                            outerRadius: outerRadius,
-                            startAngle: Math.PI,
-                            endAngle: 0
-                        }) as string;
-                    })
-                    .attr('transform', (d: { latitude: string, longitude: string, count: number }) => {
-                        return 'translate(' + projection([parseFloat(d.longitude), parseFloat(d.latitude)]) + ')';
-                    })
-                    .append("title").append('tspan')
-                    .text((d: { latitude: string, longitude: string, count: number }) => `${d.count} artworks by the artist`); */
-
-
-
                 const artBaseSorted = new Map([...artworksBase.entries()].sort((a, b) => b[1] - a[1]));
                 console.log("artbase sorted");
                 console.log(artBaseSorted);
@@ -982,7 +953,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                             .attr('stroke-width', 0.05)
                             .attr('class', 'artist-half-circle')
                             .attr('id', (d: { latitude: string, longitude: string, artist: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
-                            .attr('d', (d: { latitude: string, longitude: string, artist: string, count: number }) => {
+                            .attr('d', (d: { latitude: string, longitude: string, artist: string, count: number }) => { //rScale
                                 const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
                                 return d3.arc()({
                                     innerRadius: 0,
@@ -1025,7 +996,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                             .attr('stroke-width', 0.05)
                             .attr('class', 'artist-half-circle')
                             .attr('id', (d: { latitude: string, longitude: string, count: number }) => `artist-half-circle-${d.latitude + "-" + d.longitude}`)
-                            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {
+                            .attr('d', (d: { latitude: string, longitude: string, count: number }) => {//rScale
                                 const outerRadius = d.count === 0 ? 3 : this.rScale ? this.rScale(d.count) : 3;
                                 return d3.arc()({
                                     innerRadius: 0,

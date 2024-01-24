@@ -923,7 +923,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
                     if(!a.isCommon && b.isCommon) return 1;
                     return 0;
                 });
- */
+    */
 
                 /*             const commonExhibitions = new Array<MetaExhibition>();
                             //console.log("exhibStats");
