@@ -6,12 +6,12 @@ import { Host } from "./host.model";
 export type Exhibition = {
 	id: string;
 	startdate: number;
-    enddate: number;
+	enddate: number;
 	organizer: String;
-	title: String;
+	title: string;
 	type: String;
-    catalogueEntriesEntryIn: Array<CatalogueEntry>
+	catalogueEntriesEntryIn: Array<CatalogueEntry>
 	tookPlaceInHosts: Array<Host>;
 	cataloguesIsCatalogueFor: Array<Catalogue>;
-    artistsExhibited: Array<Artist>;
+	artistsExhibited: Array<Artist>;
 };

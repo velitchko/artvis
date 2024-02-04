@@ -160,6 +160,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     return (
         <>
             <div className="absolute top-4 right-6">
+            <h2>Hello I changed some code</h2>
                 <select className="flex-shrink-0 z-10 inline-flex items-center py-2 px-4 text-sm font-medium text-center bg-black text-white border border-gray-300" id="lang" onChange={orderChange} value={order}>
                     {
                         orders.map(o => (

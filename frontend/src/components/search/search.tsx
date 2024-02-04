@@ -22,21 +22,23 @@ const SearchComponent = (props: any) => {
     const [query, setQuery] = useState<any>(props.query); // QUERY is passed as prop
     const onClick = props.onClick; // ONCLICK is passed as prop
 
-    const search = (value: string): void => { 
-            if (value === '') {
-                setResults(new Array<any>());
-                return;
-            }
-    
-            client.query({ query: query, variables: { value: value } }).then((result: any) => {
-                console.log('searched for ' + value);const data = new Array<any>();
-                if (result.data.artists) data.push(result.data.artists.map((artist: any) => { return { name: artist.firstname + ' ' + artist.lastname, type: 'Artist', id: artist.id } }));
-                if (result.data.hosts) data.push(result.data.hosts.map((host: any) => { return { name: host.name, type: 'Host', id: host.id } }));
-                if (result.data.exhibition) data.push(result.data.exhibitions.map((exhibition: any) => { return { name: exhibition.title, type: 'Exhibition', id: exhibition.id } }));
-    
-                setResults(data.flat());
-                setResultsLoaded(true);
-            });
+    const search = (value: string): void => {
+        if (value === '') {
+            setResults(new Array<any>());
+            return;
+        }
+
+        value = value.substring(0, 1).toUpperCase() + value.substring(1);
+
+        client.query({ query: query, variables: { value: value } }).then((result: any) => {
+            console.log('searched for ' + value); const data = new Array<any>();
+            if (result.data.artists) data.push(result.data.artists.map((artist: any) => { return { name: artist.firstname + ' ' + artist.lastname, type: 'Artist', id: artist.id } }));
+            if (result.data.hosts) data.push(result.data.hosts.map((host: any) => { return { name: host.name, type: 'Host', id: host.id } }));
+            if (result.data.exhibition) data.push(result.data.exhibitions.map((exhibition: any) => { return { name: exhibition.title, type: 'Exhibition', id: exhibition.id } }));
+
+            setResults(data.flat());
+            setResultsLoaded(true);
+        });
     }
 
     const debouncedSearch = useCallback(_.debounce(search, 250), []);
@@ -65,7 +67,7 @@ const SearchComponent = (props: any) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
-            {resultsLoaded && 
+            {resultsLoaded &&
                 <ResultsComponent results={results} value={value} onClick={handleClick} />
             }
         </>
