@@ -212,7 +212,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //(base) size of circles outside of network
         this.outerNodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
-            .range([2, 8]);
+            //.range([2, 8]);
+            .range([2, 10]);
 
         const targetNodes = this.filterData(this.state.coEx);
         this.links = targetNodes;
