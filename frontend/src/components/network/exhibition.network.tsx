@@ -1752,7 +1752,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });
 
 
-            const circles = this.artistContainer?.selectAll('circle')
+            //const circles = this.artistContainer?.selectAll('circle')
+            const circles = this.artistContainer?.selectAll('.node')
                 .filter((d: any) => {
                     return commonExhibitions.find((link: Link) => link.target.id == d.target.id) ? true : false;
                 });
