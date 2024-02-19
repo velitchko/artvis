@@ -1374,9 +1374,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // handle last element
                 if (!last) {
                     last = this.links[this.links.length - 1];
-                    return this.getAngle(last?.props.originalIndex) + this.theta;
+                    //return this.getAngle(last?.props.originalIndex) + this.theta;
+                    console.log("theta" + this.theta);
+                    return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
                 } else {
-                    return this.getAngle(last?.props.originalIndex);
+                    return this.getAngle(last?.props.originalIndex) - this.theta / 2;
                 }
             })
             .endAngle((d: Link) => {
@@ -1387,7 +1389,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         break;
                     }
                 }
-                return this.getAngle(first?.props.originalIndex) - 0.01;
+                //return this.getAngle(first?.props.originalIndex) - 0.01;
+                return this.getAngle(first?.props.originalIndex) - this.theta / 2;
             })
 
         // let donutpie = d3.pie<Link>()
