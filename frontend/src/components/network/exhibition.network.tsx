@@ -667,6 +667,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .data(this.links)
             .join('circle')
             .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
+            .attr('class', "node")
             .transition().duration(250)
             .attr('r', (d: Link) => this.nodeRScale(d.props.data.count))
             /* .attr('transform', (d: Link) => {
@@ -1712,8 +1713,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.artistContainer?.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
 
         // reset opacity of all nodes
-        this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
-        this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+        //this.artistContainer?.selectAll('circle').attr('opacity', 0.5);
+        this.artistContainer?.selectAll('.node').attr('opacity', 0.5);
+        this.artistContainer?.selectAll('.percentnode').attr('opacity', 1);
+
+        this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.5);
 
         // reset opacity of labels
         this.artistContainer?.selectAll('.artist-label').attr('opacity', 1).attr('font-weight', 'normal');
