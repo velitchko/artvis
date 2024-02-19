@@ -430,7 +430,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 									{this.state.compareWith &&
 										<div className="float-right text-right pr-2">
-											<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-300 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+											<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-400 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
 											<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
 											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
 
