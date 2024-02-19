@@ -1152,8 +1152,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 <div className="absolute w-auto left-3">
                     <div className="block">
                         <select id="order-by" onChange={this.handleMarkChange}>
-                            <option value="circles">Number of artist's exhibited paintings</option>
-                            <option value="halfcircles">Total vs. artist's paintings in exhibitions</option>
+                            <option value="circles">Number of artist's exhibited artworks</option>
+                            <option value="halfcircles">Total vs. artist's artworks in exhibitions</option>
                         </select>
                     </div>
                 </div>
