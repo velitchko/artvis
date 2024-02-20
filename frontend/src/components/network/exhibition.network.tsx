@@ -8,7 +8,7 @@ import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 
-class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }> {
+class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, marks: string }> {
 
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
@@ -30,6 +30,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private minYear = 1905;
     private maxYear = 1915;
 
+    private minimum = 0;
+
     constructor(props: { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean }) {
         super(props);
 
@@ -42,7 +44,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             coEx: 3,
             groupBy: 'year',
             orderBy: 'year',
-            selection: false
+            selection: false,
+            marks: "circles"
         };
 
         this.svgContainer = undefined;
@@ -245,7 +248,15 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             this.links = targetNodes;
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
-            this.drawCircle();
+
+            if (this.state.marks === "circles") {
+                this.drawCircleMarks();
+            }
+            else if (this.state.marks === "pies") {
+                this.drawPieMarks();
+            }
+
+            //this.drawCircle();
             this.removeHighlight();
             this.highlightCommonExhibitions(this.state.compareWith);
         });
@@ -262,7 +273,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             this.links = targetNodes;
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
-            this.drawCircle();
+
+            if (this.state.marks === "circles") {
+                this.drawCircleMarks();
+            }
+            else if (this.state.marks === "pies") {
+                this.drawPieMarks();
+            }
+            //this.drawCircle();
             this.removeHighlight();
             this.highlightCommonExhibitions(this.state.compareWith);
         });
@@ -302,6 +320,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
+
+        console.log("groupby");
+        console.log(_.groupBy(links, (link: Link) => link.target.props.exhibition.type));
 
         /* links.forEach(function (value) {
             console.log("links " + value.target.props.exhibition.title);
@@ -350,9 +371,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
         //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
         //console.log("filter " + this.state.orderBy + " " + this.state.groupBy);
+        console.log("filtereddata");
+        console.log(filteredLinks);
+        console.log(this.state.groupBy);
 
         const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, filteredLinks);
         //const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, this.state.links);
+
+        console.log(groupedLinks);
 
         let groupData: Array<{ group: string, links: Array<Link> }> = [];
 
@@ -362,7 +388,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             groupData.push({ group: group, links: links });
         });
 
-
+        console.log("groupdata");
+        console.log(groupData);
 
         // sort group data array by percent
         //groupData = _.orderBy(groupData, ['percentage'], ['desc']);
@@ -442,6 +469,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //this.basenodeRScale.domain([Math.min(...grouped.map(g => g.props.data.percentage)), Math.max(...grouped.map(g => g.props.data.percentage))]);
         //this.basenodeRScale.domain([0, 100]);
         this.percentNodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+        this.minimum = Math.min(...grouped.map(g => g.props.data.count));
+
+        console.log("minmax");
+        console.log(Math.min(...grouped.map(g => g.props.data.count)));
+        console.log(Math.max(...grouped.map(g => g.props.data.count)));
+
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
@@ -453,6 +486,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 l.props.originalIndex = index;
             });
         });
+
+        console.log("grouped");
+        console.log(grouped);
 
         return grouped;
     }
@@ -522,15 +558,877 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });
 
         this.circleContainer.exit().remove();
+
+
     }
 
 
-    drawCircle(): void {
+    drawCircleMarks(): void {
         if (!this.svgContainer) return;
 
         if (!this.artistContainer) return;
 
-        this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
+        //CIRCLES START_____________________________________________________
+        //draw circles showing the percentage of artworks by this artist
+        this.artistContainer
+            .selectAll('circle')
+            .data(this.links)
+            .join('circle')
+            .attr('id', (d: Link) => `percentnode-${d.target.id}-${d.props.data.year}`)
+            .attr('class', "percentnode")
+            .transition().duration(250)
+            //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.baseLength))
+            .attr('r', (d: Link) => {
+                console.log(d.props.data.count);
+                console.log(d.props.data.percentage);
+                console.log(this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100));
+                //console.log("rscale " + this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100) + ", count " + d.props.data.count + ", percentage " + d.props.data.percentage + " " + d.props.data.count * d.props.data.percentage / 100);
+                if (this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100) < this.minimum) {
+                    return 0.5;
+                }
+                else {
+                    return this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100);
+                }
+
+            })
+            //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
+            .attr('cx', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                //console.log("x circle" + x);
+                return x;
+            })
+            .attr('cy', (d: Link) => {
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return y;
+            })
+            //live
+            .attr('opacity', 1)
+            //.attr('opacity', 0.0)
+            .attr('fill', (d: Link) => this.color(d.props.group));
+
+        //draw circles showing the amount of exhibited artworks
+        this.artistContainer
+            .selectAll('.circle')
+            .data(this.links)
+            .join('circle')
+            .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
+            .attr('class', "node")
+            .transition().duration(250)
+            .attr('r', (d: Link) => this.nodeRScale(d.props.data.count))
+            /* .attr('transform', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return 'translate(' + x + ',' + y + ')';
+                //return 'translate(0,0)';
+            }) */
+            .attr('cx', (d: Link) => {
+                const x = this.getXCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.width / 2;
+                d.target.x = x;
+
+                return x;
+            })
+            .attr('cy', (d: Link) => {
+                const y = this.getYCoordinates(d.props.data.year, this.getAngle(d.props.originalIndex)) + this.state.height / 2;
+                d.target.y = y;
+
+                return y;
+            })
+            //live
+            .attr('opacity', 0.5)
+            //.attr('opacity', 0.0)
+            .attr('fill', (d: Link) => this.color(d.props.group));
+
+        //CIRCLES END______________________________________________________________________________
+
+
+        console.log(this.artistContainer.selectAll('circle'));
+
+
+        //Tooltips + highlight year circle ______________________________________________________
+        this.artistContainer.selectAll('circle')
+            .on('mouseover', (d: PointerEvent) => {
+                // get data from d 
+                const id = (d.target as SVGCircleElement).id;
+
+                console.log(d.target);
+                console.log(id);
+
+                const data = d3.select(`#${id}`).datum() as Link;
+                console.log(data);
+
+                if (!data) return;
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.target.props.exhibition.title} (${data.props.data.year})`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '2em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '3em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.props.data.count} artworks of ${data.props.data.baseLength} in total`);
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+
+                /* // highlight all links with same targetId
+                const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                links.forEach((link: Link) => {
+                    const id = `node-${link.target.id}-${link.props.data.year}`;
+                    const circle = this.svgContainer?.select(`#${id}`);
+
+                    if (!circle) return;
+
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                }); */
+                // highlight all circles of this exhibition in network
+                const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                links.forEach((link: Link) => {
+                    //const circles = this.artistContainer?.selectAll('circle')
+                    const circles = this.artistContainer?.selectAll('.node')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!circles) return;
+
+                    circles.attr('stroke', 'black');
+                    circles.attr('stroke-width', 2);
+
+                    const outercircles = this.outerCircleContainer?.selectAll('circle')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!outercircles) return;
+
+                    outercircles.attr('stroke', 'black');
+                    outercircles.attr('stroke-width', 2);
+
+                });
+
+                // pass year to mouseOverCallBack
+                //this.mouseOverCallBack(data.props.data.year);
+                this.highlightCircle(data.props.data.year);
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+                // lower tooltip 
+                this.tooltip?.lower();
+
+
+                // unhightlight all nodes 
+
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+
+                // pass year to mouseOverCallBack
+                //this.mouseOverCallBack(0);
+                this.highlightCircle(0);
+            });
+
+        this.artistContainer.exit().remove();
+
+        //Tooltips END_____________________________________________________________
+
+        //Exhibitions titles outer circle_________________________________________
+        this.artistContainer.selectAll('.artist-label')
+            .data(_.uniqBy(this.links, (node: Link) => node.target.id))
+            .join('text')
+            // .transition().duration(250)
+            .attr('class', 'artist-label')
+            .attr('id', (d: Link) => `artist-label-${d.target.id}`)
+            .attr('x', (d: Link) => {
+                // find angle of target node
+                const angle = this.getAngle(d.props.originalIndex);
+                // find x coordinate of target node
+                const x = this.getXCoordinates(this.maxYear, angle, 50) + this.state.width / 2;
+
+                return x;
+            })
+            .attr('y', (d: Link) => {
+                // find angle of target node
+                const angle = this.getAngle(d.props.originalIndex);
+                // find y coordinate of target node
+                const y = this.getYCoordinates(this.maxYear, angle, 50) + this.state.height / 2;
+
+                return y;
+            })
+            .attr('transform', (d: Link, i: number) => {
+                const x1 = 0 + this.state.width / 2;
+                const y1 = 0 + this.state.height / 2;
+
+                const x2 = this.getXCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 50) + this.state.width / 2;
+                const y2 = this.getYCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 50) + this.state.height / 2;
+
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                // Calculate the rotation angle in radians
+                let rotationAngleRadians = Math.atan2(dy, dx);
+
+                // Ensure the angle is non-negative (between 0 and 2*pi)
+                if (rotationAngleRadians < 0) {
+                    rotationAngleRadians += 2 * Math.PI;
+                }
+
+                // Ensure the angle is between 0 and 2*pi
+                rotationAngleRadians %= 2 * Math.PI;
+
+                // Convert the rotation angle from radians to degrees
+                let rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
+
+                // if between 90 and 270 rotate by an additional 180 degrees
+                if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
+                    rotationAngleDegrees += 180;
+                }
+
+                return `rotate(${rotationAngleDegrees}, ${x2}, ${y2})`;
+            })
+            .style('text-anchor', (d: any, i: number) => {
+                const x1 = 0 + this.state.width / 2;
+                const y1 = 0 + this.state.height / 2;
+
+                const x2 = this.getXCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 25) + this.state.width / 2;
+                const y2 = this.getYCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 25) + this.state.height / 2;
+
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                // Calculate the rotation angle in radians
+                let rotationAngleRadians = Math.atan2(dy, dx);
+
+                // Ensure the angle is non-negative (between 0 and 2*pi)
+                if (rotationAngleRadians < 0) {
+                    rotationAngleRadians += 2 * Math.PI;
+                }
+
+                // Ensure the angle is between 0 and 2*pi
+                rotationAngleRadians %= 2 * Math.PI;
+
+                // Convert the rotation angle from radians to degrees
+                const rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
+
+                return (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) ? 'end' : 'start';
+            })
+            .attr('font-size', '12px')
+            .attr('fill', 'black')
+            .attr('dy', '0.35em')
+            .text((d: Link) => d.target.name.substring(0, 30) + "...")
+            .style('cursor', 'pointer')
+            .on('mouseover', (d: PointerEvent) => {
+                // get id from mouseevent target
+                const id = (d.target as SVGCircleElement).id;
+
+                const data = d3.select(`#${id}`).datum() as Link;
+                if (!data) return;
+
+                if (!this.state.selection) {
+                    // select current label and make font-weight bold
+                    const label = this.artistContainer?.select(`#${id}`);
+
+                    if (label) label.attr('font-weight', 'bold');
+
+                    // highlight current node
+                    const circle = this.outerCircleContainer?.select(`#${id}`);
+                    if (!circle) return;
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                    circle.attr('stroke-opacity', 1);
+
+                    // highlight all circles of this exhibition in network
+                    const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                    links.forEach((link: Link) => {
+                        const circles = this.artistContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!circles) return;
+
+                        circles.attr('stroke', 'black');
+                        circles.attr('stroke-width', 2);
+
+                        const outercircles = this.outerCircleContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!outercircles) return;
+
+                        outercircles.attr('stroke', 'black');
+                        outercircles.attr('stroke-width', 2);
+
+                    });
+                }
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('x');
+                    const cy = +d3.select(`#${id}`).attr('y');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(data.target.name);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`Age ${data.target.props.age}`);
+                        .text(`Year ${data.target.props.exhibition.startdate}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 45)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Group ${data.props.group}`);
+
+                    // get sum of all counts for links with same targetId
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 60)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 75)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // if state.selection is true return
+                if (this.state.selection) return;
+
+                // reset font weight of all labels
+                this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+        /* .on('click', (d: PointerEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
+   
+            // reset font weight of all labels
+            this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+   
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+   
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+   
+                // reset all labels font weight to normal
+                this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+   
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+   
+                // lower tooltip
+                this.tooltip?.lower();
+   
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+   
+                // return
+                return;
+            }
+   
+            const id = (d.target as SVGCircleElement).id;
+   
+            const data = d3.select(`#${id}`).datum() as Link;
+   
+            if (!data) return;
+   
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
+   
+            // set current label font weight to bold
+            const label = this.artistContainer?.select(`#${id}`);
+   
+            if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
+        }); */
+        //EXHIBITION LABELS END_________________________________________________________
+
+        if (!this.outerCircleContainer) return;
+
+        // iterate over all links and sum up all counts for links with same targetId
+        const sums = _.uniqBy(this.links.map((link: Link) => {
+            const sum = this.links.filter((l: Link) => l.targetId == link.targetId)
+                .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+            return { targetId: link.targetId, sum: sum };
+        }), (node: { targetId: string, sum: number }) => node.targetId);
+
+        // set outerNodeRScale domain to min and max sum
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+
+
+        //OUTER CIRCLE CONTAINER_____________________________________________________________________
+        // draw circles on the outside one for each unique target node 
+        this.outerCircleContainer.selectAll('circle')
+            .data(_.uniqBy(this.links, (node: Link) => node.target.id))
+            .join('circle')
+            .attr('id', (d: Link) => `outer-circle-${d.target.id}`)
+            .transition().duration(250)
+            .attr('r', (d: Link) => {
+                // sum up all counts of links with same targetId
+                const sum = this.links.filter((link: Link) => link.targetId == d.targetId)
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                //console.log("outer r " + sum);
+                // set radius to sum
+                return this.outerNodeRScale(sum);
+            })
+            //multiplicator = distance of outer circles to middle, original value 535
+            .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 340) + this.state.width / 2)
+            .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 340) + this.state.height / 2)
+            //.attr('opacity', 0.75)
+            .attr('opacity', 0)
+            .attr('fill', (d: Link) => this.color(d.props.group))
+            .style('cursor', 'pointer');
+
+        this.outerCircleContainer
+            .on('mouseover', (d: MouseEvent) => {
+                // get id from mouseevent target
+                const id = (d.target as SVGCircleElement).id;
+
+                const data = d3.select(`#${id}`).datum() as Link;
+
+                if (!data) return;
+
+                if (!this.state.selection) {
+                    // highlight current node
+                    const circle = this.outerCircleContainer?.select(`#${id}`);
+                    if (!circle) return;
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                    circle.attr('stroke-opacity', 1);
+
+                    // highlight all links with same targetId 
+                    const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                    links.forEach((link: Link) => {
+                        const circles = this.artistContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!circles) return;
+
+                        circles.attr('stroke', 'black');
+                        circles.attr('stroke-width', 2);
+                    });
+                }
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(data.target.name);
+
+                    /* text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Age ${data.target.props.age}`); */
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Group ${data.props.group}`);
+
+                    // get sum of all counts for links with same targetId
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 45)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 60)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', _ => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // if state.selection is true return
+                if (this.state.selection) return;
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+        /* .on('click', (d: MouseEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
+   
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+   
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+   
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+   
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+   
+                // lower tooltip
+                this.tooltip?.lower();
+   
+                return;
+            }
+   
+            const id = (d.target as SVGCircleElement).id;
+   
+            const data = d3.select(`#${id}`).datum() as Link;
+   
+            if (!data) return;
+   
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
+        }); */
+
+        this.outerCircleContainer.exit().remove();
+        //OUTER CIRCLE END______________________________________________________________
+
+
+        //DONUT_______________________________________________________________________
+        // donut chart
+        if (!this.donutContainer) return;
+
+        // create arc generator
+        const arc = d3.arc<Link>()
+            .innerRadius(this.rScale(this.maxYear) + 10)
+            .outerRadius(this.rScale(this.maxYear) + 25)
+            .startAngle((d: Link) => {
+                let first: Link | undefined;
+                let last: Link | undefined;
+
+                //console.log("d title" + d.target.props.exhibition.title);
+
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        //console.log(i);
+                        break;
+                    }
+                }
+                for (let i = this.links.indexOf(first as Link); i < this.links.length; i++) {
+                    if (this.links[i].props.group != d.props.group) {
+                        //last = this.links[i + 1];
+                        last = this.links[i];
+                        break;
+                    }
+                }
+
+                //console.log("last " + last?.target.props.exhibition.title);
+                //console.log("first " + first?.target.props.exhibition.title);
+                // handle last element
+                if (!last) {
+                    last = this.links[this.links.length - 1];
+                    //return this.getAngle(last?.props.originalIndex) + this.theta;
+
+                    return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
+                } else {
+                    return this.getAngle(last?.props.originalIndex) - this.theta / 2;
+                }
+            })
+            .endAngle((d: Link) => {
+                let first: Link | undefined;
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        break;
+                    }
+                }
+                //return this.getAngle(first?.props.originalIndex) - 0.01;
+                return this.getAngle(first?.props.originalIndex) - this.theta / 2;
+            })
+
+        // let donutpie = d3.pie<Link>()
+        //     .sort(null)
+        //     .value((d: any) => {
+        //         console.log(d);
+        //         return d;
+        //     });
+
+        this.donutContainer.selectAll('path')
+            .data(_.uniqBy(this.links, (node: Link) => node.props.group))
+            // .data(this.links)
+            .join('path')
+            .attr('class', 'donut')
+            .attr('fill', (d: any) => this.color(d.props.group))
+            .attr('id', (d: any) => `donut-${d.props.group}`)
+            .attr('stroke', 'none')
+            .attr('stroke-width', 1)
+
+            // .data((d: Link) => {
+            //     //return (pie([100, 10, 50, 60, 75]));
+            //     //return pie([d.artworksBase]);
+            //     return donutpie(d.props.group);
+            //     //               return pie(d);
+            //     //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
+            // })
+
+
+            // .join('path')
+
+            .attr('d', (d: any) => {
+                //console.log("donut arc " + d)
+                return arc(d);
+            })
+            .style('cursor', 'pointer')
+            .on('mouseover', (d: PointerEvent) => {
+                // TODO: make tooltip
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });;
+
+        // append text to donut chart
+
+        //this.links.forEach((link: Link) => console.log("donut groups " + link.props.group))
+
+
+        this.donutContainer.selectAll('text')
+            .data(_.uniqBy(this.links, (node: Link) => node.props.group))
+            .join('text')
+            .attr('class', 'donut-label')
+            .attr('id', (d: any) => `do nut-label-${d.props.group}`)
+            // set text to d.props.group
+            .text((d: any) => d.props.group)
+            .attr('font-size', '12px')
+            .attr('dy', '0.35em')
+            .attr('fill', 'black')
+            .attr('text-anchor', 'middle')
+            .attr('x', (d: Link) => arc.centroid(d)[0])
+            .attr('y', (d: Link) => arc.centroid(d)[1])
+            .attr('transform', (d: Link) => {
+                const x2 = arc.centroid(d)[0];
+                const y2 = arc.centroid(d)[1];
+
+                //console.log("donut transform " + x2 + " " + y2);
+
+                return `rotate(-90, ${x2}, ${y2})`;
+            });
+
+        this.donutContainer.exit().remove();
+
+        //DONUT END__________________________________________________________________
+    }
+
+    drawPieMarks(): void {
+        if (!this.svgContainer) return;
+
+        if (!this.artistContainer) return;
 
         //PIE CHARTS________________________________________________
         // Pie chart variables:
@@ -625,12 +1523,798 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
             })
+            .transition().duration(250)
             //.attr("fill", (d: any) => this.color(d.props.group))
 
             //live
             //.attr('opacity', 0.75);
-            .attr('opacity', 0.0);
+            .attr('opacity', 0.75);
         //PIE CHARTS END__________________________________________________________
+
+        console.log(this.artistContainer.selectAll('.pies'));
+
+        //Tooltips + highlight year circle ______________________________________________________
+        this.artistContainer.selectAll('.pies')
+            .on('mouseover', (d: PointerEvent) => {
+                console.log("mouse");
+                // get data from d 
+                const id = (d.target as SVGCircleElement).id;
+                console.log(d);
+                console.log(id);
+
+                const data = d3.select(`#${id}`).datum() as Link;
+
+                console.log(data);
+
+                if (!data) return;
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.target.props.exhibition.title} (${data.props.data.year})`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '2em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '3em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`${data.props.data.count} artworks of ${data.props.data.baseLength} in total`);
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+
+                /* // highlight all links with same targetId
+                const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                links.forEach((link: Link) => {
+                    const id = `node-${link.target.id}-${link.props.data.year}`;
+                    const circle = this.svgContainer?.select(`#${id}`);
+
+                    if (!circle) return;
+
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                }); */
+                // highlight all circles of this exhibition in network
+                const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                links.forEach((link: Link) => {
+                    //const circles = this.artistContainer?.selectAll('circle')
+                    const circles = this.artistContainer?.selectAll('.node')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!circles) return;
+
+                    circles.attr('stroke', 'black');
+                    circles.attr('stroke-width', 2);
+
+                    const outercircles = this.outerCircleContainer?.selectAll('circle')
+                        .filter((d: any) => {
+                            return d.target.id == link.target.id
+                        });
+
+                    if (!outercircles) return;
+
+                    outercircles.attr('stroke', 'black');
+                    outercircles.attr('stroke-width', 2);
+
+                });
+
+                // pass year to mouseOverCallBack
+                //this.mouseOverCallBack(data.props.data.year);
+                this.highlightCircle(data.props.data.year);
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+                // lower tooltip 
+                this.tooltip?.lower();
+
+
+                // unhightlight all nodes 
+
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+
+                // pass year to mouseOverCallBack
+                //this.mouseOverCallBack(0);
+                this.highlightCircle(0);
+            });
+
+        this.artistContainer.exit().remove();
+
+
+        //Exhibitions titles outer circle_________________________________________
+        this.artistContainer.selectAll('.artist-label')
+            .data(_.uniqBy(this.links, (node: Link) => node.target.id))
+            .join('text')
+            // .transition().duration(250)
+            .attr('class', 'artist-label')
+            .attr('id', (d: Link) => `artist-label-${d.target.id}`)
+            .attr('x', (d: Link) => {
+                // find angle of target node
+                const angle = this.getAngle(d.props.originalIndex);
+                // find x coordinate of target node
+                const x = this.getXCoordinates(this.maxYear, angle, 50) + this.state.width / 2;
+
+                return x;
+            })
+            .attr('y', (d: Link) => {
+                // find angle of target node
+                const angle = this.getAngle(d.props.originalIndex);
+                // find y coordinate of target node
+                const y = this.getYCoordinates(this.maxYear, angle, 50) + this.state.height / 2;
+
+                return y;
+            })
+            .attr('transform', (d: Link, i: number) => {
+                const x1 = 0 + this.state.width / 2;
+                const y1 = 0 + this.state.height / 2;
+
+                const x2 = this.getXCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 50) + this.state.width / 2;
+                const y2 = this.getYCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 50) + this.state.height / 2;
+
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                // Calculate the rotation angle in radians
+                let rotationAngleRadians = Math.atan2(dy, dx);
+
+                // Ensure the angle is non-negative (between 0 and 2*pi)
+                if (rotationAngleRadians < 0) {
+                    rotationAngleRadians += 2 * Math.PI;
+                }
+
+                // Ensure the angle is between 0 and 2*pi
+                rotationAngleRadians %= 2 * Math.PI;
+
+                // Convert the rotation angle from radians to degrees
+                let rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
+
+                // if between 90 and 270 rotate by an additional 180 degrees
+                if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
+                    rotationAngleDegrees += 180;
+                }
+
+                return `rotate(${rotationAngleDegrees}, ${x2}, ${y2})`;
+            })
+            .style('text-anchor', (d: any, i: number) => {
+                const x1 = 0 + this.state.width / 2;
+                const y1 = 0 + this.state.height / 2;
+
+                const x2 = this.getXCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 25) + this.state.width / 2;
+                const y2 = this.getYCoordinates(this.maxYear, this.angleScale(d.props.originalIndex), 25) + this.state.height / 2;
+
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                // Calculate the rotation angle in radians
+                let rotationAngleRadians = Math.atan2(dy, dx);
+
+                // Ensure the angle is non-negative (between 0 and 2*pi)
+                if (rotationAngleRadians < 0) {
+                    rotationAngleRadians += 2 * Math.PI;
+                }
+
+                // Ensure the angle is between 0 and 2*pi
+                rotationAngleRadians %= 2 * Math.PI;
+
+                // Convert the rotation angle from radians to degrees
+                const rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
+
+                return (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) ? 'end' : 'start';
+            })
+            .attr('font-size', '12px')
+            .attr('fill', 'black')
+            .attr('dy', '0.35em')
+            .text((d: Link) => d.target.name.substring(0, 30) + "...")
+            .style('cursor', 'pointer')
+            .on('mouseover', (d: PointerEvent) => {
+                // get id from mouseevent target
+                const id = (d.target as SVGCircleElement).id;
+
+                const data = d3.select(`#${id}`).datum() as Link;
+                if (!data) return;
+
+                if (!this.state.selection) {
+                    // select current label and make font-weight bold
+                    const label = this.artistContainer?.select(`#${id}`);
+
+                    if (label) label.attr('font-weight', 'bold');
+
+                    // highlight current node
+                    const circle = this.outerCircleContainer?.select(`#${id}`);
+                    if (!circle) return;
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                    circle.attr('stroke-opacity', 1);
+
+                    // highlight all circles of this exhibition in network
+                    const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                    links.forEach((link: Link) => {
+                        const circles = this.artistContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!circles) return;
+
+                        circles.attr('stroke', 'black');
+                        circles.attr('stroke-width', 2);
+
+                        const outercircles = this.outerCircleContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!outercircles) return;
+
+                        outercircles.attr('stroke', 'black');
+                        outercircles.attr('stroke-width', 2);
+
+                    });
+                }
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('x');
+                    const cy = +d3.select(`#${id}`).attr('y');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(data.target.name);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`Age ${data.target.props.age}`);
+                        .text(`Year ${data.target.props.exhibition.startdate}`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 45)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Group ${data.props.group}`);
+
+                    // get sum of all counts for links with same targetId
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 60)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 75)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // if state.selection is true return
+                if (this.state.selection) return;
+
+                // reset font weight of all labels
+                this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+        /* .on('click', (d: PointerEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
+   
+            // reset font weight of all labels
+            this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+   
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+   
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+   
+                // reset all labels font weight to normal
+                this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
+   
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+   
+                // lower tooltip
+                this.tooltip?.lower();
+   
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+   
+                // return
+                return;
+            }
+   
+            const id = (d.target as SVGCircleElement).id;
+   
+            const data = d3.select(`#${id}`).datum() as Link;
+   
+            if (!data) return;
+   
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
+   
+            // set current label font weight to bold
+            const label = this.artistContainer?.select(`#${id}`);
+   
+            if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
+        }); */
+        //EXHIBITION LABELS END_________________________________________________________
+
+        if (!this.outerCircleContainer) return;
+
+        // iterate over all links and sum up all counts for links with same targetId
+        const sums = _.uniqBy(this.links.map((link: Link) => {
+            const sum = this.links.filter((l: Link) => l.targetId == link.targetId)
+                .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+            return { targetId: link.targetId, sum: sum };
+        }), (node: { targetId: string, sum: number }) => node.targetId);
+
+        // set outerNodeRScale domain to min and max sum
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+
+
+        //OUTER CIRCLE CONTAINER_____________________________________________________________________
+        // draw circles on the outside one for each unique target node 
+        this.outerCircleContainer.selectAll('circle')
+            .data(_.uniqBy(this.links, (node: Link) => node.target.id))
+            .join('circle')
+            .attr('id', (d: Link) => `outer-circle-${d.target.id}`)
+            .transition().duration(250)
+            .attr('r', (d: Link) => {
+                // sum up all counts of links with same targetId
+                const sum = this.links.filter((link: Link) => link.targetId == d.targetId)
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                //console.log("outer r " + sum);
+                // set radius to sum
+                return this.outerNodeRScale(sum);
+            })
+            //multiplicator = distance of outer circles to middle, original value 535
+            .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 340) + this.state.width / 2)
+            .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 340) + this.state.height / 2)
+            //.attr('opacity', 0.75)
+            .attr('opacity', 0)
+            .attr('fill', (d: Link) => this.color(d.props.group))
+            .style('cursor', 'pointer');
+
+        this.outerCircleContainer
+            .on('mouseover', (d: MouseEvent) => {
+                // get id from mouseevent target
+                const id = (d.target as SVGCircleElement).id;
+
+                const data = d3.select(`#${id}`).datum() as Link;
+
+                if (!data) return;
+
+                if (!this.state.selection) {
+                    // highlight current node
+                    const circle = this.outerCircleContainer?.select(`#${id}`);
+                    if (!circle) return;
+                    circle.attr('stroke', 'black');
+                    circle.attr('stroke-width', 2);
+                    circle.attr('stroke-opacity', 1);
+
+                    // highlight all links with same targetId 
+                    const links = this.links.filter((link: Link) => link.targetId == data.targetId);
+                    links.forEach((link: Link) => {
+                        const circles = this.artistContainer?.selectAll('circle')
+                            .filter((d: any) => {
+                                return d.target.id == link.target.id
+                            });
+
+                        if (!circles) return;
+
+                        circles.attr('stroke', 'black');
+                        circles.attr('stroke-width', 2);
+                    });
+                }
+
+                // show tooltip with name of target node
+                if (this.tooltip) {
+                    // this.tooltip.style('display', 'block');
+                    // set tooltip border to red and fill to white
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // get circle cx and cy
+                    const cx = +d3.select(`#${id}`).attr('cx');
+                    const cy = +d3.select(`#${id}`).attr('cy');
+
+                    // set tooltip position to mouse position
+                    tooltip.attr('x', cx + 15);
+                    tooltip.attr('y', cy + 15);
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(data.target.name);
+
+                    /* text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Age ${data.target.props.age}`); */
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text(`Group ${data.props.group}`);
+
+                    // get sum of all counts for links with same targetId
+                    //const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    //    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 45)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`${data.props.data.count} artworks`);
+
+                    text.append('tspan')
+                        .attr('x', cx + 15)
+                        .attr('y', cy + 60)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        //.text(`${sum} co-exhibitions`);
+                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', _ => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // if state.selection is true return
+                if (this.state.selection) return;
+
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+        /* .on('click', (d: MouseEvent) => {
+            // set state.selection to true
+            this.setState(prevState => ({ selection: true }));
+   
+            // ctrl+click to deselect
+            if (d.ctrlKey) {
+                // set state.selection to false
+                this.setState(prevState => ({ selection: false }));
+   
+                // unhightlight all nodes 
+                this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
+                this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+   
+                // reset opacity of all nodes
+                this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
+                this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+   
+                // reset opacity of labels
+                this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
+   
+                // lower tooltip
+                this.tooltip?.lower();
+   
+                return;
+            }
+   
+            const id = (d.target as SVGCircleElement).id;
+   
+            const data = d3.select(`#${id}`).datum() as Link;
+   
+            if (!data) return;
+   
+            this.requestNode(data.targetId);
+            this.getSecondaryLinks(data);
+        }); */
+
+        this.outerCircleContainer.exit().remove();
+        //OUTER CIRCLE END______________________________________________________________
+
+
+        //DONUT_______________________________________________________________________
+        // donut chart
+        if (!this.donutContainer) return;
+
+        // create arc generator
+        const arc = d3.arc<Link>()
+            .innerRadius(this.rScale(this.maxYear) + 10)
+            .outerRadius(this.rScale(this.maxYear) + 25)
+            .startAngle((d: Link) => {
+                let first: Link | undefined;
+                let last: Link | undefined;
+
+                //console.log("d title" + d.target.props.exhibition.title);
+
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        //console.log(i);
+                        break;
+                    }
+                }
+                for (let i = this.links.indexOf(first as Link); i < this.links.length; i++) {
+                    if (this.links[i].props.group != d.props.group) {
+                        //last = this.links[i + 1];
+                        last = this.links[i];
+                        break;
+                    }
+                }
+
+                //console.log("last " + last?.target.props.exhibition.title);
+                //console.log("first " + first?.target.props.exhibition.title);
+                // handle last element
+                if (!last) {
+                    last = this.links[this.links.length - 1];
+                    //return this.getAngle(last?.props.originalIndex) + this.theta;
+
+                    return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
+                } else {
+                    return this.getAngle(last?.props.originalIndex) - this.theta / 2;
+                }
+            })
+            .endAngle((d: Link) => {
+                let first: Link | undefined;
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        break;
+                    }
+                }
+                //return this.getAngle(first?.props.originalIndex) - 0.01;
+                return this.getAngle(first?.props.originalIndex) - this.theta / 2;
+            })
+
+        // let donutpie = d3.pie<Link>()
+        //     .sort(null)
+        //     .value((d: any) => {
+        //         console.log(d);
+        //         return d;
+        //     });
+
+        this.donutContainer.selectAll('path')
+            .data(_.uniqBy(this.links, (node: Link) => node.props.group))
+            // .data(this.links)
+            .join('path')
+            .attr('class', 'donut')
+            .attr('fill', (d: any) => this.color(d.props.group))
+            .attr('id', (d: any) => `donut-${d.props.group}`)
+            .attr('stroke', 'none')
+            .attr('stroke-width', 1)
+
+            // .data((d: Link) => {
+            //     //return (pie([100, 10, 50, 60, 75]));
+            //     //return pie([d.artworksBase]);
+            //     return donutpie(d.props.group);
+            //     //               return pie(d);
+            //     //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
+            // })
+
+
+            // .join('path')
+
+            .attr('d', (d: any) => {
+                //console.log("donut arc " + d)
+                return arc(d);
+            })
+            .style('cursor', 'pointer')
+            .on('mouseover', (d: PointerEvent) => {
+                // TODO: make tooltip
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                // remove rect and text from tooltip
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+
+                // lower tooltip
+                this.tooltip?.lower();
+            });;
+
+        // append text to donut chart
+
+        //this.links.forEach((link: Link) => console.log("donut groups " + link.props.group))
+
+
+        this.donutContainer.selectAll('text')
+            .data(_.uniqBy(this.links, (node: Link) => node.props.group))
+            .join('text')
+            .attr('class', 'donut-label')
+            .attr('id', (d: any) => `do nut-label-${d.props.group}`)
+            // set text to d.props.group
+            .text((d: any) => d.props.group)
+            .attr('font-size', '12px')
+            .attr('dy', '0.35em')
+            .attr('fill', 'black')
+            .attr('text-anchor', 'middle')
+            .attr('x', (d: Link) => arc.centroid(d)[0])
+            .attr('y', (d: Link) => arc.centroid(d)[1])
+            .attr('transform', (d: Link) => {
+                const x2 = arc.centroid(d)[0];
+                const y2 = arc.centroid(d)[1];
+
+                //console.log("donut transform " + x2 + " " + y2);
+
+                return `rotate(-90, ${x2}, ${y2})`;
+            });
+
+        this.donutContainer.exit().remove();
+
+        //DONUT END__________________________________________________________________
+    }
+
+
+    drawCircle(): void {
+        if (!this.svgContainer) return;
+
+        if (!this.artistContainer) return;
+
+        this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
+
+
 
 
 
@@ -648,7 +2332,13 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('r', (d: Link) => {
 
                 //console.log("rscale " + this.basenodeRScale(d.props.data.count * d.props.data.percentage / 100) + ", count " + d.props.data.count + ", percentage " + d.props.data.percentage + " " + d.props.data.count * d.props.data.percentage / 100);
-                return this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100);
+                if (this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100) < this.minimum) {
+                    return 0.5;
+                }
+                else {
+                    return this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100);
+                }
+                //return this.percentNodeRScale(d.props.data.count * d.props.data.percentage / 100);
             })
             //.attr('r', (d: Link) => this.basenodeRScale(d.props.data.percentage))
             .attr('cx', (d: Link) => {
@@ -708,7 +2398,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //CIRCLES END______________________________________________________________________________
 
 
-
+        console.log(this.artistContainer.selectAll('circle'));
 
 
         //Tooltips + highlight year circle ______________________________________________________
@@ -717,7 +2407,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // get data from d 
                 const id = (d.target as SVGCircleElement).id;
 
+                console.log(d.target);
+                console.log(id);
+
                 const data = d3.select(`#${id}`).datum() as Link;
+                console.log(data);
 
                 if (!data) return;
 
@@ -1803,6 +3497,40 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
 
+    handleMarkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        //console.log("marker change " + event.target.value);
+
+        this.setState(prevState => ({ ...prevState, marks: event.target.value }), () => {
+            if (event.target.value === "circles") {
+                console.log("circles");
+                this.artistContainer?.selectAll('.pies').remove();
+                //this.circleContainer?.selectAll('.artist-half-circle').remove();
+                //this.circleContainer?.selectAll('.total-half-circle').remove();
+                this.drawCircleMarks();
+
+
+            }
+            else if (event.target.value === "pies") {
+                console.log("pies");
+                this.artistContainer?.selectAll('circle').remove();
+                this.drawPieMarks();
+            }
+
+            /* console.log("props comparewith");
+            console.log(this.props.compareWith)
+            console.log("state comparewith");
+            console.log(this.state.compareWith); */
+            if (this.state.compareWith) {
+                //console.log("drawcompare");
+                //this.drawCompare(this.state.compareWith);
+            }
+
+            /* console.log("marks state");
+            console.log(this.state.marks); */
+        });
+
+
+    };
 
     /* highlightArtist(artist: Artist | null): void {
         // grab Link data for artist.id from outerCircleContainer
@@ -1846,6 +3574,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     render() {
         return (
             <>
+                <div className="absolute w-auto center-10">
+                    <div className="block">
+                        <select id="order-by" onChange={this.handleMarkChange}>
+                            <option value="circles">Circles</option>
+                            <option value="pies">Pies</option>
+                        </select>
+                    </div>
+                </div>
                 <div className="absolute w-auto right-5">
                     <div className="block">
                         <label htmlFor="co-ex">Group by: </label>
