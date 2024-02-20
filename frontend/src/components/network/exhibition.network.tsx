@@ -446,8 +446,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
             // find filtered link with same targetId
-            //const filteredLink = filteredLinks.filter((l: Link) => l.targetId == link.targetId);
-            const filteredLink = this.state.links.filter((l: Link) => l.targetId == link.targetId);
+            const filteredLink = filteredLinks.filter((l: Link) => l.targetId == link.targetId);
+            //const filteredLink = this.state.links.filter((l: Link) => l.targetId == link.targetId);
             if (!filteredLink) return;
             filteredLink.forEach((l: Link) => {
                 l.props.originalIndex = index;
@@ -794,7 +794,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // highlight all circles of this exhibition in network
                 const links = this.links.filter((link: Link) => link.targetId == data.targetId);
                 links.forEach((link: Link) => {
-                    const circles = this.artistContainer?.selectAll('circle')
+                    //const circles = this.artistContainer?.selectAll('circle')
+                    const circles = this.artistContainer?.selectAll('.node')
                         .filter((d: any) => {
                             return d.target.id == link.target.id
                         });
