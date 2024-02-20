@@ -725,7 +725,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         // }
 
         if (update) {
-            console.log('update', update);
+            //console.log('update', update);
             this.drawTimeline(update);
         }
 

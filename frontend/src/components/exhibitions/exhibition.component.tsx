@@ -249,8 +249,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		});
 		//});
 
-		console.log("exhib map");
-		console.log(this.exhibMap);
+		/* console.log("exhib map");
+		console.log(this.exhibMap); */
 		let i: number = 0;
 
 		//if the links from artist to exhibitions have not been set yet
@@ -301,7 +301,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 							type: `NA`,
 							exhibitionsTookPlaceIn: []
 						}
-						console.log("tookplaceinhosts " + item.exhibition.tookPlaceInHosts);
+						//console.log("tookplaceinhosts " + item.exhibition.tookPlaceInHosts);
 						hosts = [noHost];
 						//console.log("nohosts " + noHosts[0].country);
 						//item.exhibition.tookPlaceInHosts = noHosts;
@@ -365,8 +365,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		}
 		//console.log(this.links);
 		//console.log(source);
-		console.log("component statistics")
-		console.log(this.exhibStatistics);
+		/* console.log("component statistics")
+		console.log(this.exhibStatistics); */
 
 		//this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
 

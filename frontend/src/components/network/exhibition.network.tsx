@@ -95,7 +95,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     // request node broadcasts node id to parent
     requestNode(node: string | number) {
         // emit event to parent
-        console.log('request', node)
+        //console.log('request', node)
         if (this.props.requestNode) this.props.requestNode(node);
     }
 
@@ -333,16 +333,18 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         // calculate unique target nodes from links
         // filter out links of same targetId where the sum of the count property is 1
+        // needed to filter out exhibitions before 1905 and after 1915
         const filteredLinks = this.state.links.filter((link: Link) => {
-            const sum = this.state.links
+            /* const sum = this.state.links
                 .filter((l: Link) => {
                     return l.targetId == link.targetId;// && link.target.props.data.country != '\\N';
                 })
-                .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            //console.log("SUM " + sum + "link " + link.target.props.exhibition.title);
-            //TODO make this nicer... only a workaround so it shows all exhibitions and filtering still works...
-            return sum >= 0 && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
+                .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0); */
+            //console.log("SUM " + sum + "link " + link.target.props.exhibition.title);            
+            //return sum >= 0 && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);//(numCoEx ? numCoEx : 0) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
+            return (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
+
 
 
         //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
@@ -350,8 +352,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //console.log("filter " + this.state.orderBy + " " + this.state.groupBy);
 
         const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, filteredLinks);
-
-
+        //const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, this.state.links);
 
         let groupData: Array<{ group: string, links: Array<Link> }> = [];
 
@@ -361,11 +362,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             groupData.push({ group: group, links: links });
         });
 
+
+
         // sort group data array by percent
-        groupData = _.orderBy(groupData, ['percent'], ['desc']);
+        //groupData = _.orderBy(groupData, ['percentage'], ['desc']);
+        //groupData = _.orderBy(groupData, ['links'], ['desc']);
 
         // create an array of all target ages from filteredLinks
-        const targetAges = filteredLinks.map((link: Link) => {
+        /* const targetAges = filteredLinks.map((link: Link) => {
             let age = +link.target.props.data.deathdate.split('-')[0] - +link.target.props.data.birthdate.split('-')[0];
 
             if (isNaN(age)) return '?';
@@ -373,39 +377,39 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             if (age > 200) return '?';
 
             return `${age}`;
-        });
+        }); */
 
         // get the min age that isnt '?'
-        const minAge = Math.min(...targetAges.map((a: string) => { return isNaN(+a) ? 200 : +a; }));
+        //const minAge = Math.min(...targetAges.map((a: string) => { return isNaN(+a) ? 200 : +a; }));
 
         // get max age from targetAges
-        const maxAge = Math.max(...targetAges.map((a: string) => { return isNaN(+a) ? 0 : +a; }));
+        //const maxAge = Math.max(...targetAges.map((a: string) => { return isNaN(+a) ? 0 : +a; }));
 
         // construct age groups in +/- 7 year intervals starting from source age to min and max target age
-        const ageGroups = _.range(
+        /* const ageGroups = _.range(
             minAge - 7, // start
             maxAge + 7, // stop
-            7); // step
+            7); // step */
 
         // create ranges for each age group
-        const ageRanges = ageGroups.map((age: number) => {
+        /* const ageRanges = ageGroups.map((age: number) => {
             return `${age}-${age + 7}`;
-        });
+        }); */
 
-        ageRanges.unshift('?'); // For people with missing birthdate or deathdate
+        // ageRanges.unshift('?'); // For people with missing birthdate or deathdate
 
         const grouped = groupData.map((link: { group: string, links: Array<Link> }) => {
             link.links.forEach((l: Link) => {
                 l.props.group = link.group;
                 // find which age range the target node belongs to
-                const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
-                const index = ageRanges.findIndex((range: string) => {
+                //const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
+                /* const index = ageRanges.findIndex((range: string) => {
                     const r = range.split('-');
                     return age >= +r[0] && age <= +r[1];
-                });
+                }); */
                 // set targetAge property to age range
-                l.target.props.ageGroup = index == -1 ? '?' : ageRanges[index];
-                l.target.props.age = age;
+                /* l.target.props.ageGroup = index == -1 ? '?' : ageRanges[index];
+                l.target.props.age = age; */
             });
             return link.links;
         })
@@ -414,10 +418,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .sort((a: Link, b: Link) => {
                 if (a.props.group > b.props.group) return 1;
                 if (a.props.group < b.props.group) return -1;
-                if (a.target.props.age > b.target.props.age) return 1;
-                if (a.target.props.age < b.target.props.age) return -1;
+                /* if (a.target.props.age > b.target.props.age) return 1;
+                if (a.target.props.age < b.target.props.age) return -1; */
                 return 0;
             });
+
+
 
         const unique = _.uniqBy(grouped, (link: Link) => link.targetId);
 
@@ -440,7 +446,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
             // find filtered link with same targetId
-            const filteredLink = filteredLinks.filter((l: Link) => l.targetId == link.targetId);
+            //const filteredLink = filteredLinks.filter((l: Link) => l.targetId == link.targetId);
+            const filteredLink = this.state.links.filter((l: Link) => l.targetId == link.targetId);
             if (!filteredLink) return;
             filteredLink.forEach((l: Link) => {
                 l.props.originalIndex = index;
@@ -822,10 +829,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
                 // unhightlight all nodes 
+
                 this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
                 this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
                 this.artistContainer?.selectAll('circle').attr('stroke', 'none');
                 this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+
 
                 // pass year to mouseOverCallBack
                 //this.mouseOverCallBack(0);
@@ -1376,7 +1385,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 if (!last) {
                     last = this.links[this.links.length - 1];
                     //return this.getAngle(last?.props.originalIndex) + this.theta;
-                    console.log("theta" + this.theta);
+
                     return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
                 } else {
                     return this.getAngle(last?.props.originalIndex) - this.theta / 2;
@@ -1702,9 +1711,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             }); */
         });
 
-        console.log("found");
+        /* console.log("found");
         console.log(found);
-        console.log(commonExhibitions);
+        console.log(commonExhibitions); */
 
 
         // if (!found) {
