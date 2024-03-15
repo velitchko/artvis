@@ -152,7 +152,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
         if (!exhibition) return 0;
 
         // get length of catalogueEntriesEntryIn
-        const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+        //const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+        const baseLength = exhibition.catalogueEntriesEntryIn?.length;
 
 
         // get amount of catalogueEntries with id_person === id
