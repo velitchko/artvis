@@ -17,6 +17,7 @@ import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
 import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
+import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -122,6 +123,9 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		//TODO: change logic... query for exhibitions by artist
 		const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
 
+		console.log("artist (comp with)");
+		console.log(artist);
+
 		if (artist) {
 			// this.setState({ compareWith: artist });
 			this.setState(prevState => ({ compareWith: artist }), () => {
@@ -135,7 +139,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			this.loadingExternalData = true;
 			// query artist by id
 			client.query({
-				query: GET_ARTIST,
+				//query: GET_ARTIST,
+				query: GET_ARTIST_AND_CATALOGUES,
 				variables: {
 					searchId: artistId
 				}
@@ -192,7 +197,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 		/* console.log("exhibited exhib");
-		console.log(this.state.artist.exhibitedExhibitions); */
+		console.log(this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)); */
 
 		//put exhibitions into a map with exhibition id as key and compute the number of artworks in each exhibition
 		this.state.artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {

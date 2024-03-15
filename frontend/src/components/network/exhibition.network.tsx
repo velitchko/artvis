@@ -7,6 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
+import { CatalogueEntry } from '../../models/catalogueEntry.model';
 
 class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, marks: string }> {
 
@@ -26,6 +27,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     private theta: number;
     private links: Array<Link> = [];
     private color: d3.ScaleOrdinal<string, string>;
+
+    private currentMark: string;
 
     private minYear = 1905;
     private maxYear = 1915;
@@ -49,6 +52,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         };
 
         this.svgContainer = undefined;
+
+        this.currentMark = "circles";
 
         this.angleScale = d3.scaleLinear();
         this.rScale = d3.scaleSqrt();
@@ -1430,6 +1435,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         if (!this.artistContainer) return;
 
+        console.log("draw pies");
+
         //PIE CHARTS________________________________________________
         // Pie chart variables:
         let piearc = d3.arc<Link>()
@@ -1456,13 +1463,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         //let color = d3.schemeCategory10;
 
-        let color = ["#1f77b4", "#cbd5e8"];
-        //console.log("links ");
-        //console.log(this.links);
+        let color = ["#1f77b4", "#ff7f0e", "#cbd5e8"];
+        console.log("links ");
+        console.log(this.links);
+
+        console.log("compare pies");
+        console.log(this.getCompareArtworks(this.state.compareWith));
 
         let points = this.artistContainer.selectAll('g')
             //let points = this.artistContainer.selectAll('.pies')
-            .data(this.links)
+            //.data(this.links)
+            .data(this.getCompareArtworks(this.props.compareWith))
             //          .enter()
             //         .append('g')
             .join('g')
@@ -1485,7 +1496,12 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .data((d: Link) => {
                 //return (pie([100, 10, 50, 60, 75]));
                 //return pie([d.artworksBase]);
-                return pie([d.props.data.count, d.props.data.baseLength - d.props.data.count]);
+
+                return pie([d.props.data.count, d.props.data.compareCount, d.props.data.baseLength - d.props.data.count - d.props.data.compareCount]);
+
+
+
+
                 //               return pie(d);
                 //return pie([{ label: d.artworksBase, radius: d.artworksBase},{label: d.artworksTotal - d.artworksBase, radius: d.artworksBase}]);
             })
@@ -1510,6 +1526,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return piearc(d);
             })
             .attr("fill", function (d, i) {
+                console.log("color");
+                console.log(color[i]);
                 return color[i];
                 /* if (i === 0) {
                     return color[i];
@@ -3342,6 +3360,17 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 }); */
                 //console.log(this.exhibStats);
 
+                //this.getCompareArtworks(this.props.compareWith);
+
+
+                console.log("update");
+                console.log(this.currentMark);
+
+                if (this.currentMark === "pies") {
+                    this.artistContainer?.selectAll('circle').remove();
+
+                    this.drawPieMarks();
+                }
 
                 this.highlightCommonExhibitions(this.props.compareWith);
                 //this.init();
@@ -3495,6 +3524,39 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.artistContainer?.selectAll('.artist-label').attr('font-weight', 'normal');
     }
 
+    /** assign number of compare artist's artworks to the common exhibitions */
+    getCompareArtworks(compareWith: Artist | null): Array<Link> {
+
+        console.log("comparewith");
+        console.log(compareWith);
+
+        let links: Link[] = [];
+
+        this.links.forEach((l: Link) => {
+
+            const exhibition = compareWith?.exhibitedExhibitions?.find(x => x.id === l.targetId);
+
+            const count = exhibition?.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === compareWith?.id)?.length;
+
+            if (count) {
+                l.props.data.compareCount = count;
+            }
+            else {
+                l.props.data.compareCount = 0;
+            }
+
+            links.push(l);
+
+        });
+        console.log("compare links");
+        console.log(links);
+
+        return links;
+
+        //this.links = links;
+
+
+    }
 
 
     handleMarkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -3506,6 +3568,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 this.artistContainer?.selectAll('.pies').remove();
                 //this.circleContainer?.selectAll('.artist-half-circle').remove();
                 //this.circleContainer?.selectAll('.total-half-circle').remove();
+
+                this.currentMark = "circles";
                 this.drawCircleMarks();
 
 
@@ -3513,6 +3577,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             else if (event.target.value === "pies") {
                 console.log("pies");
                 this.artistContainer?.selectAll('circle').remove();
+                this.currentMark = "pies";
                 this.drawPieMarks();
             }
 
