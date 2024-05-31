@@ -252,6 +252,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         // create an array of all target ages from filteredLinks
         const targetAges = filteredLinks.map((link: Link) => {
+            // calculate age of person at the given exhibiton time
+            // let age = link.props.data.year - +link.target.props.data.birthdate.split('-')[0];
             let age = +link.target.props.data.deathdate.split('-')[0] - +link.target.props.data.birthdate.split('-')[0];
 
             if (isNaN(age)) return '?';
@@ -285,6 +287,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 l.props.group = link.group;
                 // find which age range the target node belongs to
                 const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
+                
                 const index = ageRanges.findIndex((range: string) => {
                     const r = range.split('-');
                     return age >= +r[0] && age <= +r[1];
@@ -456,7 +459,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(data.target.name);
+                        .text(`${data.target.name} ${data.props.data.year - data.target.props.data.birthdate.split('-')[0]}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)

@@ -1105,6 +1105,15 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         return uniqueExhibitions.length;
     }
 
+    getArtistAge(artist: Artist): number {
+        if (!artist.birthdate) return 0;
+
+        const birthdate = new Date(artist.birthdate);
+        const deathdate = artist.deathdate ? new Date(artist.deathdate) : new Date();
+
+        return deathdate.getFullYear() - birthdate.getFullYear();
+    }
+
     nodeClickedCallback(id: string) {
         this.onArtistChange(id);
     }
@@ -1126,13 +1135,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                     <div className="row-span-1 col-span-2 z-40">
                         <div className="w-full h-[80%]" id="timeline-container">
                             <div className="float-left text-left pl-2">
-                                <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
+                                <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
                                 <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.artist.birthdate)} ({this.state.artist.birthplace}) - {this.formatDate(this.state.artist.deathdate)} ({this.state.artist.deathplace})</h2>
                                 <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
                             </div>
                             {this.state.compareWith &&
                                 <div className="float-right text-right pr-2">
-                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
                                     <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.compareWith.birthdate)} ({this.state.compareWith.birthplace}) - {this.formatDate(this.state.compareWith.deathdate)} ({this.state.compareWith.deathplace})</h2>
                                     <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
                                 </div>
