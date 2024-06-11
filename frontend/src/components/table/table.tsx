@@ -6,6 +6,12 @@ import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
 import { Host } from '../../models/host.model';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons/faPeopleGroup';
+import { faPerson } from '@fortawesome/free-solid-svg-icons/faPerson';
+import { faGavel } from '@fortawesome/free-solid-svg-icons/faGavel';
+
+
 
 type IResults = {
     artists?: Array<any>,
@@ -215,8 +221,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
 
         return (
             <>
-                <table className="text-left text-gray-500">
-                    <thead className="text-xs bg-gray-200 text-gray-700 uppercase sticky">
+                <table className="text-left text-black">
+                    <thead className="text-xs bg-black text-white uppercase sticky">
                         <tr>
                             {/* <th scope="col" className="px-6 py-3">
                                 ID
@@ -234,17 +240,17 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                                 <button onClick={() => this.sort('host')}>City (Country)</button>
                             </th>
                             <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('title')}>Title</button>
+                                <button onClick={() => this.sort('title')}>Exhibition Title</button>
                             </th>
                             <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Catalogue Entries</button>
+                                <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Nr. Artworks</button>
                             </th>
                             <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('percentBase')}>Base %Entries</button>
+                                <button onClick={() => this.sort('percentBase')}>Base Contribution</button>
                             </th>
                             { 
                             this.state.compareWith && <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('percentCompare')}>Compare %Entries</button>
+                                <button onClick={() => this.sort('percentCompare')}>Compare Contribution</button>
                             </th> 
                             }
                             <th scope="col" className="px-6 py-2 border-r border-gray-300">
@@ -278,7 +284,13 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                                 {/* <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                     {exhibition.id}
                                 </th> */}
-                                <td className="px-6 py-4">{exhibition.type}</td>
+                                <td className="px-6 py-4">
+                                    
+                                    {/* use fontawesome icons depending on type */}
+                                    {exhibition.type === 'group' && <FontAwesomeIcon icon={faPeopleGroup} data-toggle="tooltip" title="Group Exhibition"/>}
+                                    {exhibition.type === 'auction' && <FontAwesomeIcon icon={faPerson} data-toggle="tooltip" title="Solo Exhibition"/>}
+                                    {exhibition.type === 'solo' && <FontAwesomeIcon icon={faGavel} data-toggle="tooltip" title="Auction" />}
+                                </td>
                                 <td className="px-6 py-4">{exhibition.startdate}</td>
                                 <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).place} ({this.checkForHost(exhibition.tookPlaceInHosts).country})</td>
                                 {/* <td className="px-6 py-4">{exhibition.enddate}</td> */}
