@@ -9,6 +9,7 @@ import SearchComponent from '../search/search';
 import GET_ARTIST_BY_NAME from '../../queries/artistByName';
 import GET_ARTIST from '../../queries/artist';
 import EgoNetworkComponent from '../network/ego.network';
+import AreaChartComponent from '../linechart/area.chart';
 import TableComponent from '../table/table';
 import _ from 'lodash';
 import GET_EXHIBITION from '../../queries/exhibition';
@@ -38,6 +39,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private showNetwork: boolean = false;
     private loadingExternalData: boolean = false;
     private egoNetwork = React.createRef<EgoNetworkComponent>();
+    private colors: Map<string, string>;
 
     constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
         super(props);
@@ -69,6 +71,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.minYear = 1905;
         this.maxYear = 1915;
+
+        this.colors = new Map<string, string>();
 
         this.margin = {
             top: 30,
@@ -270,7 +274,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
             .attr('class', 'base-path')
             .attr('id', 'base-path')
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-width', 2)
             .attr('stroke-opacity', 0.75)
             .attr('fill', 'none');
@@ -293,7 +297,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         absHalfCircles
             .data(dataWithMissingYears)
             .join('path')
-            .attr('fill', 'gray')
+            .attr('fill', 'black')
             .attr('fill-opacity', 1)
             .attr('stroke', 'white')
             .attr('stroke-opacity', 0.75)
@@ -401,7 +405,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .join('path')
             .attr('fill', 'white')
             .attr('fill-opacity', 1)
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-opacity', 1)
             .attr('stroke-width', 2)
             .attr('class', 'base-avg-half-circle')
@@ -572,6 +576,27 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             });
         });
 
+        // get unique set of countries and assign colors to them
+        const countries = new Set<string>();
+        this.links.forEach((link: Link) => {
+            countries.add(link.target.props.data.country);
+        });
+
+        // assign unique color to each country for more than 10 countries
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(countries).sort((a: string, b: string) => a.localeCompare(b)));
+
+          // set colorScale to this.colors
+        Array.from(countries).forEach((country: string, i: number) => {
+            this.colors.set(country, colorScale(country));
+        });
+
+        // INTERPOLATE COLORS
+        // const colorScale =  d3.scaleSequential(d3.interpolateViridis).domain([0, countries.size]);
+        // set colorScale to this.colors
+        // Array.from(countries).forEach((country: string, i: number) => {
+        //     this.colors.set(country, colorScale(i));
+        // });
+
         this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
     }
 
@@ -730,7 +755,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 // return x - (this.xScale ? this.xScale(d.year) : 0);
             })
             .attr('fill', '#FEF3C7')
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             // .attr('opacity', 0.5)
             .on('mouseover', (event: any, d: { year: number, count: number }) => {
                 if (this.tooltip) {
@@ -801,7 +826,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         absHalfCircles
             .data(dataWithMissingYears)
             .join('path')
-            .attr('fill', 'gray')
+            .attr('fill', 'black')
             .attr('fill-opacity', 1)
             .attr('stroke', 'white')
             .attr('stroke-opacity', 0.75)
@@ -910,7 +935,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .join('path')
             .attr('fill', 'white')
             .attr('fill-opacity', 1)
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-opacity', 1)
             .attr('stroke-width', 2)
             .attr('class', 'compare-avg-half-circle')
@@ -1017,7 +1042,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .data(dataWithMissingYears)
             .join('path')
             .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-width', 2)
             .attr('stroke-opacity', 0.75)
             .style('stroke-dasharray', ('3, 3'))
@@ -1130,7 +1155,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                     </div>
                 </div>
                 {this.state.artist &&
-                <div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-4 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
+                <div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-5 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
                     <div className="row-span-1 col-span-2 z-40">
                         <div className="w-full h-[80%]" id="timeline-container">
                             <div className="float-left text-left pl-2">
@@ -1148,16 +1173,23 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                             <svg id="artist-detail-timeline"></svg>
                         </div>
                     </div>
-                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
-                        <div className="w-full h-[90vh] sm:h-full" id="ego-net-container">
+                    <div className="lg:row-span-1 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
+                        <div className="w-full h-full sm:h-full" id="area-chart-container">
                             {this.showNetwork &&
-                                <EgoNetworkComponent ref={this.egoNetwork} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} />
+                                <AreaChartComponent links={this.state.links} colors={this.colors} stacked={true}/>
                             }
                         </div>
                     </div>
-                    <div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
+                    <div className="lg:row-span-4 md:row-span-1 col-span-2 z-30">
                         <div className="w-full h-full overflow-y-scroll" id="table-container">
                             <TableComponent query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
+                        </div>
+                    </div>
+                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
+                        <div className="w-full h-full sm:h-full" id="ego-net-container">
+                            {this.showNetwork &&
+                                <EgoNetworkComponent ref={this.egoNetwork} colors={this.colors} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} />
+                            }
                         </div>
                     </div>
                 </div>
