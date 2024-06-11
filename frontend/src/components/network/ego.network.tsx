@@ -7,7 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 
-class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
+class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -62,6 +62,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         this.setState(prevState => ({ width: width, height: height }), () => {
             this.init();
         });
+
         // set resize handler to window
         window.addEventListener('resize', this.onResize);
 
@@ -99,9 +100,13 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     init(): void {
         if (this.svgContainer) return;
 
-        console.log(this.state.baseNode, this.state.links)
-
         this.svgContainer = d3.select('#ego-net');
+
+        if(this.props.colors) {
+            this.color = d3.scaleOrdinal<string, string>()
+                .domain(Array.from(this.props.colors.keys()))
+                .range(Array.from(this.props.colors.values()));
+        }
 
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.25, 10])
