@@ -91,13 +91,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
+        this.setState(prevState => ({ width: width, height: height - 30 }), () => {
             this.init();
         });
 
         // set resize handler to window
         window.addEventListener('resize', this.onResize);
-
         // this.init();
     }
 
@@ -108,7 +107,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
+        this.setState(prevState => ({ width: width, height: height  - 30 }), () => {
             this.init();
         });
     }
