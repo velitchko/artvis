@@ -69,7 +69,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.compareItemCountExtentAvg = [0, 0];
 
         this.width = 500;
-        this.height = 200;
+        this.height = 250;
 
         this.minYear = 1905;
         this.maxYear = 1915;
@@ -97,7 +97,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height - 30 }), () => {
+        this.setState(prevState => ({ width: width, height: height - 20 }), () => {
             this.init();
         });
 
@@ -113,7 +113,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height  - 30 }), () => {
+        this.setState(prevState => ({ width: width, height: height  - 50 }), () => {
             this.init();
         });
     }
@@ -161,7 +161,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.svgTimeLineContainer.append('text')
             .attr('class', 'x-axis-label')
             .attr('x', this.state.width / 2)
-            .attr('y', this.state.height - this.margin.bottom + 36)
+            .attr('y', this.state.height)
             .attr('text-anchor', 'middle')
             .text('Year');
 
@@ -177,11 +177,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.svgTimeLineContainer.append('text')
             .attr('class', 'title')
             .attr('x', this.state.width / 2)
-            .attr('y', -this.margin.top)
+            .attr('y', -2*this.margin.top)
             .attr('text-anchor', 'middle')
             .text('Exhibitions over time');
 
         this.drawTimeline();
+        this.addLegend();
         this.drawNetwork();
     }
 
@@ -1057,6 +1058,123 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // push rect to bottom
         this.svgTimeLineContainer.select('#timeline-background').lower();
+    }
+
+    addLegend() {
+        // draw legend of half circle sizes 
+        if (!this.svgTimeLineContainer) return;
+
+        const legendContainer = this.svgTimeLineContainer.append('g').attr('id', 'legend-container');
+
+        // draw 2 half circles one for average and one for absolute count with text
+        const legend = legendContainer.selectAll('.legend')
+            .data(['#Artworks', '#Exhibitions'])
+            .join('g')
+            .attr('class', 'legend')
+            .attr('transform', (d: string, i: number) => {
+                return `translate(${i * 80}, 0)`;
+            });
+
+        // add info button to legend
+        legendContainer.append('text')
+            .attr('x', -40)
+            .attr('y', 5)
+            .attr('font-size', '18px')
+            .attr('font-weight', '700')
+            .attr('cursor', 'pointer')
+            // add ? with circle around it using unicode circle
+            .text('\u24D8')
+            .on('mouseover', (d: PointerEvent) => {
+                // add tooltip with explanation
+                if (this.tooltip) {
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // grab cursor position
+                    const xPos = d.clientX;
+                    const yPos = d.clientY - (this.state.height + this.margin.bottom + 50);
+
+                    tooltip
+                        .attr('fill', 'black')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 15)
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text('Artworks: Number of artworks exhibited');
+
+                    text.append('tspan')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text('Exhibitions: Number of exhibitions exhibited');
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', () => {
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+
+
+        legend.append('path')
+            .attr('fill', (d, i) => i === 0 ? 'black' : 'white')
+            .attr('fill-opacity', 1)
+            .attr('stroke', 'black')
+            .attr('stroke-opacity', 1)
+            .attr('stroke-width', 2)
+            .attr('d', (d: string, i: number) => {
+                return d3.arc()({
+                    innerRadius: 0,
+                    outerRadius: 10,
+                    startAngle: i === 0 ? -Math.PI : Math.PI,
+                    endAngle: 0
+                }) as string;
+            });
+
+        legend.append('text')
+            .attr('x', (d, i) => i === 0 ? 5 : 15)
+            .attr('y', 5)
+            .attr('font-size', '12px')
+            .text((d: string) => d);
+
+        legend.exit().remove();
+
+        // get bbox of legend
+        const bbox = legendContainer.node()?.getBBox();
+
+        if (bbox) {
+            // center legend container 
+            legendContainer.attr('transform', `translate(${this.state.width / 2 - bbox.width / 2}, 0)`);
+        }
+
+        legendContainer.raise();
+
     }
 
     onArtistChange(artistId: string) {
