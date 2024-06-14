@@ -16,20 +16,21 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     private margin: { bottom: number, left: number, right: number, top: number };
     private minYear: number = 1905;
     private maxYear: number = 1915;
+    private selectedGroup: string = '';
 
     constructor(props: { links: Array<Link>, colors: Map<string, string>, stacked?: boolean, onclick?: Function }) {
         super(props);
         this.state = {
             links: props.links,
+            stacked: props.stacked || false,
             width: 0,
-            height: 0,
-            stacked: props.stacked ? props.stacked : false
-        }
+            height: 0
+        };
 
         this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
         this.xScale = undefined;
         this.yScale = undefined;
-        
+
         this.margin = {
             top: 30,
             bottom: 30,
@@ -66,84 +67,65 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         });
     }
 
-    calculateCoExhibitorCountryDistribution() {
+    calculateCoExhibitorGroupDistribution(coEx: number = 3) {
         // coexhibitor map over the years of the artist according to their country
-        const coExhibitorCountryDistribution = new Map<number, Map<string, number>>();
+        const coExhibitorGroupDistribution = new Map<number, Map<string, number>>();
 
         // show only links with a count >= 3
         // iterate over the artist's links
         this.state.links
-        .filter((link: Link) => {
-            const sum = this.state.links
-            .filter((l: Link) => {
-                return l.targetId == link.targetId && link.target.props.data.country != '\\N';
+            .filter((link: Link) => {
+                const sum = this.state.links
+                    .filter((l: Link) => {
+                        return l.targetId == link.targetId;
+                    })
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+                return sum >= (coEx ? coEx : 3)  && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
             })
-            .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            return sum >= 3 && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
-        })
-        // _.uniqBy(this.state.links, (link: Link) => link.target.id)
-        .forEach((link: Link) => {
-            const year = link.props.data.year;
-            const country = link.target.props.data.country;
-            // if the year is not in the map, add it
-            if (!coExhibitorCountryDistribution.has(year)) {
-                // and add the country to the year with a count of 1
-                coExhibitorCountryDistribution.set(year, new Map<string, number>());
-                coExhibitorCountryDistribution.get(year)?.set(country, 1);
-            }
-    
-            // if the year is in the map, check if the country is in the year map 
-            if (!coExhibitorCountryDistribution.get(year)?.has(country)) {
-                // if not, add the country with a count of 1
-                coExhibitorCountryDistribution.get(year)?.set(country, 1);
-            } else {
-                // increment the co-exhibitor's count
-                coExhibitorCountryDistribution.get(year)?.set(country, coExhibitorCountryDistribution.get(year)?.get(country) as number + 1);
-            }
-        });
+            // _.uniqBy(this.state.links, (link: Link) => link.target.id)
+            .forEach((link: Link) => {
+                const year = link.props.data.year;
+                const group = link.props.group;
+                if(!group) return;
+                // if the year is not in the map, add it
+                if (!coExhibitorGroupDistribution.has(year)) {
+                    // and add the country to the year with a count of 1
+                    coExhibitorGroupDistribution.set(year, new Map<string, number>());
+                    coExhibitorGroupDistribution.get(year)?.set(group, 1);
+                }
 
-        // get a unique set of countries
-        // const countries = new Set<string>();
-        // coExhibitorCountryDistribution.forEach((value, key) => {
-        //     value.forEach((value, key) => {
-        //         countries.add(key);
-        //     });
-        // });
+                // if the year is in the map, check if the country is in the year map 
+                if (!coExhibitorGroupDistribution.get(year)?.has(group)) {
+                    // if not, add the country with a count of 1
+                    coExhibitorGroupDistribution.get(year)?.set(group, 1);
+                } else {
+                    // increment the co-exhibitor's count
+                    coExhibitorGroupDistribution.get(year)?.set(group, coExhibitorGroupDistribution.get(year)?.get(group) as number + 1);
+                }
+            });
 
-        // auto-fill missing years
-        // for (let year = this.minYear; year <= this.maxYear; year++) {
-        //     if (!coExhibitorCountryDistribution.has(year)) {
-        //         coExhibitorCountryDistribution.set(year, new Map<string, number>());
-                // fill the year with the countries and a count of 0
-                // countries.forEach((country: string) => {
-                //     coExhibitorCountryDistribution.get(year)?.set(country, 0);
-                // });
-        //     }
-        // }
-        
         // sort map by year
-        return new Map([...coExhibitorCountryDistribution.entries()].sort());
+        return new Map([...coExhibitorGroupDistribution.entries()].sort());
     }
 
-
-    init() {
+    update(coEx?: number): void {
         // calculate distribution over the years of the artist's co-exhibitors according to their country
-        const coExhibitorCountryDistribution = this.calculateCoExhibitorCountryDistribution();
+        const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(coEx);
 
-        const countryDataOverTime = new Array<{ country: string, data: Array<{ year: number, count: number }> }>();
-        const countryData = new Map<string, Map<number, number>>();
-        coExhibitorCountryDistribution.forEach((values, year) => {
+        const groupDataOverTime = new Array<{ group: string, data: Array<{ year: number, count: number }> }>();
+        const groupData = new Map<string, Map<number, number>>();
+        coExhibitorGroupDistribution.forEach((values, year) => {
             values.forEach((value, key) => {
-                if (!countryData.has(key)) {
-                    countryData.set(key, new Map<number, number>());
-                    countryData.get(key)?.set(year, value);
+                if (!groupData.has(key)) {
+                    groupData.set(key, new Map<number, number>());
+                    groupData.get(key)?.set(year, value);
                 } else {
-                    countryData.get(key)?.set(year, value);
-                }    
+                    groupData.get(key)?.set(year, value);
+                }
             });
         });
 
-        countryData.forEach((values, key) => {
+        groupData.forEach((values, key) => {
             const valuesAsArray = new Array<{ year: number, count: number }>();
             values.forEach((value, key) => {
                 valuesAsArray.push({ year: key, count: value });
@@ -157,10 +139,41 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             // sort by year
             valuesAsArray.sort((a, b) => a.year - b.year);
 
-            countryDataOverTime.push({ country: key, data: valuesAsArray });
+            groupDataOverTime.push({ group: key, data: valuesAsArray });
         });
 
+        console.log(groupDataOverTime)
 
+        this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
+        this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
+
+        // set domains
+        this.xScale.domain([this.minYear, this.maxYear]);
+        // get max count of co-exhibitors over the years
+        const maxCount = d3.max(groupDataOverTime, (d) => d3.max(d.data, (d) => d.count) as number);
+        this.yScale.domain([0, maxCount || 0]);
+
+        // sort groupDataOverTime by the sum of the counts of the group
+        groupDataOverTime.sort((a, b) => {
+            const aSum = a.data.reduce((acc, cur) => acc + cur.count, 0);
+            const bSum = b.data.reduce((acc, cur) => acc + cur.count, 0);
+
+            return aSum - bSum;
+        });
+
+        if (this.state.stacked) {
+            console.log('stacked');
+            this.drawStackedChart(groupDataOverTime);
+        } else {
+            console.log('not stacked');
+            this.drawChart(groupDataOverTime);
+        }
+
+        this.addLegend(groupDataOverTime.reverse()); // draw in reverse order
+    }
+
+
+    init() {
         this.svgContainer = d3.select('#area-chart')
             .attr('width', this.state.width)
             .attr('height', this.state.height)
@@ -169,21 +182,10 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .style('overflow', 'visible');
 
 
-        this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
-        this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
-        
-        // set domains
-        this.xScale.domain([this.minYear, this.maxYear]);
-        // get max count of co-exhibitors over the years
-        const maxCount = d3.max(countryDataOverTime, (d) => d3.max(d.data, (d) => d.count) as number);
-        this.yScale.domain([0, maxCount || 0]);
-
-        console.log(this.yScale.domain());
-
         this.xAxis = this.svgContainer.append('g');
         this.yAxis = this.svgContainer.append('g');
 
-        if(this.props.colors) {
+        if (this.props.colors) {
             this.color = d3.scaleOrdinal<string, string>()
                 .domain(Array.from(this.props.colors.keys()))
                 .range(Array.from(this.props.colors.values()));
@@ -216,24 +218,26 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         this.svgContainer.append('text')
             .attr('class', 'title')
             .attr('x', this.state.width / 2)
-            .attr('y', -this.margin.top)
+            .attr('y', this.margin.top)
             .attr('text-anchor', 'middle')
-            .text('Co-Exhibitor Nationalities over time');
+            .text('Co-Exhibitor Groups over time');
 
-        if (this.state.stacked) {
-            this.drawStackedChart(countryDataOverTime);
-        } else {
-            this.drawChart(countryDataOverTime);
-        }
+        this.svgContainer.append('g')
+            .attr('id', 'area-wrapper');
+
+        this.svgContainer.append('g')
+            .attr('id', 'legend-wrapper')
+            .attr('transform', `translate(${this.state.width / 2}, 0)`);
+
+
+        this.update();
     }
 
-    drawStackedChart(data: Array<{ country: string, data: Array<{ year: number, count: number }> }>) {
-        if(!this.svgContainer) return;
+    drawStackedChart(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
+        if (!this.svgContainer) return;
 
-        const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+        this.svgContainer?.selectAll('.area').exit().remove();
 
-        const width = this.state.width - margin.left - margin.right;
-        const height = this.state.height - margin.top - margin.bottom; 
         const xAxis = d3.axisBottom(this.xScale as unknown as d3.AxisScale<string>);
         const yAxis = d3.axisLeft(this.yScale as d3.AxisScale<number>);
 
@@ -244,20 +248,17 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         this.yAxis?.call(yAxis);
 
         // flatten the data as a single array
-        const flatData = data.map((d) => d.data.map((dd) => ({ country: d.country, year: dd.year, count: dd.count }))).flat();
-        
-        this.svgContainer.append('g')
-            .attr('transform', `translate(0, ${height})`)
+        const flatData = data.map((d: any) => d.data.map((dd: any) => ({ group: d.group, year: dd.year, count: dd.count }))).flat();
 
         // stack the data by country over the years
         const stack = d3.stack<any>()
-            .keys(d3.union(flatData.map(d => d.country)))
+            .keys(d3.union(flatData.map(d => d.group)))
             .value(([, D], key) => D.get(key).count) // get value for each series key and stack
-            (d3.index(flatData, d => d.year, d => d.country)); // group by stack then series key
+            (d3.index(flatData, d => d.year, d => d.group)); // group by stack then series key
 
         const yMax = d3.max(stack, d => d3.max(d, d => d[1])) as number;
 
-        
+
         this.yScale = d3.scaleLinear<number, number>()
             .domain([0, yMax])
             .range([this.state.height - this.margin.top, this.margin.top]);
@@ -272,21 +273,21 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .y1((d: any) => this.yScale ? this.yScale(d[1]) : 0);
 
         // // Append a group for each series, and a rect for each element in the series.
-        this.svgContainer.append('g')
-            .selectAll()
+        this.svgContainer.select('#area-wrapper')
+            .selectAll('.area')
             .data(stack)
             .join('path')
             .attr('class', 'area')
             .attr('fill', d => this.color(d.key))
-            // .attr('fill-opacity', 0.15)
-            // .attr('stroke', d => 'black')
-            // .attr('stroke-width', 0.5)
+            .attr('fill-opacity', 1)
+            .attr('stroke-width', 0)
             .attr('d', (d) => area(d) as string)
             .on('mouseover', (event, d) => {
-                // get country name from the data and show tool tip at the mouse position
-                const country = d.key;
+                // get groupedBy value from the data and show tool tip at the mouse position
+                const groupedBy = d.key;
                 const x = event.clientX;
                 const y = event.clientY;
+
                 this.tooltip = d3.select('body').append('div')
                     .style('position', 'absolute')
                     .style('background-color', 'black')
@@ -296,59 +297,128 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${country} - ${d[d.length - 1][1]}`);
-
-                // TODO: Find year closest to mouse position and show count for that year
+                    .text(`${groupedBy}`);
 
                 // set tooltip ontop of the chart
                 this.tooltip.raise();
 
-                // lower chart 
-                d3.selectAll('.area').lower();
-
                 // set opacity of non-selected areas to 0.5
                 d3.selectAll('.area')
-                    .filter((dd: any) => dd.key != d.key)
+                    .filter((dd: any) => dd.key !== d.key)
                     .attr('fill-opacity', 0.25);
+
+                // set selected area to full opacity
+                d3.selectAll('.area')
+                    .filter((dd: any) => dd.key === d.key)
+                    .attr('fill-opacity', 1);
             })
             .on('mouseout', () => {
                 this.tooltip?.remove();
 
-                // reset opacity of all areas
-                d3.selectAll('.area')
-                    .attr('fill-opacity', 1);
+                if(this.selectedGroup === '') {
+                    // reset opacity of all areas
+                    d3.selectAll('.area')
+                        .attr('fill-opacity', 1);
+                } else {
+                    this.highlightGroup(this.selectedGroup);
+                }
+            })
+            .on('click', (event, d) => {
+                const group = d.key;
+
+                if(this.selectedGroup === d.key) {
+                    this.selectedGroup = '';
+                    this.highlightGroup('');
+                    this.props.onclick?.call(this, '');
+                    return;
+                }
+                
+                this.selectedGroup = group;
+                this.props.onclick?.call(this, group);
+                this.highlightGroup(group);
             });
-
-            // BAR CHART IMPL
-            // .join('g')
-            // .attr('fill', d => this.color(d.key))
-            // .selectAll('rect')
-            // .data(D => D.map((d: any) => (d.key = D.key, d)))
-            // .join('rect')
-            // .attr('x', (d: any) => {
-            //     const x = this.xScaleB ? this.xScaleB(d.data[0].toString()) : 0;
-            //     return x as number;
-            // })
-            // .attr('y', d => this.yScaleB ? this.yScaleB(d[1]) : 0)
-            // .attr('height', d => {
-            //     console.log(d);
-            //     const height = this.yScaleB ? (this.yScaleB(d[0]) - this.yScaleB(d[1])) : 0;
-
-            //     console.log(height);
-
-            //     return height;
-            // })
-            // .attr('width', this.xScaleB? this.xScaleB.bandwidth() : 0)
     }
 
+    addLegend(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
+        // clear existing legend
+        this.svgContainer?.selectAll('.legend-item').remove();
 
-    drawChart(data: Array<{ country: string, data: Array<{ year: number, count: number }> }>) {
-        if(!this.svgContainer) return;
+        // get unique groups
+        const groups = new Set<string>();
+        data.forEach((d: any) => {
+            groups.add(d.group);
+        });
 
-        const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+        // add legend to the chart
+        const legend = this.svgContainer?.select('#legend-wrapper');
 
-        const width = this.state.width - margin.left - margin.right;
-        const height = this.state.height - margin.top - margin.bottom; 
+        // center the legend
+        legend?.attr('transform', `translate(${(this.state.width / 2) - (groups.size * 30) / 2}, 0)`);
+
+        const legendItems = legend?.selectAll('.legend-item')
+            .data(Array.from(groups))
+            .enter()
+            .append('g')
+            .attr('class', 'legend-item')
+            .attr('transform', (d, i) => `translate(${i * 30}, 0)`);
+
+        legendItems?.append('circle')
+            .attr('r', 8)
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .attr('fill', (d: any) => this.color(d));
+
+        legendItems?.append('text')
+            .attr('x', 0)
+            .attr('y', -10)
+            .attr('text-anchor', 'middle')
+            .text((d: any) => d);
+
+        legendItems?.on('mouseover', (event, d) => {
+            // set opacity of non-selected areas to 0.5
+            // set selected area to full opacity
+            if(this.state.stacked) {
+                d3.selectAll('.area')
+                .filter((dd: any) => dd.key === d)
+                .attr('fill-opacity', 1);
+            } else {
+                d3.selectAll('.area')
+                .filter((dd: any) => {
+                    console.log(dd, d)
+                    return    dd.group === d;
+                })
+                .attr('fill-opacity', 1);
+            }
+        })
+            .on('mouseout', () => {
+                if(this.selectedGroup === '') {
+                    // reset opacity of all areas
+                    d3.selectAll('.area')
+                        .attr('fill-opacity', 0.25);
+                } else {
+                    this.highlightGroup(this.selectedGroup);
+                }
+            })
+            .on('click', (event, d) => {
+                if(this.selectedGroup === d) {
+                    this.selectedGroup = '';
+                    this.highlightGroup('');
+                    this.props.onclick?.call(this, '');
+                    return;
+                }
+                
+                this.selectedGroup = d;
+                this.props.onclick?.call(this, d);
+                this.highlightGroup(d);
+            });
+        
+    }
+
+    drawChart(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
+        if (!this.svgContainer) return;
+
+        this.svgContainer?.selectAll('.area').remove();
+
         const xAxis = d3.axisBottom(this.xScale as d3.AxisScale<number>);
         const yAxis = d3.axisLeft(this.yScale as d3.AxisScale<number>);
 
@@ -359,28 +429,27 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         this.xAxis?.call(xAxis);
         this.yAxis?.call(yAxis);
 
-        this.svgContainer.append('g')
-            .attr('transform', `translate(0, ${height})`)
-
         const area = d3.area<{ year: number, count: number }>()
             .curve(d3.curveMonotoneX)
             .x((d) => this.xScale ? this.xScale(d.year) : 0)
             .y0(this.yScale ? this.yScale(0) : 0)
-            .y1((d) => this.yScale? this.yScale(d.count) : 0);
+            .y1((d) => this.yScale ? this.yScale(d.count) : 0);
 
-        this.svgContainer.selectAll('.area')
+        this.svgContainer.select('#area-wrapper')
+            .selectAll('.area')
             .data(data)
             .enter()
             .append('path')
             .attr('class', 'area')
             .attr('d', (d) => area(d.data) as string)
-            .attr('fill', (d) => this.color(d.country))
+            .attr('fill', (d: any) => this.color(d.group))
             .attr('fill-opacity', 0.25)
-            .attr('stroke', (d) => this.color(d.country))
+            .attr('stroke', (d: any) => this.color(d.group))
             .attr('stroke-width', 2)
             .on('mouseover', (event, d) => {
-                // get country name from the data and show tool tip at the mouse position
-                const country = d.country;
+                // get groupedBy value from the data and show tool tip at the mouse position
+                const group = (d as any).group;
+
                 const x = event.clientX;
                 const y = event.clientY;
                 this.tooltip = d3.select('body').append('div')
@@ -392,33 +461,86 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${country} - ${d.data[d.data.length - 1].count}`);
+                    .text(`${group}`);
 
                 // set tooltip ontop of the chart
                 this.tooltip.raise();
-
+                
                 // lower chart 
-                d3.selectAll('.area').lower();
+                // d3.selectAll('.area').lower();
 
-                // set opacity of non-selected areas to 0.5
+                // set selected area to full opacity
                 d3.selectAll('.area')
-                    .filter((dd: any) => dd.country != d.country)
-                    .attr('fill-opacity', 0.25);
+                    .filter((dd: any) => dd.group == group)
+                    .attr('fill-opacity', 1);
             })
             .on('mouseout', () => {
                 this.tooltip?.remove();
 
-                // reset opacity of all areas
-                d3.selectAll('.area')
-                    .attr('fill-opacity', 1);
+                if(this.selectedGroup === '') {
+                    // reset opacity of all areas
+                    d3.selectAll('.area')
+                        .attr('fill-opacity', 0.25);
+                } else {
+                    this.highlightGroup(this.selectedGroup);
+                }
+            })
+            .on('click', (event, d) => {
+                const group = (d as any).group;
+                console.log('click', group)
+
+                if(this.selectedGroup === group) {
+                    this.selectedGroup = '';
+                    this.highlightGroup('');
+                    this.props.onclick?.call(this, '');
+                    return;
+                }
+                
+                this.selectedGroup = group;
+                this.props.onclick?.call(this, group);
+                this.highlightGroup(group);
             });
+    }
 
+    highlightGroup(group: string) {
+        
+        // set all areas to 0.25 opacity
+        d3.selectAll('.area')
+            .attr('fill-opacity', 0.25);
 
+        if(group === '') return;
+
+        if(this.state.stacked) {
+            d3.selectAll('.area')
+                .filter((d: any) => d.key === group)
+                .attr('fill-opacity', 1);
+        } else {
+            d3.selectAll('.area')
+                .filter((d: any) => d.group === group)
+                .attr('fill-opacity', 1);
+        }
+    }
+
+    updateCoEx(coEx?: number) {
+        console.log('update coex', coEx);
+        this.update(coEx);
     }
 
     render() {
         return (
             <>
+                <div className="relative float-right">
+                    <label htmlFor='stacked'>Stacked</label>
+                    <input 
+                        type='checkbox' 
+                        id='stacked'
+                        onChange={(event) => {
+                        this.setState({stacked: event.target.checked}, () => {
+                            this.update();
+                        })}}
+                        checked={this.state.stacked} 
+                    />
+                </div>
                 <svg id='area-chart' width={this.state.width} height={this.state.height}></svg>
             </>
         )

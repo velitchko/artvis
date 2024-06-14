@@ -14,7 +14,7 @@ import TableComponent from '../table/table';
 import _ from 'lodash';
 import GET_EXHIBITION from '../../queries/exhibition';
 // TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
@@ -39,6 +39,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private showNetwork: boolean = false;
     private loadingExternalData: boolean = false;
     private egoNetwork = React.createRef<EgoNetworkComponent>();
+    private areaChart = React.createRef<AreaChartComponent>();
     private colors: Map<string, string>;
 
     constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -51,6 +52,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             compareWith: null,
             baseNode: {} as Node,
             links: new Array<Link>(),
+            rendered: false
         };
 
         this.svgTimeLineContainer = undefined;
@@ -140,7 +142,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
         this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
-        this.rScale = d3.scaleSqrt<number, number, never>().range([10, 30]);
+        this.rScale = d3.scaleSqrt<number, number, never>().range([5, 20]);
 
         // add tooltip
         this.tooltip = this.svgTimeLineContainer.append('g').attr('id', 'line-tooltip');
@@ -305,7 +307,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('class', 'base-abs-half-circle')
             .attr('id', (d: { year: number, exhibitions: number, items: number }) => `abs-base-circle-${d.year}`)
             .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = d.items === 0 ? 3 : this.rScale ? this.rScale(d.items) : 3;
+                const outerRadius = d.items === 0 ? 0 : this.rScale ? this.rScale(d.items) : 0;
                 return d3.arc()({
                     innerRadius: 0,
                     outerRadius: outerRadius,
@@ -407,11 +409,11 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('fill-opacity', 1)
             .attr('stroke', 'black')
             .attr('stroke-opacity', 1)
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 1)
             .attr('class', 'base-avg-half-circle')
             .attr('id', (d: { year: number, exhibitions: number, items: number }) => `avg-base-circle-${d.year}`)
             .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = isNaN(d.items / d.exhibitions) ? 3 : this.rScale ? this.rScale(d.items / d.exhibitions) : 3;
+                const outerRadius = isNaN(d.items / d.exhibitions) ? 0 : this.rScale ? this.rScale(d.items / d.exhibitions) : 0;
                 return d3.arc()({
                     innerRadius: 0,
                     outerRadius: outerRadius,
@@ -1142,8 +1144,30 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.onArtistChange(id);
     }
 
+    onAreaChartClick(group: string) {
+        // highlight nodes in ego network with country
+        this.egoNetwork.current?.highlightGroup(group);
+    }
+
+    onGroupByChange() {
+        // notify area chart to update groupBy
+        this.areaChart.current?.update();
+    }
+
     highlightCircleInNetwork(year: number) {
         this.egoNetwork.current?.highlightCircle(year);
+    }
+
+    egoNetworkReady() {
+        this.setState({ rendered: true });
+    }
+
+    groupSelected(group: string) {
+        this.areaChart.current?.highlightGroup(group);
+    }
+
+    filterUpdate(coEx: number) {
+        this.areaChart.current?.updateCoEx(coEx);
     }
 
     render() {
@@ -1175,8 +1199,9 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                     </div>
                     <div className="lg:row-span-1 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
                         <div className="w-full h-full sm:h-full" id="area-chart-container">
-                            {this.showNetwork &&
-                                <AreaChartComponent links={this.state.links} colors={this.colors} stacked={true}/>
+                            {/* Ego Network Defines Grouping Criteria - Wait for initialization then render group distribution */}
+                            {this.state.rendered &&
+                                <AreaChartComponent ref={this.areaChart} links={this.state.links} colors={this.colors} stacked={true} onclick={this.onAreaChartClick.bind(this)}/>
                             }
                         </div>
                     </div>
@@ -1188,7 +1213,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                     <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
                         <div className="w-full h-full sm:h-full" id="ego-net-container">
                             {this.showNetwork &&
-                                <EgoNetworkComponent ref={this.egoNetwork} colors={this.colors} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} />
+                                <EgoNetworkComponent ref={this.egoNetwork} colors={this.colors} initCallBack={this.egoNetworkReady.bind(this)} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} groupByCallBack={this.onGroupByChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} arcClickCallback={this.groupSelected.bind(this)} filterCallback={this.filterUpdate.bind(this)}/>
                             }
                         </div>
                     </div>

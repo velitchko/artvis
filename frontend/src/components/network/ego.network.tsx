@@ -7,7 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 
-class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
+class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -25,7 +25,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     private color: d3.ScaleOrdinal<string, string>;
     private minYear = 1905;
     private maxYear = 1915;
-
+    public isInitialized: boolean = false;
+    private selectedGroup: string = '';
+    
     constructor(props: { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }) {
         super(props);
 
@@ -123,7 +125,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         const everything = this.svgContainer.append('g').attr('id', 'everything');
 
         // setup groups
-        this.tooltip = everything.append('g').attr('id', 'tooltip');
         this.gridContainer = everything.append('g').attr('id', 'grid');
         this.circleContainer = everything.append('g').attr('id', 'circle-lines');
         this.artistContainer = everything.append('g').attr('id', 'artists');
@@ -142,8 +143,10 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .attr('id', 'base-circle')
             .attr('cx', this.state.width / 2)
             .attr('cy', this.state.height / 2)
-            .attr('r', 25)
-            .attr('fill', this.color(this.state.baseNode.props.data.country));
+            .attr('r', 40)
+            .attr('stroke', this.color(this.state.baseNode.props.data.country))
+            .attr('stroke-width', 4)
+            .attr('fill', 'transparent');
 
         // append text to base circle
         const text = baseCircle
@@ -173,7 +176,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // setup scales 
         this.rScale = d3.scaleSqrt()
             .domain([1905, 1915])
-            .range([75, 500]);
+            .range([100, 400]);
 
         this.angleScale = d3.scaleLinear()
             // .domain([0, 100])
@@ -181,17 +184,19 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         this.nodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
-            .range([2, 6]);
+            .range([1, 6]);
 
         this.outerNodeRScale = d3.scaleSqrt()
             // .domain([0, 100])
-            .range([2, 8]);
+            .range([1, 6]);
 
         const targetNodes = this.filterData(this.state.coEx);
         this.links = targetNodes;
 
         this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
         this.drawCircle();
+
+        if (this.props.initCallBack) this.props.initCallBack();
     }
 
     handleCoExChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,16 +206,22 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
+
+            if (this.props.filterCallback) this.props.filterCallback(this.state.coEx);
         });
     };
 
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         this.setState(prevState => ({ groupBy: event.target.value }), () => {
-            const targetNodes = this.filterData(this.state.coEx, this.state.groupBy);
+            const targetNodes = this.filterData(this.state.coEx);
             this.links = targetNodes;
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
+
+            
+
+            if (this.props.groupByCallBack) this.props.groupByCallBack(this.state.groupBy);
         });
     };
 
@@ -220,7 +231,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             case 'country':
                 return _.groupBy(links, (link: Link) => link.target.props.data.country);
             case 'year':
-                return _.groupBy(links, (link: Link) => link.target.props.data.country);
+                return _.groupBy(links, (link: Link) => link.props.data.year);
             case 'sex':
                 return _.groupBy(links, (link: Link) => link.target.props.data.sex);
             case 'age':
@@ -230,7 +241,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         }
     }
 
-    filterData(numCoEx: number, groupBy?: string): Array<Link> {
+    filterData(numCoEx: number): Array<Link> {
         // calculate unique target nodes from links
         // filter out links of same targetId where the sum of the count property is 1
         const filteredLinks = this.state.links.filter((link: Link) => {
@@ -252,6 +263,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             groupData.push({ group: group, links: links });
         });
 
+        
         // sort group data array by percent
         groupData = _.orderBy(groupData, ['percent'], ['desc']);
 
@@ -287,22 +299,24 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         ageRanges.unshift('?'); // For people with missing birthdate or deathdate
 
-        const grouped = groupData.map((link: { group: string, links: Array<Link> }) => {
-            link.links.forEach((l: Link) => {
-                l.props.group = link.group;
-                // find which age range the target node belongs to
-                const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
-                
-                const index = ageRanges.findIndex((range: string) => {
-                    const r = range.split('-');
-                    return age >= +r[0] && age <= +r[1];
+        const grouped = groupData
+            .map((link: { group: string, links: Array<Link> }) => {
+                link.links.forEach((l: Link) => {
+                    l.props.group = link.group;
+                    // find which age range the target node belongs to
+                    const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
+                    
+                    const index = ageRanges.findIndex((range: string) => {
+                        const r = range.split('-');
+                        return age >= +r[0] && age <= +r[1];
+                    });
+                    // set targetAge property to age range
+                    l.target.props.ageGroup = index == -1 ? '?' : ageRanges[index];
+                    l.target.props.age = age;
                 });
-                // set targetAge property to age range
-                l.target.props.ageGroup = index == -1 ? '?' : ageRanges[index];
-                l.target.props.age = age;
-            });
-            return link.links;
-        })
+
+                return link.links;
+            })
             .flat()
             // sort by group and within each group by age
             .sort((a: Link, b: Link) => {
@@ -427,7 +441,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 return y;
             })
             .attr('opacity', 0.75)
-            .attr('fill', (d: Link) => this.color(d.props.group));
+            .attr('stroke', (d: Link) => this.color(d.props.group))
+            .attr('stroke-width', 2)
+            .attr('fill', 'transparent');
 
         this.artistContainer.selectAll('circle')
             .on('mouseover', (d: PointerEvent) => {
@@ -437,55 +453,27 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 const data = d3.select(`#${id}`).datum() as Link;
 
                 if (!data) return;
+                
+                const x = d.clientX;
+                const y = d.clientY;
 
-                // show tooltip with name of target node
-                if (this.tooltip) {
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const tooltip = this.tooltip.append('rect');
-                    tooltip.attr('fill', 'black');
+                this.tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('left', `${x}px`)
+                    .style('top', `${y}px`)
+                    .style('z-index', 1000)
+                    .html(`
+                        <p><b>${data.target.name}<b> (${data.props.data.year - data.target.props.data.birthdate.split('-')[0]})</p>
+                        <p>Group: ${data.props.group}</p>
+                        <p>${data.props.data.year}) ${data.props.data.count} co-exhibitions</p>
+                        `);
 
-                    // get circle cx and cy
-                    const cx = +d3.select(`#${id}`).attr('cx');
-                    const cy = +d3.select(`#${id}`).attr('cy');
-
-                    // set tooltip position to mouse position
-                    tooltip.attr('x', cx + 15);
-                    tooltip.attr('y', cy + 15);
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${data.target.name} ${data.props.data.year - data.target.props.data.birthdate.split('-')[0]}`);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 15)
-                        .attr('dy', '2em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`(${data.props.data.year}) ${data.props.data.count} co-exhibitions`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
+                // set tooltip ontop of the chart
+                this.tooltip.raise();
 
                 // highlight all links with same targetId
                 const links = this.links.filter((link: Link) => link.targetId == data.targetId);
@@ -505,13 +493,14 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             })
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
+                this.tooltip?.remove();
 
                 // clear all highlights
-                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
+                this.artistContainer?.selectAll('circle')
+                    .attr('opacity', 0.75)
+                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke-width', 2)
+                    .attr('fill', 'transparent');
 
                 // pass year to mouseOverCallBack
                 this.mouseOverCallBack(0);
@@ -639,84 +628,34 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     });
                 }
 
-                // show tooltip with name of target node
-                if (this.tooltip) {
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const tooltip = this.tooltip.append('rect');
-                    tooltip.attr('fill', 'black');
+                const x = d.clientX;
+                const y = d.clientY;
 
-                    // get circle cx and cy
-                    const cx = +d3.select(`#${id}`).attr('x');
-                    const cy = +d3.select(`#${id}`).attr('y');
+                // get sum of all counts for links with same targetId
+                const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
-                    // set tooltip position to mouse position
-                    tooltip.attr('x', cx + 15);
-                    tooltip.attr('y', cy + 15);
+                this.tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('left', `${x}px`)
+                    .style('top', `${y}px`)
+                    .style('z-index', 1000)
+                    .html(`
+                        <p><b>${data.target.name}<b> (${data.target.props.age})</b></p>
+                        <p>Group: ${data.props.group}</p>
+                        <p>${sum} co-exhibitions</p>
+                        `);
 
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(data.target.name);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`Age ${data.target.props.age}`);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`Group ${data.props.group}`);
-
-                    // get sum of all counts for links with same targetId
-                    const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
-                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${sum} co-exhibitions`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
+                // set tooltip ontop of the chart
+                this.tooltip.raise();
             })
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
+                this.tooltip?.remove();
 
                 // if state.selection is true return
                 if (this.state.selection) return;
@@ -727,8 +666,11 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 // unhightlight all nodes 
                 this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
                 this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
-                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
-                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
+                this.artistContainer?.selectAll('circle')
+                    .attr('opacity', 0.75)
+                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke-width', 2)
+                    .attr('fill', 'transparent');
 
                 // lower tooltip
                 this.tooltip?.lower();
@@ -810,8 +752,14 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 // set radius to sum
                 return this.outerNodeRScale(sum);
             })
-            .attr('cx', (d: Link) => (Math.cos(this.getAngle(d.props.originalIndex)) * 535) + this.state.width / 2)
-            .attr('cy', (d: Link) => (Math.sin(this.getAngle(d.props.originalIndex)) * 535) + this.state.height / 2)
+            .attr('cx', (d: Link) => {
+                // (Math.cos(this.getAngle(d.props.originalIndex)) * 535) + this.state.width / 2)
+                return this.getXCoordinates(this.maxYear, this.getAngle(d.props.originalIndex), 40) + this.state.width / 2;
+            })
+            .attr('cy', (d: Link) => {
+                // (Math.sin(this.getAngle(d.props.originalIndex)) * 535) + this.state.height / 2)
+                return this.getYCoordinates(this.maxYear, this.getAngle(d.props.originalIndex), 40) + this.state.height / 2;
+            })
             .attr('opacity', 0.75)
             .attr('fill', (d: Link) => this.color(d.props.group))
             .style('cursor', 'pointer');
@@ -847,84 +795,33 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     });
                 }
 
-                // show tooltip with name of target node
-                if (this.tooltip) {
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const tooltip = this.tooltip.append('rect');
-                    tooltip.attr('fill', 'black');
+                const x = d.clientX;
+                const y = d.clientY;
 
-                    // get circle cx and cy
-                    const cx = +d3.select(`#${id}`).attr('cx');
-                    const cy = +d3.select(`#${id}`).attr('cy');
+                // get sum of all counts for links with same targetId
+                const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
-                    // set tooltip position to mouse position
-                    tooltip.attr('x', cx + 15);
-                    tooltip.attr('y', cy + 15);
+                this.tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('left', `${x}px`)
+                    .style('top', `${y}px`)
+                    .style('z-index', 1000)
+                    .html(`
+                        <p><b>${data.target.name}<b> (${data.target.props.age})</b></p>
+                        <p>Group: ${data.props.group}</p>
+                        <p>${sum} co-exhibitions</p>
+                        `);
 
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(data.target.name);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`Age ${data.target.props.age}`);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`Group ${data.props.group}`);
-
-                    // get sum of all counts for links with same targetId
-                    const sum = this.links.filter((link: Link) => link.targetId == data.targetId)
-                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-
-                    text.append('tspan')
-                        .attr('x', cx + 15)
-                        .attr('y', cy + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${sum} co-exhibitions`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
+                // set tooltip ontop of the chart
+                this.tooltip.raise();
             })
             .on('mouseout', _ => {
-                // remove rect and text from tooltip
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
+                this.tooltip?.remove();
 
                 // if state.selection is true return
                 if (this.state.selection) return;
@@ -932,11 +829,11 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 // unhightlight all nodes 
                 this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none');
                 this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
-                this.artistContainer?.selectAll('circle').attr('stroke', 'none');
-                this.artistContainer?.selectAll('circle').attr('stroke-width', 0);
-
-                // lower tooltip
-                this.tooltip?.lower();
+                this.artistContainer?.selectAll('circle')
+                    .attr('opacity', 0.75)
+                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke-width', 2)
+                    .attr('fill', 'transparent');
             })
             .on('click', (d: MouseEvent) => {
                 // set state.selection to true
@@ -1032,16 +929,46 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             })
             .style('cursor', 'pointer')
             .on('mouseover', (d: PointerEvent) => {
-               // TODO: make tooltip
+               // get id from mouseevent target
+                const group = (d.target as SVGPathElement).id.split('-')[1];
+
+                // FIXME: Percent is wrong
+                // calculate group percentage
+                const percentage = (this.links.filter((link: Link) => link.props.group == group).length / this.links.length) * 100;
+
+                const x = d.clientX;
+                const y = d.clientY;
+
+                this.tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('left', `${x}px`)
+                    .style('top', `${y}px`)
+                    .style('z-index', 1000)
+                    .text(`${group} (${percentage.toFixed(2)}%)`);
             })
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
+                this.tooltip?.remove();
+            })
+            .on('click', (d: PointerEvent) => {
+                // get id from mouseevent target
+                const group = (d.target as SVGPathElement).id.split('-')[1];
 
-                // lower tooltip
-                this.tooltip?.lower();
-            });;
+                if(this.selectedGroup === group) {
+                    this.selectedGroup = '';
+                    this.highlightGroup('');
+                    if(this.props.arcClickCallback) this.props.arcClickCallback('');
+                    return;
+                }
+
+                this.selectedGroup = group;
+                if(this.props.arcClickCallback) this.props.arcClickCallback(group);
+                this.highlightGroup(group);
+            });
 
         // append text to donut chart
         this.donutContainer.selectAll('text')
@@ -1060,8 +987,53 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .attr('transform', (d: Link) => {
                 const x2 = arc.centroid(d)[0];
                 const y2 = arc.centroid(d)[1];
-                
+
                 return `rotate(-90, ${x2}, ${y2})`;
+            })
+            .style('cursor', 'pointer')
+            .on('mouseover', (d: PointerEvent) => {
+                // get id from mouseevent target
+                const group = (d.target as SVGPathElement).id.split('-')[2];
+
+                // calculate group percentage
+                // FIXME: Percent is wrong
+                const percentage = (this.links.filter((link: Link) => link.props.group == group).length / this.links.length) * 100;
+
+                const x = d.clientX;
+                const y = d.clientY;
+
+                this.tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('left', `${x}px`)
+                    .style('top', `${y}px`)
+                    .style('z-index', 1000)
+                    .text(`${group} (${percentage.toFixed(2)}%)`);
+            })
+            .on('mouseout', (d: PointerEvent) => {
+                this.tooltip?.remove();
+
+            })
+            .on('click', (d: PointerEvent) => {
+                // get id from mouseevent target
+                const group = (d.target as SVGPathElement).id.split('-')[2];
+
+                if(this.selectedGroup === group) {
+                    this.selectedGroup = '';
+                    this.highlightGroup('');
+                    if(this.props.arcClickCallback) this.props.arcClickCallback('');
+                    return;
+                }
+
+                this.selectedGroup = group;
+                if(this.props.arcClickCallback) this.props.arcClickCallback(group);
+                this.highlightGroup(group);
+
+                // raise selected text
+                this.donutContainer?.select(`#donut-label-${group}`).raise();
             });
 
         this.donutContainer.exit().remove();
@@ -1197,6 +1169,73 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .raise();
         }
     }
+
+    highlightGroup(group: string): void {
+        // select all links with the same country as the country passed in
+        // change the stroke to yellow and make it dashed update stroke-width to 2
+        console.log('highlighting country: ' + group)
+        if (!this.artistContainer) return;
+
+        if (group === '') {
+            // reset all nodes and arcs to default 
+            this.artistContainer.selectAll('circle')
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .lower();
+
+            this.outerCircleContainer?.selectAll('circle')
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .lower();
+
+            this.donutContainer?.selectAll('path')
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .lower();
+        } else {
+            // highlight all nodes and arcs with the same country
+            this.artistContainer.selectAll('circle')
+                .filter((d: any) => d.target.props.data.country == group)
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .raise();
+
+            this.outerCircleContainer?.selectAll('circle')
+                .filter((d: any) => d.target.props.data.country == group)
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .raise();
+
+            this.donutContainer?.selectAll('path')
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+
+            this.donutContainer?.select(`#donut-${group}`)
+                .attr('opacity', 1)
+                .attr('stroke-opacity', 1)
+                .attr('fill-opacity', 1)
+                .raise();
+
+            // set rest to opacity 0.25
+            this.artistContainer.selectAll('circle')
+                .filter((d: any) => d.target.props.data.country != group)
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+            
+            this.outerCircleContainer?.selectAll('circle')
+                .filter((d: any) => d.target.props.data.country != group)
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+        }
+    };
 
     highlightArtist(artist: Artist | null): void {
         // grab Link data for artist.id from outerCircleContainer
