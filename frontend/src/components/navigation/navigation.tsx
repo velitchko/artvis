@@ -34,7 +34,7 @@ class NavigationComponent extends React.Component<{ showHeading: boolean }, { sh
                             <span className="sr-only">Open main menu</span>
                             <svg className="w-10 h-10" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"></path></svg>
                         </button>
-                        <div className="hidden w-full lg:block lg:w-auto lg:m-auto lg:items-center lg:justify-between z-10" id="navbar-default">
+                        {/* <div className="hidden w-full lg:block lg:w-auto lg:m-auto lg:items-center lg:justify-between z-10" id="navbar-default">
                             <ul className="lg:w-full lg:m-auto font-medium lg:flex flex-col p-2 mt-2 lg:flex-row lg:space-x-8 lg:mt-0">
                                 {ROUTES.map((route, index) => {
                                     return <li key={index}>
@@ -44,7 +44,7 @@ class NavigationComponent extends React.Component<{ showHeading: boolean }, { sh
                                     </li>
                                 })}
                             </ul>
-                        </div>
+                        </div> */}
                     {this.state.showHeading && 
                         <SmallHeadingComponent></SmallHeadingComponent>
                         }
