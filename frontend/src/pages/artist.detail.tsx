@@ -10,6 +10,10 @@ import { useParams } from 'react-router-dom';
 const ArtistDetailPage = () => {
 
     let { id } = useParams();
+    if (id === undefined) {
+        // set id to random number 1-14000
+        id = Math.floor(Math.random() * 14000).toString();
+    }
     
     const [artist, setArtist] = useState(null as unknown as Artist);
     const [loading, setLoading ] = useState(true);

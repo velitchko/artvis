@@ -9,11 +9,12 @@ import SearchComponent from '../search/search';
 import GET_ARTIST_BY_NAME from '../../queries/artistByName';
 import GET_ARTIST from '../../queries/artist';
 import EgoNetworkComponent from '../network/ego.network';
+import AreaChartComponent from '../linechart/area.chart';
 import TableComponent from '../table/table';
 import _ from 'lodash';
 import GET_EXHIBITION from '../../queries/exhibition';
 // TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
@@ -38,6 +39,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private showNetwork: boolean = false;
     private loadingExternalData: boolean = false;
     private egoNetwork = React.createRef<EgoNetworkComponent>();
+    private areaChart = React.createRef<AreaChartComponent>();
+    private colors: Map<string, string>;
 
     constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
         super(props);
@@ -49,6 +52,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             compareWith: null,
             baseNode: {} as Node,
             links: new Array<Link>(),
+            rendered: false
         };
 
         this.svgTimeLineContainer = undefined;
@@ -65,10 +69,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.compareItemCountExtentAvg = [0, 0];
 
         this.width = 500;
-        this.height = 200;
+        this.height = 250;
 
         this.minYear = 1905;
         this.maxYear = 1915;
+
+        this.colors = new Map<string, string>();
 
         this.margin = {
             top: 30,
@@ -91,13 +97,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
+        this.setState(prevState => ({ width: width, height: height - 20 }), () => {
             this.init();
         });
 
         // set resize handler to window
         window.addEventListener('resize', this.onResize);
-
         // this.init();
     }
 
@@ -108,7 +113,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
+        this.setState(prevState => ({ width: width, height: height  - 50 }), () => {
             this.init();
         });
     }
@@ -137,7 +142,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
         this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
-        this.rScale = d3.scaleSqrt<number, number, never>().range([10, 30]);
+        this.rScale = d3.scaleSqrt<number, number, never>().range([5, 20]);
 
         // add tooltip
         this.tooltip = this.svgTimeLineContainer.append('g').attr('id', 'line-tooltip');
@@ -156,7 +161,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.svgTimeLineContainer.append('text')
             .attr('class', 'x-axis-label')
             .attr('x', this.state.width / 2)
-            .attr('y', this.state.height - this.margin.bottom + 36)
+            .attr('y', this.state.height)
             .attr('text-anchor', 'middle')
             .text('Year');
 
@@ -172,11 +177,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.svgTimeLineContainer.append('text')
             .attr('class', 'title')
             .attr('x', this.state.width / 2)
-            .attr('y', -this.margin.top)
+            .attr('y', -2*this.margin.top)
             .attr('text-anchor', 'middle')
             .text('Exhibitions over time');
 
         this.drawTimeline();
+        this.addLegend();
         this.drawNetwork();
     }
 
@@ -271,7 +277,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
             .attr('class', 'base-path')
             .attr('id', 'base-path')
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-width', 2)
             .attr('stroke-opacity', 0.75)
             .attr('fill', 'none');
@@ -294,7 +300,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         absHalfCircles
             .data(dataWithMissingYears)
             .join('path')
-            .attr('fill', 'gray')
+            .attr('fill', 'black')
             .attr('fill-opacity', 1)
             .attr('stroke', 'white')
             .attr('stroke-opacity', 0.75)
@@ -302,7 +308,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .attr('class', 'base-abs-half-circle')
             .attr('id', (d: { year: number, exhibitions: number, items: number }) => `abs-base-circle-${d.year}`)
             .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = d.items === 0 ? 3 : this.rScale ? this.rScale(d.items) : 3;
+                const outerRadius = d.items === 0 ? 0 : this.rScale ? this.rScale(d.items) : 0;
                 return d3.arc()({
                     innerRadius: 0,
                     outerRadius: outerRadius,
@@ -402,13 +408,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .join('path')
             .attr('fill', 'white')
             .attr('fill-opacity', 1)
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-opacity', 1)
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 1)
             .attr('class', 'base-avg-half-circle')
             .attr('id', (d: { year: number, exhibitions: number, items: number }) => `avg-base-circle-${d.year}`)
             .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = isNaN(d.items / d.exhibitions) ? 3 : this.rScale ? this.rScale(d.items / d.exhibitions) : 3;
+                const outerRadius = isNaN(d.items / d.exhibitions) ? 0 : this.rScale ? this.rScale(d.items / d.exhibitions) : 0;
                 return d3.arc()({
                     innerRadius: 0,
                     outerRadius: outerRadius,
@@ -573,6 +579,27 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             });
         });
 
+        // get unique set of countries and assign colors to them
+        const countries = new Set<string>();
+        this.links.forEach((link: Link) => {
+            countries.add(link.target.props.data.country);
+        });
+
+        // assign unique color to each country for more than 10 countries
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(countries).sort((a: string, b: string) => a.localeCompare(b)));
+
+          // set colorScale to this.colors
+        Array.from(countries).forEach((country: string, i: number) => {
+            this.colors.set(country, colorScale(country));
+        });
+
+        // INTERPOLATE COLORS
+        // const colorScale =  d3.scaleSequential(d3.interpolateViridis).domain([0, countries.size]);
+        // set colorScale to this.colors
+        // Array.from(countries).forEach((country: string, i: number) => {
+        //     this.colors.set(country, colorScale(i));
+        // });
+
         this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
     }
 
@@ -731,7 +758,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 // return x - (this.xScale ? this.xScale(d.year) : 0);
             })
             .attr('fill', '#FEF3C7')
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             // .attr('opacity', 0.5)
             .on('mouseover', (event: any, d: { year: number, count: number }) => {
                 if (this.tooltip) {
@@ -802,7 +829,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         absHalfCircles
             .data(dataWithMissingYears)
             .join('path')
-            .attr('fill', 'gray')
+            .attr('fill', 'black')
             .attr('fill-opacity', 1)
             .attr('stroke', 'white')
             .attr('stroke-opacity', 0.75)
@@ -911,7 +938,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .join('path')
             .attr('fill', 'white')
             .attr('fill-opacity', 1)
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-opacity', 1)
             .attr('stroke-width', 2)
             .attr('class', 'compare-avg-half-circle')
@@ -1018,7 +1045,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .data(dataWithMissingYears)
             .join('path')
             .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
-            .attr('stroke', 'gray')
+            .attr('stroke', 'black')
             .attr('stroke-width', 2)
             .attr('stroke-opacity', 0.75)
             .style('stroke-dasharray', ('3, 3'))
@@ -1031,6 +1058,123 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // push rect to bottom
         this.svgTimeLineContainer.select('#timeline-background').lower();
+    }
+
+    addLegend() {
+        // draw legend of half circle sizes 
+        if (!this.svgTimeLineContainer) return;
+
+        const legendContainer = this.svgTimeLineContainer.append('g').attr('id', 'legend-container');
+
+        // draw 2 half circles one for average and one for absolute count with text
+        const legend = legendContainer.selectAll('.legend')
+            .data(['#Artworks', '#Exhibitions'])
+            .join('g')
+            .attr('class', 'legend')
+            .attr('transform', (d: string, i: number) => {
+                return `translate(${i * 80}, 0)`;
+            });
+
+        // add info button to legend
+        legendContainer.append('text')
+            .attr('x', -40)
+            .attr('y', 5)
+            .attr('font-size', '18px')
+            .attr('font-weight', '700')
+            .attr('cursor', 'pointer')
+            // add ? with circle around it using unicode circle
+            .text('\u24D8')
+            .on('mouseover', (d: PointerEvent) => {
+                // add tooltip with explanation
+                if (this.tooltip) {
+                    const tooltip = this.tooltip.append('rect');
+                    tooltip.attr('fill', 'black');
+
+                    // grab cursor position
+                    const xPos = d.clientX;
+                    const yPos = d.clientY - (this.state.height + this.margin.bottom + 50);
+
+                    tooltip
+                        .attr('fill', 'black')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 15)
+
+                    // append text to tooltip
+                    const text = this.tooltip.append('text');
+
+                    text.append('tspan')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 15)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text('Artworks: Number of artworks exhibited');
+
+                    text.append('tspan')
+                        .attr('x', xPos + 15)
+                        .attr('y', yPos + 30)
+                        .attr('dy', '1em')
+                        .attr('dx', '1em')
+                        .attr('font-size', '12px')
+                        .attr('fill', 'white')
+                        .attr('font-weight', 'bold')
+                        .text('Exhibitions: Number of exhibitions exhibited');
+
+                    // get bbox of text
+                    const bbox = text.node()?.getBBox();
+
+                    if (bbox) {
+                        // set tooltip width and height to bbox width and height
+                        tooltip.attr('width', bbox.width + 20);
+                        tooltip.attr('height', bbox.height + 5);
+                    }
+
+                    this.tooltip.raise();
+                }
+            })
+            .on('mouseout', () => {
+                this.tooltip?.selectAll('rect').remove();
+                this.tooltip?.selectAll('text').remove();
+                // lower tooltip
+                this.tooltip?.lower();
+            });
+
+
+        legend.append('path')
+            .attr('fill', (d, i) => i === 0 ? 'black' : 'white')
+            .attr('fill-opacity', 1)
+            .attr('stroke', 'black')
+            .attr('stroke-opacity', 1)
+            .attr('stroke-width', 2)
+            .attr('d', (d: string, i: number) => {
+                return d3.arc()({
+                    innerRadius: 0,
+                    outerRadius: 10,
+                    startAngle: i === 0 ? -Math.PI : Math.PI,
+                    endAngle: 0
+                }) as string;
+            });
+
+        legend.append('text')
+            .attr('x', (d, i) => i === 0 ? 5 : 15)
+            .attr('y', 5)
+            .attr('font-size', '12px')
+            .text((d: string) => d);
+
+        legend.exit().remove();
+
+        // get bbox of legend
+        const bbox = legendContainer.node()?.getBBox();
+
+        if (bbox) {
+            // center legend container 
+            legendContainer.attr('transform', `translate(${this.state.width / 2 - bbox.width / 2}, 0)`);
+        }
+
+        legendContainer.raise();
+
     }
 
     onArtistChange(artistId: string) {
@@ -1105,12 +1249,43 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         return uniqueExhibitions.length;
     }
 
+    getArtistAge(artist: Artist): number {
+        if (!artist.birthdate) return 0;
+
+        const birthdate = new Date(artist.birthdate);
+        const deathdate = artist.deathdate ? new Date(artist.deathdate) : new Date();
+
+        return deathdate.getFullYear() - birthdate.getFullYear();
+    }
+
     nodeClickedCallback(id: string) {
         this.onArtistChange(id);
     }
 
+    onAreaChartClick(group: string) {
+        // highlight nodes in ego network with country
+        this.egoNetwork.current?.highlightGroup(group);
+    }
+
+    onGroupByChange() {
+        // notify area chart to update groupBy
+        this.areaChart.current?.update();
+    }
+
     highlightCircleInNetwork(year: number) {
         this.egoNetwork.current?.highlightCircle(year);
+    }
+
+    egoNetworkReady() {
+        this.setState({ rendered: true });
+    }
+
+    groupSelected(group: string) {
+        this.areaChart.current?.highlightGroup(group);
+    }
+
+    filterUpdate(coEx: number) {
+        this.areaChart.current?.updateCoEx(coEx);
     }
 
     render() {
@@ -1122,17 +1297,17 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                     </div>
                 </div>
                 {this.state.artist &&
-                <div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-4 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
+                <div className="grid grid-flow-row-dense lg:grid-cols-5 lg:grid-rows-5 gap-1 sm:grid-cols-1 md:grid-rows-3 pt-20 w-full h-[95vh]">
                     <div className="row-span-1 col-span-2 z-40">
                         <div className="w-full h-[80%]" id="timeline-container">
                             <div className="float-left text-left pl-2">
-                                <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
+                                <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
                                 <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.artist.birthdate)} ({this.state.artist.birthplace}) - {this.formatDate(this.state.artist.deathdate)} ({this.state.artist.deathplace})</h2>
                                 <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
                             </div>
                             {this.state.compareWith &&
                                 <div className="float-right text-right pr-2">
-                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
                                     <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.compareWith.birthdate)} ({this.state.compareWith.birthplace}) - {this.formatDate(this.state.compareWith.deathdate)} ({this.state.compareWith.deathplace})</h2>
                                     <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
                                 </div>
@@ -1140,16 +1315,24 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                             <svg id="artist-detail-timeline"></svg>
                         </div>
                     </div>
-                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
-                        <div className="w-full h-[90vh] sm:h-full" id="ego-net-container">
-                            {this.showNetwork &&
-                                <EgoNetworkComponent ref={this.egoNetwork} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} />
+                    <div className="lg:row-span-1 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
+                        <div className="w-full h-full sm:h-full" id="area-chart-container">
+                            {/* Ego Network Defines Grouping Criteria - Wait for initialization then render group distribution */}
+                            {this.state.rendered &&
+                                <AreaChartComponent ref={this.areaChart} links={this.state.links} colors={this.colors} stacked={true} onclick={this.onAreaChartClick.bind(this)}/>
                             }
                         </div>
                     </div>
-                    <div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
+                    <div className="lg:row-span-4 md:row-span-1 col-span-2 z-30">
                         <div className="w-full h-full overflow-y-scroll" id="table-container">
                             <TableComponent query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
+                        </div>
+                    </div>
+                    <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
+                        <div className="w-full h-full sm:h-full" id="ego-net-container">
+                            {this.showNetwork &&
+                                <EgoNetworkComponent ref={this.egoNetwork} colors={this.colors} initCallBack={this.egoNetworkReady.bind(this)} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} groupByCallBack={this.onGroupByChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} arcClickCallback={this.groupSelected.bind(this)} filterCallback={this.filterUpdate.bind(this)}/>
+                            }
                         </div>
                     </div>
                 </div>
