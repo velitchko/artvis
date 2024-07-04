@@ -7,7 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 
-class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function }, { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }> {
+class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function }, { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -27,18 +27,32 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     private maxYear = 1915;
     public isInitialized: boolean = false;
     private selectedGroup: string = '';
+    private catchy = [
+        "Brushing up on art history... Hold tight!",
+        "Uncovering masterpieces... Just a moment!",
+        "Painting a picture of data... Almost there!",
+        "Dusting off old canvases... Please wait!",
+        "Sculpting your results... Hang on!",
+        "Restoring the Renaissance... Fetching data!",
+        "Channeling our inner art historian... Loading!",
+        "Analyzing ancient art... One sec!",
+        "Polishing our Monets... Data incoming!",
+        "Digging through digital archives... Almost done!"
+    ]
     
-    constructor(props: { baseNode: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean }) {
+    constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean }) {
         super(props);
 
         this.state = {
             baseNode: props.baseNode,
+            compareNode: undefined,
             links: props.links,
             width: props.width,
             height: props.height,
             coEx: 3,
             groupBy: 'country',
-            selection: false
+            selection: false,
+            loading: false
         };
 
         this.svgContainer = undefined;
@@ -89,9 +103,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     }
 
     // request node broadcasts node id to parent
-    requestNode(node: string | number) {
+    requestNode(node?: string | number) {
         // emit event to parent
-        console.log('request', node)
         if (this.props.requestNode) this.props.requestNode(node);
     }
 
@@ -226,7 +239,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     };
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
-
         switch (prop) {
             case 'country':
                 return _.groupBy(links, (link: Link) => link.target.props.data.country);
@@ -234,8 +246,10 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 return _.groupBy(links, (link: Link) => link.props.data.year);
             case 'sex':
                 return _.groupBy(links, (link: Link) => link.target.props.data.sex);
-            case 'age':
+            case 'ageGroup':
                 return _.groupBy(links, (link: Link) => link.target.props.ageGroup);
+            case 'living':
+                return _.groupBy(links, (link: Link) => link.target.props.living);
             default:
                 return _.groupBy(links);
         }
@@ -263,15 +277,20 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             groupData.push({ group: group, links: links });
         });
 
-        
+        // Create +/- 10 year age ranges from baseNode
+        const ageRanges: string[] = [];
+
+        for (let i = -50; i <= 50; i += 5) {
+            ageRanges.push(`${i}`);
+        }
+
         // sort group data array by percent
         groupData = _.orderBy(groupData, ['percent'], ['desc']);
 
         // create an array of all target ages from filteredLinks
         const targetAges = filteredLinks.map((link: Link) => {
             // calculate age of person at the given exhibiton time
-            // let age = link.props.data.year - +link.target.props.data.birthdate.split('-')[0];
-            let age = +link.target.props.data.deathdate.split('-')[0] - +link.target.props.data.birthdate.split('-')[0];
+            let age = link.props.data.year - +link.target.props.data.birthdate.split('-')[0];
 
             if (isNaN(age)) return '?';
             if (age <= 0) return '?';
@@ -280,39 +299,69 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             return `${age}`;
         });
 
-        // get the min age that isnt '?'
-        const minAge = Math.min(...targetAges.map((a: string) => { return isNaN(+a) ? 200 : +a; }));
-
-        // get max age from targetAges
-        const maxAge = Math.max(...targetAges.map((a: string) => { return isNaN(+a) ? 0 : +a; }));
-
-        // construct age groups in +/- 7 year intervals starting from source age to min and max target age
-        const ageGroups = _.range(
-            minAge - 7, // start
-            maxAge + 7, // stop
-            7); // step
-
-        // create ranges for each age group
-        const ageRanges = ageGroups.map((age: number) => {
-            return `${age}-${age + 7}`;
+        
+        // sort targetAges array
+        targetAges.sort((a: string, b: string) => {
+            if (a == '?') return 1;
+            if (b == '?') return -1;
+            return +a - +b;
         });
-
-        ageRanges.unshift('?'); // For people with missing birthdate or deathdate
 
         const grouped = groupData
             .map((link: { group: string, links: Array<Link> }) => {
                 link.links.forEach((l: Link) => {
                     l.props.group = link.group;
-                    // find which age range the target node belongs to
-                    const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
                     
-                    const index = ageRanges.findIndex((range: string) => {
-                        const r = range.split('-');
-                        return age >= +r[0] && age <= +r[1];
-                    });
-                    // set targetAge property to age range
-                    l.target.props.ageGroup = index == -1 ? '?' : ageRanges[index];
-                    l.target.props.age = age;
+                    // set living status based on birth and death dates
+                    const birthYear = +l.target.props.data.birthdate.split('-')[0];
+                    const deathYear = +l.target.props.data.deathdate.split('-')[0];
+
+                    if (birthYear <= 1915 && (deathYear >= 1905 || isNaN(deathYear))) {
+                        l.target.props.living = 'alive';
+                    } else if (deathYear < 1905 || birthYear > 1915) {
+                        l.target.props.living = 'dead';
+                    } else {
+                        l.target.props.living = '?';
+                    }
+
+                    l.target.props.country = l.target.props.data.country;
+                    l.target.props.sex = l.target.props.data.sex;
+
+                    // calculate age of person and set to link.target.props.age
+                    const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
+                    // check if age is a number and set to age or unknown
+                    l.target.props.age = isNaN(age) ? 'unknown' : `${age}`;
+
+
+                    // calculate difference of birthdates between target and base node
+                    const diff = +l.target.props.data.birthdate.split('-')[0] - +this.state.baseNode.props.data.birthdate.split('-')[0];
+                    
+                    const ageGroup = ageRanges.reduce((closest: string | null, age: string) => {
+                        if (closest === null) return age;
+
+                        const diffToAge = Math.abs(diff - parseInt(age));
+                        const closestDiff = Math.abs(diff - parseInt(closest));
+                        if (closest === null || diffToAge < closestDiff) {
+                            return age;
+                        }
+                        return closest;
+                    }, null);
+                    
+                    
+                    if (!ageGroup) {
+                        l.target.props.ageGroup = 'unknown';
+                        return;
+                    };
+
+                    if(Math.abs(diff) > 100) {
+                        l.target.props.ageGroup = 'unknown';
+                    } else if(diff == 0) {
+                        l.target.props.ageGroup = 'same';
+                    } else if (Math.abs(diff) <= 5) {
+                        l.target.props.ageGroup = 'similar';
+                    } else {
+                        l.target.props.ageGroup = `${+ageGroup > 0 ? 'gt_' + ageGroup : 'lt_' + Math.abs(+ageGroup)}`;
+                    }
                 });
 
                 return link.links;
@@ -463,13 +512,14 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
                     .html(`
-                        <p><b>${data.target.name}<b> (${data.props.data.year - data.target.props.data.birthdate.split('-')[0]})</p>
+                        <p><b>${data.target.name} (${data.props.data.year - data.target.props.data.birthdate.split('-')[0]})</b></p>
                         <p>Group: ${data.props.group}</p>
-                        <p>${data.props.data.year}) ${data.props.data.count} co-exhibitions</p>
+                        <p>(${data.props.data.year}) ${data.props.data.count} co-exhibitions</p>
                         `);
 
                 // set tooltip ontop of the chart
@@ -494,13 +544,17 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
                 this.tooltip?.remove();
+                console.log(this.state.selection);
 
-                // clear all highlights
                 this.artistContainer?.selectAll('circle')
+                    .filter((d: any) => {
+                        return d.target.id !== this.state.compareNode?.id;
+                    })
                     .attr('opacity', 0.75)
                     .attr('stroke', (d: any) => this.color(d.props.group))
                     .attr('stroke-width', 2)
                     .attr('fill', 'transparent');
+            
 
                 // pass year to mouseOverCallBack
                 this.mouseOverCallBack(0);
@@ -641,11 +695,12 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
                     .html(`
-                        <p><b>${data.target.name}<b> (${data.target.props.age})</b></p>
+                        <p><b>${data.target.name} (${data.target.props.age})</b></p>
                         <p>Group: ${data.props.group}</p>
                         <p>${sum} co-exhibitions</p>
                         `);
@@ -706,6 +761,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     // reset opacity of labels
                     this.artistContainer?.selectAll('.artist-label').attr('opacity', 1);
 
+                    this.requestNode();
                     // return
                     return;
                 }
@@ -808,11 +864,12 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
                     .html(`
-                        <p><b>${data.target.name}<b> (${data.target.props.age})</b></p>
+                        <p><b>${data.target.name} (${data.target.props.age})</b></p>
                         <p>Group: ${data.props.group}</p>
                         <p>${sum} co-exhibitions</p>
                         `);
@@ -900,9 +957,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                         // handle last element
                         if (!last) {
                             last = this.links[this.links.length - 1];
-                            return this.getAngle(last?.props.originalIndex) + this.theta;
+                            return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
                         } else {
-                            return this.getAngle(last?.props.originalIndex);
+                            return this.getAngle(last?.props.originalIndex) - this.theta/2;
                         }
                     })
                     .endAngle((d: Link) => {
@@ -913,7 +970,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                                 break;
                             }
                         }
-                        return this.getAngle(first?.props.originalIndex) - 0.01;
+                        return this.getAngle(first?.props.originalIndex) - this.theta/2;
                     })
 
         this.donutContainer.selectAll('path')
@@ -932,7 +989,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                // get id from mouseevent target
                 const group = (d.target as SVGPathElement).id.split('-')[1];
 
-                // FIXME: Percent is wrong
                 // calculate group percentage
                 const percentage = (this.links.filter((link: Link) => link.props.group == group).length / this.links.length) * 100;
 
@@ -945,10 +1001,26 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${group} (${percentage.toFixed(2)}%)`);
+                    .text(() => {
+                        if (this.state.groupBy == 'ageGroup') {
+                            if(group.includes('gt')) {
+                                return `~${group.split('_')[1]} years older (${percentage.toFixed(2)}%)`;
+                            }
+                            if(group.includes('lt')) {
+                                return `~${group.split('_')[1]} years younger (${percentage.toFixed(2)}%)`;
+                            } 
+
+
+                            return `${group} (${percentage.toFixed(2)}%)`;
+
+                        } 
+                        
+                        return `${group} (${percentage.toFixed(2)}%)`;
+                    });
             })
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
@@ -977,7 +1049,20 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .attr('class', 'donut-label')
             .attr('id', (d: any) => `donut-label-${d.props.group}`)
             // set text to d.props.group
-            .text((d: any) => d.props.group)
+            .text((d: any) => {
+                if (this.state.groupBy == 'ageGroup') {
+                    if(d.props.group.includes('gt')) {
+                        return `~${d.props.group.split('_')[1]} years older`;
+                    }
+                    if(d.props.group.includes('lt')) {
+                        return `~${d.props.group.split('_')[1]} years younger`;
+                    } 
+
+                    return d.props.group;
+                } 
+                
+                return d.props.group;
+            })
             .attr('font-size', '12px')
             .attr('dy', '0.35em')
             .attr('fill', 'black')
@@ -991,12 +1076,12 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 return `rotate(-90, ${x2}, ${y2})`;
             })
             .style('cursor', 'pointer')
+            .style('pointer-events', 'none')
             .on('mouseover', (d: PointerEvent) => {
                 // get id from mouseevent target
                 const group = (d.target as SVGPathElement).id.split('-')[2];
 
                 // calculate group percentage
-                // FIXME: Percent is wrong
                 const percentage = (this.links.filter((link: Link) => link.props.group == group).length / this.links.length) * 100;
 
                 const x = d.clientX;
@@ -1008,38 +1093,56 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${group} (${percentage.toFixed(2)}%)`);
+                    .text(() => {
+                        if (this.state.groupBy == 'ageGroup') {
+                            if(group.includes('gt')) {
+                                return `~${group.split('_')[1]} years older (${percentage.toFixed(2)}%)`;
+                            }
+                            if(group.includes('lt')) {
+                                return `~${group.split('_')[1]} years younger (${percentage.toFixed(2)}%)`;
+                            } 
+
+                            return `${group} (${percentage.toFixed(2)}%)`;
+
+                        } 
+                        
+                        return `${group} (${percentage.toFixed(2)}%)`;
+                    });
             })
             .on('mouseout', (d: PointerEvent) => {
                 this.tooltip?.remove();
 
             })
-            .on('click', (d: PointerEvent) => {
-                // get id from mouseevent target
-                const group = (d.target as SVGPathElement).id.split('-')[2];
+            // .on('click', (d: PointerEvent) => {
+            //     // get id from mouseevent target
+            //     const group = (d.target as SVGPathElement).id.split('-')[2];
 
-                if(this.selectedGroup === group) {
-                    this.selectedGroup = '';
-                    this.highlightGroup('');
-                    if(this.props.arcClickCallback) this.props.arcClickCallback('');
-                    return;
-                }
+            //     if(this.selectedGroup === group) {
+            //         this.selectedGroup = '';
+            //         this.highlightGroup('');
+            //         if(this.props.arcClickCallback) this.props.arcClickCallback('');
+            //         return;
+            //     }
 
-                this.selectedGroup = group;
-                if(this.props.arcClickCallback) this.props.arcClickCallback(group);
-                this.highlightGroup(group);
+            //     this.selectedGroup = group;
+            //     if(this.props.arcClickCallback) this.props.arcClickCallback(group);
+            //     this.highlightGroup(group);
 
-                // raise selected text
-                this.donutContainer?.select(`#donut-label-${group}`).raise();
-            });
+            //     // raise selected text
+            //     this.donutContainer?.select(`#donut-label-${group}`).raise();
+            // });
 
         this.donutContainer.exit().remove();
     }
 
     getSecondaryLinks(node: Link): void {
+        // Set the selected node to the node passed in 
+        this.setState(prevState => ({ compareNode: node.target, loading: true }));
+
         // for each targetNode make a request to get the exhibitedWithArtists for that node
         client.query({
             query: GET_ARTIST_EXHIBITED_WITH,
@@ -1077,12 +1180,21 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     }
 
     drawSecondaryLinks(id: string, links: Array<Link>): void {
-        const baseNode = this.links.find((link: Link) => link.targetId == id);
+        if (!this.state.compareNode) return;
 
-        if (!baseNode) return;
+        // set loading false
+        this.setState(prevState => ({ loading: false }));
 
         // select all artist and outer circles and reduce the opacity to 0.25
-        this.artistContainer?.selectAll('circle').attr('opacity', 0.25);
+        this.artistContainer?.selectAll('circle')
+            .attr('opacity', 0.25)
+            .attr('stroke', (d: any) => this.color(d.props.group));
+
+        this.artistContainer?.selectAll('circle')
+            .filter((d: any) => d.target.id == id)
+            .attr('opacity', 1)
+            .attr('stroke', 'black');
+
         this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.25);
 
         // highlight all links from the links array 
@@ -1110,7 +1222,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         circles.attr('opacity', 1);
 
         // highlight baseNode artist and outer circle
-        const baseOuter = this.outerCircleContainer?.select(`#outer-circle-${baseNode.target.id}`);
+        const baseOuter = this.outerCircleContainer?.select(`#outer-circle-${this.state.compareNode.id}`);
 
         if (!baseOuter) return;
 
@@ -1122,7 +1234,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         const baseCircle = this.artistContainer?.selectAll('circle')
             .filter((d: any) => {
-                return d.target.id == baseNode.target.id;
+                return d.target.id == this.state.compareNode?.id;
             });
 
         if (!baseCircle) return;
@@ -1173,7 +1285,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     highlightGroup(group: string): void {
         // select all links with the same country as the country passed in
         // change the stroke to yellow and make it dashed update stroke-width to 2
-        console.log('highlighting country: ' + group)
         if (!this.artistContainer) return;
 
         if (group === '') {
@@ -1196,44 +1307,54 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .attr('fill-opacity', 1)
                 .lower();
         } else {
+            this.donutContainer?.selectAll('path')
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+
+            // set rest to opacity 0.25
+            this.artistContainer.selectAll('circle')
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+
+            this.outerCircleContainer?.selectAll('circle')
+                .attr('opacity', 0.5)
+                .attr('stroke-opacity', 0.5)
+                .attr('fill-opacity', 0.5);
+
+            // set labels to opacity 0.25
+            this.artistContainer.selectAll('.artist-label')
+                .attr('opacity', 0.25);
+
+            const prop = this.state.groupBy;
+
+            // set labels with the same country to opacity 1
+            this.artistContainer.selectAll('.artist-label')
+                .filter((d: any) => d.target.props[prop] === group)
+                .attr('opacity', 1)
+                .raise();
+
             // highlight all nodes and arcs with the same country
             this.artistContainer.selectAll('circle')
-                .filter((d: any) => d.target.props.data.country == group)
+                .filter((d: any) => d.target.props[prop] === group)
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
                 .raise();
 
             this.outerCircleContainer?.selectAll('circle')
-                .filter((d: any) => d.target.props.data.country == group)
+                .filter((d: any) => d.target.props[prop] === group)
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
                 .raise();
-
-            this.donutContainer?.selectAll('path')
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
 
             this.donutContainer?.select(`#donut-${group}`)
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
                 .raise();
-
-            // set rest to opacity 0.25
-            this.artistContainer.selectAll('circle')
-                .filter((d: any) => d.target.props.data.country != group)
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
-            
-            this.outerCircleContainer?.selectAll('circle')
-                .filter((d: any) => d.target.props.data.country != group)
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
         }
     };
 
@@ -1245,29 +1366,35 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             if(a.target.id == artist?.id) found = true;
         });
         
+        this.artistContainer?.selectAll('.artist-label').attr('opacity', 1).attr('font-weight', 'normal');
+
         if (!found) {
             // deselect everything
             this.setState(prevState => ({ selection: false }));
 
-            // unhightlight all nodes 
-            this.outerCircleContainer?.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
-            this.artistContainer?.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
+            // reset to original stroke and color for circles and outercircles
+            this.artistContainer?.selectAll('circle')
+                .attr('opacity', 0.75)
+                .attr('stroke', (d: any) => this.color(d.props.group))
+                .attr('stroke-width', 2)
+                .attr('fill', 'transparent');
 
-            // reset opacity of all nodes
-            this.artistContainer?.selectAll('circle').attr('opacity', 0.75);
-            this.outerCircleContainer?.selectAll('circle').attr('opacity', 0.75);
+            this.outerCircleContainer?.selectAll('circle')
+                .attr('opacity', 0.75)
+                .attr('stroke', 'none')
+                .attr('stroke-width', 0);
 
             // reset opacity of labels
             this.artistContainer?.selectAll('.artist-label').attr('opacity', 1).attr('font-weight', 'normal');
+
             return;
         }
-
-        console.log(artist?.id + ' found')
 
         if (!this.outerCircleContainer) return;
 
         const data = this.outerCircleContainer.select(`#outer-circle-${artist?.id}`).datum() as Link;
         
+        this.setState(prevState => ({ selection: true }));        
         this.getSecondaryLinks(data);
 
         // set current label font weight to bold
@@ -1285,7 +1412,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                         <select id="group-by" value={this.state.groupBy} onChange={this.handleGroupByChange}>
                             <option value="country">Country</option>
                             <option value="sex">Sex</option>
-                            <option value="age">Age Group</option>
+                            <option value="ageGroup">Age Group</option>
+                            <option value="living">Living</option>
                         </select>
                     </div>
                     <div className="block">
@@ -1294,6 +1422,12 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     </div>
                 </div>
                 <svg id='ego-net' width={this.state.width} height={this.state.height}></svg>
+                {this.state.loading && (
+                    <div className="absolute top-0 left-0 z-60 w-full h-full flex items-center justify-center bg-white bg-opacity-50">
+                        <p className="text-4xl text-black">{ this.catchy[Math.floor(Math.random() * this.catchy.length)] }</p>
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
+                    </div>
+                )}
                 {/* <div id='ego-tooltip' ref={this.tooltip} className="absolute w-auto h-auto font-medium p-2 bg-black text-white"></div> */}
             </>
         )
