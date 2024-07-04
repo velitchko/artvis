@@ -142,8 +142,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             groupDataOverTime.push({ group: key, data: valuesAsArray });
         });
 
-        console.log(groupDataOverTime)
-
         this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
         this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
 
@@ -162,10 +160,8 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         });
 
         if (this.state.stacked) {
-            console.log('stacked');
             this.drawStackedChart(groupDataOverTime);
         } else {
-            console.log('not stacked');
             this.drawChart(groupDataOverTime);
         }
 
@@ -294,6 +290,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
@@ -383,10 +380,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 .attr('fill-opacity', 1);
             } else {
                 d3.selectAll('.area')
-                .filter((dd: any) => {
-                    console.log(dd, d)
-                    return    dd.group === d;
-                })
+                .filter((dd: any) => dd.group === d)
                 .attr('fill-opacity', 1);
             }
         })
@@ -394,7 +388,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 if(this.selectedGroup === '') {
                     // reset opacity of all areas
                     d3.selectAll('.area')
-                        .attr('fill-opacity', 0.25);
+                        .attr('fill-opacity', 1);
                 } else {
                     this.highlightGroup(this.selectedGroup);
                 }
@@ -458,6 +452,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('color', 'white')
                     .style('padding', '5px')
                     .style('border-radius', '5px')
+                    .style('font-size', '12px')
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
@@ -487,7 +482,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             })
             .on('click', (event, d) => {
                 const group = (d as any).group;
-                console.log('click', group)
 
                 if(this.selectedGroup === group) {
                     this.selectedGroup = '';
@@ -522,7 +516,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     }
 
     updateCoEx(coEx?: number) {
-        console.log('update coex', coEx);
         this.update(coEx);
     }
 
