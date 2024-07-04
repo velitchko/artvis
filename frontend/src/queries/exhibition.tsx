@@ -16,7 +16,8 @@ query Exhibitions($where: ExhibitionWhere) {
         tookPlaceInHosts {
             id,
             name,
-            place
+            place,
+            country
         }
         artistsExhibited {
             id
