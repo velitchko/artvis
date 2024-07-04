@@ -84,7 +84,10 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         // iterate over exhibitions array and calculate total amount of exhibitions per year
         const exhibitionsPerYear = new Map<number, number>();
         
-        this.state.artist.exhibitedExhibitions.forEach((exhibition: Exhibition) => {
+        this.state.artist.exhibitedExhibitions
+        // get unique ids 
+        .filter((exhibition, index, self) => self.findIndex(e => e.id === exhibition.id) === index)
+        .forEach((exhibition: Exhibition) => {
             const year = +exhibition.startdate;
             if(exhibitionsPerYear.has(year)) {
                 const count = exhibitionsPerYear.get(year) || 0;
@@ -120,9 +123,9 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
             }
         });
         
-        const yExt = d3.extent(dataWithMissingYears, (d: { year: number, count: number }) => d.count);
-        // this.yScale?.domain(this.state.countExtent as Array<number>);
-        this.yScale?.domain(yExt as Array<number>);
+        // const yExt = d3.extent(dataWithMissingYears, (d: { year: number, count: number }) => d.count);
+        this.yScale?.domain(this.state.countExtent as Array<number>);
+        // this.yScale?.domain(yExt as Array<number>);
 
         const lineGenerator =  d3.line<{ year: number, count: number }>()
         .curve(d3.curveMonotoneX)
@@ -173,7 +176,7 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
                     </svg>
                 </button>
                 <div className="absolute">
-                    <p className="truncate">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</p>
+                    <p className="truncate">({this.state.artist.id}){this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</p>
                     <p className="truncate">{ this.state.artist.birthplace == '\N' ? '?' : this.state.artist.birthplace }, { this.state.artist.birthdate?.toString().split('-')[0] }</p>
                     <p className="truncate">{ this.state.artist.deathplace == '\N' ? '?' : this.state.artist.deathplace }, { this.state.artist.deathdate?.toString().split('-')[0] }</p>
                 </div>
