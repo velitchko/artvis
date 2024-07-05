@@ -6,8 +6,9 @@ import * as d3 from 'd3';
 import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
+import { countryColors, sexColors, ageGroupColors, livingColors } from '../../colors/colors';
 
-class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: Map<string, string>, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function }, { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean }> {
+class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function, syncColors?: Function }, { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -22,25 +23,24 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     private outerNodeRScale: d3.ScalePower<number, number>;
     private theta: number;
     private links: Array<Link> = [];
-    private color: d3.ScaleOrdinal<string, string>;
     private minYear = 1905;
     private maxYear = 1915;
     public isInitialized: boolean = false;
     private selectedGroup: string = '';
     private catchy = [
-        "Brushing up on art history... Hold tight!",
-        "Uncovering masterpieces... Just a moment!",
-        "Painting a picture of data... Almost there!",
-        "Dusting off old canvases... Please wait!",
-        "Sculpting your results... Hang on!",
-        "Restoring the Renaissance... Fetching data!",
-        "Channeling our inner art historian... Loading!",
-        "Analyzing ancient art... One sec!",
-        "Polishing our Monets... Data incoming!",
-        "Digging through digital archives... Almost done!"
+        'Brushing up on art history... Hold tight!',
+        'Uncovering masterpieces... Just a moment!',
+        'Painting a picture of data... Almost there!',
+        'Dusting off old canvases... Please wait!',
+        'Sculpting your results... Hang on!',
+        'Restoring the Renaissance... Fetching data!',
+        'Channeling our inner art historian... Loading!',
+        'Analyzing ancient art... One sec!',
+        'Polishing our Monets... Data incoming!',
+        'Digging through digital archives... Almost done!'
     ]
-    
-    constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean }) {
+
+    constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }) {
         super(props);
 
         this.state = {
@@ -52,7 +52,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             coEx: 3,
             groupBy: 'country',
             selection: false,
-            loading: false
+            loading: false,
+            colors: props.colors
         };
 
         this.svgContainer = undefined;
@@ -61,8 +62,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         this.rScale = d3.scaleSqrt();
         this.nodeRScale = d3.scaleSqrt();
         this.outerNodeRScale = d3.scaleSqrt();
-
-        this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
 
         this.tooltip = undefined;
         this.theta = 0;
@@ -117,11 +116,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         this.svgContainer = d3.select('#ego-net');
 
-        if(this.props.colors) {
-            this.color = d3.scaleOrdinal<string, string>()
-                .domain(Array.from(this.props.colors.keys()))
-                .range(Array.from(this.props.colors.values()));
-        }
+
 
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.25, 10])
@@ -157,7 +152,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .attr('cx', this.state.width / 2)
             .attr('cy', this.state.height / 2)
             .attr('r', 40)
-            .attr('stroke', this.color(this.state.baseNode.props.data.country))
+            .attr('stroke', this.state.colors.colors.get(this.state.baseNode.props.data.country) || 'black')
             .attr('stroke-width', 4)
             .attr('fill', 'transparent');
 
@@ -225,14 +220,21 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     };
 
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        this.setState(prevState => ({ groupBy: event.target.value }), () => {
+        let newColors = new Map<string, string>();
+
+        if (event.target.value == 'country') newColors = countryColors;
+        if (event.target.value == 'sex') newColors = sexColors;
+        if (event.target.value == 'living') newColors = livingColors;
+
+        // sync colors with parent
+        if (this.props.syncColors) this.props.syncColors({ group: event.target.value, colors: newColors });
+
+        this.setState(prevState => ({ groupBy: event.target.value, colors: { group: event.target.value, colors: newColors } }), () => {
             const targetNodes = this.filterData(this.state.coEx);
             this.links = targetNodes;
 
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
-
-            
 
             if (this.props.groupByCallBack) this.props.groupByCallBack(this.state.groupBy);
         });
@@ -299,7 +301,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             return `${age}`;
         });
 
-        
+
         // sort targetAges array
         targetAges.sort((a: string, b: string) => {
             if (a == '?') return 1;
@@ -311,7 +313,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .map((link: { group: string, links: Array<Link> }) => {
                 link.links.forEach((l: Link) => {
                     l.props.group = link.group;
-                    
+
                     // set living status based on birth and death dates
                     const birthYear = +l.target.props.data.birthdate.split('-')[0];
                     const deathYear = +l.target.props.data.deathdate.split('-')[0];
@@ -335,7 +337,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
                     // calculate difference of birthdates between target and base node
                     const diff = +l.target.props.data.birthdate.split('-')[0] - +this.state.baseNode.props.data.birthdate.split('-')[0];
-                    
+
                     const ageGroup = ageRanges.reduce((closest: string | null, age: string) => {
                         if (closest === null) return age;
 
@@ -346,16 +348,16 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                         }
                         return closest;
                     }, null);
-                    
-                    
+
+
                     if (!ageGroup) {
                         l.target.props.ageGroup = 'unknown';
                         return;
                     };
 
-                    if(Math.abs(diff) > 100) {
+                    if (Math.abs(diff) > 100) {
                         l.target.props.ageGroup = 'unknown';
-                    } else if(diff == 0) {
+                    } else if (diff == 0) {
                         l.target.props.ageGroup = 'same';
                     } else if (Math.abs(diff) <= 5) {
                         l.target.props.ageGroup = 'similar';
@@ -468,6 +470,80 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         if (!this.artistContainer) return;
 
+        if (this.state.groupBy == 'country') {
+            // get unique countries from links
+            const countries = _.uniq(this.links.map((link: Link) => link.target.props.data.country));
+            const colorScale = d3.scaleOrdinal<string, string>()
+                .domain(countries)
+                .range(d3.schemeCategory10);
+            // add new colors to color scale for countries not in color scale
+            countries.forEach((country: string) => {
+                if (!this.state.colors.colors.get(country)) {
+                    this.state.colors.colors.set(country, colorScale(country));
+                }
+            });
+        }
+
+        if (this.state.groupBy == 'ageGroup') {
+            // get list of all age groups
+            const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
+            // sort ageGroups 
+            ageGroups.sort((a: string, b: string) => {
+                const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
+
+                const priorities = {
+                    'unknown': 4,
+                    'gt': 3,
+                    'same': 2,
+                    'similar': 1,
+                    'lt': 0
+                };
+
+                const getPriority = (str: string) => {
+                    if (str === 'unknown') return priorities['unknown'];
+                    if (str === 'same') return priorities['same'];
+                    if (str === 'similar') return priorities['similar'];
+                    if (str.startsWith('gt')) return priorities['gt'];
+                    if (str.startsWith('lt')) return priorities['lt'];
+                    return -1; // Unknown type, shouldn't happen in this case
+                };
+
+                const priorityA = getPriority(a);
+                const priorityB = getPriority(b);
+
+                if (priorityA !== priorityB) return priorityA - priorityB;
+
+                // At this point, both a and b have the same priority, compare within their group
+                if (a.startsWith('lt') && b.startsWith('lt')) {
+                    return parseValue(b) - parseValue(a); // Descending order
+                }
+
+                if (a.startsWith('gt') && b.startsWith('gt')) {
+                    return parseValue(a) - parseValue(b); // Ascending order
+                }
+
+                return 0; // same and similar are already at their correct position by priority
+            });
+
+            // add new colors to color scale for countries not in color scale
+            ageGroups.forEach((ageGroup: string, index: number) => {
+                if (!this.state.colors.colors.get(ageGroup)) {
+                    const color = (ageGroup: string) => {
+                        if (ageGroup === 'unknown') return '#d3d3d3';
+                        if (ageGroup === 'similar') return ageGroupColors(0.5);
+                        if (ageGroup === 'same') return ageGroupColors(0.25);
+
+                        return ageGroupColors(index / ageGroups.length);
+                    };
+
+                    this.state.colors.colors.set(ageGroup, color(ageGroup));
+                }
+            });
+
+            // sync colors with parent
+            if (this.props.syncColors) this.props.syncColors({ group: this.state.groupBy, colors: this.state.colors });
+        }
+
         this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
 
         this.artistContainer
@@ -490,7 +566,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 return y;
             })
             .attr('opacity', 0.75)
-            .attr('stroke', (d: Link) => this.color(d.props.group))
+            .attr('stroke', (d: Link) => this.state.colors.colors.get(d.props.group) || 'black')
             .attr('stroke-width', 2)
             .attr('fill', 'transparent');
 
@@ -502,7 +578,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 const data = d3.select(`#${id}`).datum() as Link;
 
                 if (!data) return;
-                
+
                 const x = d.clientX;
                 const y = d.clientY;
 
@@ -544,21 +620,31 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .on('mouseout', (d: PointerEvent) => {
                 // remove rect and text from tooltip
                 this.tooltip?.remove();
-                console.log(this.state.selection);
+
+                // pass year to mouseOverCallBack
+                this.mouseOverCallBack(0);
+                this.highlightCircle(0);
+
+                if (this.state.selection) {
+                    // reset stroke color on all circles apart from the compareNode
+                    this.artistContainer?.selectAll('circle')
+                        .filter((d: any) => {
+                            return d.target.id !== this.state.compareNode?.id;
+                        })
+                        .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
+                        .attr('stroke-width', 2);
+
+                    return;
+                }
 
                 this.artistContainer?.selectAll('circle')
                     .filter((d: any) => {
                         return d.target.id !== this.state.compareNode?.id;
                     })
                     .attr('opacity', 0.75)
-                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
                     .attr('stroke-width', 2)
                     .attr('fill', 'transparent');
-            
-
-                // pass year to mouseOverCallBack
-                this.mouseOverCallBack(0);
-                this.highlightCircle(0);
             });
 
         this.artistContainer.exit().remove();
@@ -723,7 +809,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
                 this.artistContainer?.selectAll('circle')
                     .attr('opacity', 0.75)
-                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
                     .attr('stroke-width', 2)
                     .attr('fill', 'transparent');
 
@@ -817,7 +903,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 return this.getYCoordinates(this.maxYear, this.getAngle(d.props.originalIndex), 40) + this.state.height / 2;
             })
             .attr('opacity', 0.75)
-            .attr('fill', (d: Link) => this.color(d.props.group))
+            .attr('fill', (d: Link) => this.state.colors.colors.get(d.props.group) || 'black')
             .style('cursor', 'pointer');
 
         this.outerCircleContainer
@@ -888,7 +974,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 this.outerCircleContainer?.selectAll('circle').attr('stroke-width', 0);
                 this.artistContainer?.selectAll('circle')
                     .attr('opacity', 0.75)
-                    .attr('stroke', (d: any) => this.color(d.props.group))
+                    .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
                     .attr('stroke-width', 2)
                     .attr('fill', 'transparent');
             })
@@ -934,50 +1020,50 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         // donut chart
         if (!this.donutContainer) return;
-    
+
         // create arc generator
         const arc = d3.arc<Link>()
-                    .innerRadius(this.rScale(this.maxYear) + 10)
-                    .outerRadius(this.rScale(this.maxYear) + 25)
-                    .startAngle((d: Link) => {
-                        let first: Link | undefined;
-                        let last: Link | undefined;
-                        for (let i = 0; i < this.links.length; i++) {
-                            if (this.links[i].props.group == d.props.group) {
-                                first = this.links[i];
-                                break;
-                            }
-                        }
-                        for (let i = this.links.indexOf(first as Link); i < this.links.length; i++) {
-                            if (this.links[i].props.group != d.props.group) {
-                                last = this.links[i + 1];
-                                break;
-                            }
-                        }
-                        // handle last element
-                        if (!last) {
-                            last = this.links[this.links.length - 1];
-                            return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
-                        } else {
-                            return this.getAngle(last?.props.originalIndex) - this.theta/2;
-                        }
-                    })
-                    .endAngle((d: Link) => {
-                        let first: Link | undefined;
-                        for (let i = 0; i < this.links.length; i++) {
-                            if (this.links[i].props.group == d.props.group) {
-                                first = this.links[i];
-                                break;
-                            }
-                        }
-                        return this.getAngle(first?.props.originalIndex) - this.theta/2;
-                    })
+            .innerRadius(this.rScale(this.maxYear) + 10)
+            .outerRadius(this.rScale(this.maxYear) + 25)
+            .startAngle((d: Link) => {
+                let first: Link | undefined;
+                let last: Link | undefined;
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        break;
+                    }
+                }
+                for (let i = this.links.indexOf(first as Link); i < this.links.length; i++) {
+                    if (this.links[i].props.group != d.props.group) {
+                        last = this.links[i + 1];
+                        break;
+                    }
+                }
+                // handle last element
+                if (!last) {
+                    last = this.links[this.links.length - 1];
+                    return this.getAngle(last?.props.originalIndex) + this.theta - this.theta / 2;
+                } else {
+                    return this.getAngle(last?.props.originalIndex) - this.theta / 2;
+                }
+            })
+            .endAngle((d: Link) => {
+                let first: Link | undefined;
+                for (let i = 0; i < this.links.length; i++) {
+                    if (this.links[i].props.group == d.props.group) {
+                        first = this.links[i];
+                        break;
+                    }
+                }
+                return this.getAngle(first?.props.originalIndex) - this.theta / 2;
+            })
 
         this.donutContainer.selectAll('path')
             .data(_.uniqBy(this.links, (node: Link) => node.props.group))
             .join('path')
             .attr('class', 'donut')
-            .attr('fill', (d: any) => this.color(d.props.group))
+            .attr('fill', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
             .attr('id', (d: any) => `donut-${d.props.group}`)
             .attr('stroke', 'none')
             .attr('stroke-width', 1)
@@ -986,7 +1072,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             })
             .style('cursor', 'pointer')
             .on('mouseover', (d: PointerEvent) => {
-               // get id from mouseevent target
+                // get id from mouseevent target
                 const group = (d.target as SVGPathElement).id.split('-')[1];
 
                 // calculate group percentage
@@ -1007,18 +1093,15 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('z-index', 1000)
                     .text(() => {
                         if (this.state.groupBy == 'ageGroup') {
-                            if(group.includes('gt')) {
+                            if (group.includes('gt')) {
                                 return `~${group.split('_')[1]} years older (${percentage.toFixed(2)}%)`;
                             }
-                            if(group.includes('lt')) {
+                            if (group.includes('lt')) {
                                 return `~${group.split('_')[1]} years younger (${percentage.toFixed(2)}%)`;
-                            } 
-
+                            }
 
                             return `${group} (${percentage.toFixed(2)}%)`;
-
-                        } 
-                        
+                        }
                         return `${group} (${percentage.toFixed(2)}%)`;
                     });
             })
@@ -1030,15 +1113,15 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 // get id from mouseevent target
                 const group = (d.target as SVGPathElement).id.split('-')[1];
 
-                if(this.selectedGroup === group) {
+                if (this.selectedGroup === group) {
                     this.selectedGroup = '';
                     this.highlightGroup('');
-                    if(this.props.arcClickCallback) this.props.arcClickCallback('');
+                    if (this.props.arcClickCallback) this.props.arcClickCallback('');
                     return;
                 }
 
                 this.selectedGroup = group;
-                if(this.props.arcClickCallback) this.props.arcClickCallback(group);
+                if (this.props.arcClickCallback) this.props.arcClickCallback(group);
                 this.highlightGroup(group);
             });
 
@@ -1051,16 +1134,16 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             // set text to d.props.group
             .text((d: any) => {
                 if (this.state.groupBy == 'ageGroup') {
-                    if(d.props.group.includes('gt')) {
+                    if (d.props.group.includes('gt')) {
                         return `~${d.props.group.split('_')[1]} years older`;
                     }
-                    if(d.props.group.includes('lt')) {
+                    if (d.props.group.includes('lt')) {
                         return `~${d.props.group.split('_')[1]} years younger`;
-                    } 
+                    }
 
                     return d.props.group;
-                } 
-                
+                }
+
                 return d.props.group;
             })
             .attr('font-size', '12px')
@@ -1099,17 +1182,17 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('z-index', 1000)
                     .text(() => {
                         if (this.state.groupBy == 'ageGroup') {
-                            if(group.includes('gt')) {
+                            if (group.includes('gt')) {
                                 return `~${group.split('_')[1]} years older (${percentage.toFixed(2)}%)`;
                             }
-                            if(group.includes('lt')) {
+                            if (group.includes('lt')) {
                                 return `~${group.split('_')[1]} years younger (${percentage.toFixed(2)}%)`;
-                            } 
+                            }
 
                             return `${group} (${percentage.toFixed(2)}%)`;
 
-                        } 
-                        
+                        }
+
                         return `${group} (${percentage.toFixed(2)}%)`;
                     });
             })
@@ -1117,24 +1200,24 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 this.tooltip?.remove();
 
             })
-            // .on('click', (d: PointerEvent) => {
-            //     // get id from mouseevent target
-            //     const group = (d.target as SVGPathElement).id.split('-')[2];
+        // .on('click', (d: PointerEvent) => {
+        //     // get id from mouseevent target
+        //     const group = (d.target as SVGPathElement).id.split('-')[2];
 
-            //     if(this.selectedGroup === group) {
-            //         this.selectedGroup = '';
-            //         this.highlightGroup('');
-            //         if(this.props.arcClickCallback) this.props.arcClickCallback('');
-            //         return;
-            //     }
+        //     if(this.selectedGroup === group) {
+        //         this.selectedGroup = '';
+        //         this.highlightGroup('');
+        //         if(this.props.arcClickCallback) this.props.arcClickCallback('');
+        //         return;
+        //     }
 
-            //     this.selectedGroup = group;
-            //     if(this.props.arcClickCallback) this.props.arcClickCallback(group);
-            //     this.highlightGroup(group);
+        //     this.selectedGroup = group;
+        //     if(this.props.arcClickCallback) this.props.arcClickCallback(group);
+        //     this.highlightGroup(group);
 
-            //     // raise selected text
-            //     this.donutContainer?.select(`#donut-label-${group}`).raise();
-            // });
+        //     // raise selected text
+        //     this.donutContainer?.select(`#donut-label-${group}`).raise();
+        // });
 
         this.donutContainer.exit().remove();
     }
@@ -1188,7 +1271,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // select all artist and outer circles and reduce the opacity to 0.25
         this.artistContainer?.selectAll('circle')
             .attr('opacity', 0.25)
-            .attr('stroke', (d: any) => this.color(d.props.group));
+            .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black');
 
         this.artistContainer?.selectAll('circle')
             .filter((d: any) => d.target.id == id)
@@ -1306,6 +1389,10 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
                 .lower();
+
+            // set labels to opacity 1
+            this.artistContainer.selectAll('.artist-label')
+                .attr('opacity', 1);
         } else {
             this.donutContainer?.selectAll('path')
                 .attr('opacity', 0.5)
@@ -1363,9 +1450,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         let found = false;
         // check if artist is in ego network
         _.uniqBy(this.links, (l: Link) => l.target.id).forEach((a: Link) => {
-            if(a.target.id == artist?.id) found = true;
+            if (a.target.id == artist?.id) found = true;
         });
-        
+
         this.artistContainer?.selectAll('.artist-label').attr('opacity', 1).attr('font-weight', 'normal');
 
         if (!found) {
@@ -1375,7 +1462,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             // reset to original stroke and color for circles and outercircles
             this.artistContainer?.selectAll('circle')
                 .attr('opacity', 0.75)
-                .attr('stroke', (d: any) => this.color(d.props.group))
+                .attr('stroke', (d: any) => this.state.colors.colors.get(d.props.group) || 'black')
                 .attr('stroke-width', 2)
                 .attr('fill', 'transparent');
 
@@ -1393,8 +1480,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         if (!this.outerCircleContainer) return;
 
         const data = this.outerCircleContainer.select(`#outer-circle-${artist?.id}`).datum() as Link;
-        
-        this.setState(prevState => ({ selection: true }));        
+
+        this.setState(prevState => ({ selection: true }));
         this.getSecondaryLinks(data);
 
         // set current label font weight to bold
@@ -1406,29 +1493,29 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     render() {
         return (
             <>
-                <div className="absolute w-auto right-5">
-                    <div className="block">
-                        <label htmlFor="co-ex">Group by:</label>
-                        <select id="group-by" value={this.state.groupBy} onChange={this.handleGroupByChange}>
-                            <option value="country">Country</option>
-                            <option value="sex">Sex</option>
-                            <option value="ageGroup">Age Group</option>
-                            <option value="living">Living</option>
+                <div className='absolute w-auto right-5'>
+                    <div className='block'>
+                        <label htmlFor='co-ex'>Group by:</label>
+                        <select id='group-by' value={this.state.groupBy} onChange={this.handleGroupByChange}>
+                            <option value='country'>Country</option>
+                            <option value='sex'>Sex</option>
+                            <option value='ageGroup'>Age Group</option>
+                            <option value='living'>Living</option>
                         </select>
                     </div>
-                    <div className="block">
-                        <label htmlFor="co-ex">Co-exhibition count: {this.state.coEx}</label>
-                        <input id="co-ex" type="range" min="3" max="20" value={this.state.coEx} onChange={this.handleCoExChange} />
+                    <div className='block'>
+                        <label htmlFor='co-ex'>Co-exhibition count: {this.state.coEx}</label>
+                        <input id='co-ex' type='range' min='3' max='20' value={this.state.coEx} onChange={this.handleCoExChange} />
                     </div>
                 </div>
                 <svg id='ego-net' width={this.state.width} height={this.state.height}></svg>
                 {this.state.loading && (
-                    <div className="absolute top-0 left-0 z-60 w-full h-full flex items-center justify-center bg-white bg-opacity-50">
-                        <p className="text-4xl text-black">{ this.catchy[Math.floor(Math.random() * this.catchy.length)] }</p>
-                        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
+                    <div className='absolute top-0 left-0 z-60 w-full h-full flex items-center justify-center bg-white bg-opacity-50'>
+                        <p className='text-4xl text-black'>{this.catchy[Math.floor(Math.random() * this.catchy.length)]}</p>
+                        <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900'></div>
                     </div>
                 )}
-                {/* <div id='ego-tooltip' ref={this.tooltip} className="absolute w-auto h-auto font-medium p-2 bg-black text-white"></div> */}
+                {/* <div id='ego-tooltip' ref={this.tooltip} className='absolute w-auto h-auto font-medium p-2 bg-black text-white'></div> */}
             </>
         )
     }

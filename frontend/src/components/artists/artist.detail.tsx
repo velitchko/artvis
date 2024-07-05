@@ -13,8 +13,9 @@ import AreaChartComponent from '../linechart/area.chart';
 import TableComponent from '../table/table';
 import _ from 'lodash';
 import GET_EXHIBITION from '../../queries/exhibition';
+import { countryColors } from '../../colors/colors';
 // TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
@@ -41,9 +42,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private egoNetwork = React.createRef<EgoNetworkComponent>();
     private areaChart = React.createRef<AreaChartComponent>();
     private table = React.createRef<TableComponent>();
-    private colors: Map<string, string>;
 
-    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
+    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors:{ group: string, colors: Map<string, string> } }) {
         super(props);
 
         this.state = {
@@ -53,7 +53,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             compareWith: null,
             baseNode: {} as Node,
             links: new Array<Link>(),
-            rendered: false
+            rendered: false,
+            colors: { group: 'country', colors: new Map<string, string>() }
         };
 
         this.svgTimeLineContainer = undefined;
@@ -69,13 +70,17 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.compareItemCountExtentAbs = [0, 0];
         this.compareItemCountExtentAvg = [0, 0];
 
+        // initialize colors
+        if(this.state.colors.group === 'country') {
+            // set colors map 
+            this.state.colors.colors = countryColors;
+        };
+
         this.width = 500;
         this.height = 250;
 
         this.minYear = 1905;
         this.maxYear = 1915;
-
-        this.colors = new Map<string, string>();
 
         this.margin = {
             top: 30,
@@ -585,27 +590,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 this.links.push(link);
             });
         });
-
-        // get unique set of countries and assign colors to them
-        const countries = new Set<string>();
-        this.links.forEach((link: Link) => {
-            countries.add(link.target.props.data.country);
-        });
-
-        // assign unique color to each country for more than 10 countries
-        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(countries).sort((a: string, b: string) => a.localeCompare(b)));
-
-        // set colorScale to this.colors
-        Array.from(countries).forEach((country: string, i: number) => {
-            this.colors.set(country, colorScale(country));
-        });
-
-        // INTERPOLATE COLORS
-        // const colorScale =  d3.scaleSequential(d3.interpolateViridis).domain([0, countries.size]);
-        // set colorScale to this.colors
-        // Array.from(countries).forEach((country: string, i: number) => {
-        //     this.colors.set(country, colorScale(i));
-        // });
 
         this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
     }
@@ -1305,6 +1289,10 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.onArtistChange(id);
     }
 
+    onSyncColors(colors: { group: string, colors: Map<string, string> }) {
+        this.setState({ colors: colors });
+    }
+
     onAreaChartClick(group: string) {
         // highlight nodes in ego network with country
         this.egoNetwork.current?.highlightGroup(group);
@@ -1312,7 +1300,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
     onGroupByChange() {
         // notify area chart to update groupBy
-        this.areaChart.current?.update();
+        const group = this.egoNetwork.current?.state.groupBy;
+        this.areaChart.current?.update(group);
     }
 
     highlightCircleInNetwork(year: number) {
@@ -1360,7 +1349,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                             <div className="w-full h-full sm:h-full" id="area-chart-container">
                                 {/* Ego Network Defines Grouping Criteria - Wait for initialization then render group distribution */}
                                 {this.state.rendered &&
-                                    <AreaChartComponent ref={this.areaChart} links={this.state.links} colors={this.colors} stacked={true} onclick={this.onAreaChartClick.bind(this)} />
+                                    <AreaChartComponent ref={this.areaChart} groupBy={this.egoNetwork.current?.state.groupBy} links={this.state.links} colors={this.state.colors} stacked={true} onclick={this.onAreaChartClick.bind(this)} />
                                 }
                             </div>
                         </div>
@@ -1372,7 +1361,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
                             <div className="w-full h-full sm:h-full" id="ego-net-container">
                                 {this.showNetwork &&
-                                    <EgoNetworkComponent ref={this.egoNetwork} colors={this.colors} initCallBack={this.egoNetworkReady.bind(this)} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} groupByCallBack={this.onGroupByChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} arcClickCallback={this.groupSelected.bind(this)} filterCallback={this.filterUpdate.bind(this)} />
+                                    <EgoNetworkComponent ref={this.egoNetwork} syncColors={this.onSyncColors.bind(this)} colors={this.state.colors} initCallBack={this.egoNetworkReady.bind(this)} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} groupByCallBack={this.onGroupByChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} arcClickCallback={this.groupSelected.bind(this)} filterCallback={this.filterUpdate.bind(this)} />
                                 }
                             </div>
                         </div>

@@ -4,10 +4,11 @@ import { Artist } from '../../models/artist.model';
 import { Node } from '../../models/node';
 import { Link } from '../../models/link';
 import _ from 'lodash';
+import { countryColors, sexColors, ageGroupColors } from '../../colors/colors';
 
-class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: Map<string, string>, stacked?: boolean, onclick?: Function }, { links: Array<Link>, width: number, height: number, stacked: boolean }> {
+
+class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, stacked?: boolean, groupBy?: string, onclick?: Function }, { links: Array<Link>, width: number, height: number, stacked: boolean, groupBy?: string }> {
     private svgContainer: d3.Selection<any, any, any, any> | undefined;
-    private color: d3.ScaleOrdinal<string, string>;
     private xAxis: d3.Selection<any, any, any, any> | undefined;
     private yAxis: d3.Selection<any, any, any, any> | undefined;
     private tooltip: d3.Selection<any, any, any, any> | undefined;
@@ -17,17 +18,18 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     private minYear: number = 1905;
     private maxYear: number = 1915;
     private selectedGroup: string = '';
+    private ageGroupMap: Map<string, string>;
 
-    constructor(props: { links: Array<Link>, colors: Map<string, string>, stacked?: boolean, onclick?: Function }) {
+    constructor(props: { links: Array<Link>, colors: { group: string, colors: Map<string, string> }, stacked?: boolean, onclick?: Function, groupBy?: string }) {
         super(props);
         this.state = {
             links: props.links,
             stacked: props.stacked || false,
             width: 0,
-            height: 0
+            height: 0,
+            groupBy: props.groupBy
         };
 
-        this.color = d3.scaleOrdinal<string>(d3.schemeCategory10);
         this.xScale = undefined;
         this.yScale = undefined;
 
@@ -39,6 +41,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         };
 
         this.tooltip = undefined;
+        this.ageGroupMap = new Map<string, string>();
     }
 
     componentDidMount() {
@@ -108,9 +111,11 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         return new Map([...coExhibitorGroupDistribution.entries()].sort());
     }
 
-    update(coEx?: number): void {
+    update(group?: string, coEx?: number): void {
         // calculate distribution over the years of the artist's co-exhibitors according to their country
         const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(coEx);
+
+        this.setState({ groupBy: group });
 
         const groupDataOverTime = new Array<{ group: string, data: Array<{ year: number, count: number }> }>();
         const groupData = new Map<string, Map<number, number>>();
@@ -181,12 +186,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         this.xAxis = this.svgContainer.append('g');
         this.yAxis = this.svgContainer.append('g');
 
-        if (this.props.colors) {
-            this.color = d3.scaleOrdinal<string, string>()
-                .domain(Array.from(this.props.colors.keys()))
-                .range(Array.from(this.props.colors.values()));
-        }
-
         this.xAxis
             .attr('transform', `translate(0, ${this.state.height - this.margin.bottom})`)
             .attr('class', 'x-axis');
@@ -208,13 +207,13 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .attr('y', this.margin.left / 2)
             .attr('transform', 'rotate(-90)')
             .attr('text-anchor', 'middle')
-            .text('Co-Exhibitor Nationalities');
+            .text('Number of Co-Exhibitors');
 
         // add title
         this.svgContainer.append('text')
             .attr('class', 'title')
             .attr('x', this.state.width / 2)
-            .attr('y', this.margin.top)
+            .attr('y', this.margin.top*2)
             .attr('text-anchor', 'middle')
             .text('Co-Exhibitor Groups over time');
 
@@ -274,7 +273,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .data(stack)
             .join('path')
             .attr('class', 'area')
-            .attr('fill', d => this.color(d.key))
+            .attr('fill', (d: any) => this.props.colors?.colors.get(d.key) || 'black')
             .attr('fill-opacity', 1)
             .attr('stroke-width', 0)
             .attr('d', (d) => area(d) as string)
@@ -321,7 +320,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 }
             })
             .on('click', (event, d) => {
-                const group = d.key;
+                const group = this.ageGroupMap.get(d.key) || '';
 
                 if(this.selectedGroup === d.key) {
                     this.selectedGroup = '';
@@ -340,35 +339,55 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         // clear existing legend
         this.svgContainer?.selectAll('.legend-item').remove();
 
+        this.ageGroupMap.clear();
+
         // get unique groups
         const groups = new Set<string>();
         data.forEach((d: any) => {
-            groups.add(d.group);
+            let label = '';
+            if (this.props.colors?.group === 'ageGroup') {
+                label = d.group;
+
+                if (d.group.includes('gt')) {
+                    label = `~${d.group.split('_')[1]}y older`;
+                }
+                if (d.group.includes('lt')) {
+                    label = `~${d.group.split('_')[1]}y younger`;
+                } 
+            } else {
+                label = d.group;
+            }
+            // add to map
+            this.ageGroupMap.set(label, d.group);
+
+            groups.add(label);
         });
 
         // add legend to the chart
         const legend = this.svgContainer?.select('#legend-wrapper');
 
         // center the legend
-        legend?.attr('transform', `translate(${(this.state.width / 2) - (groups.size * 30) / 2}, 0)`);
+        legend?.attr('transform', `translate(${(this.state.width / 2) - (groups.size * 40) / 2}, 20)`);
 
         const legendItems = legend?.selectAll('.legend-item')
             .data(Array.from(groups))
             .enter()
             .append('g')
             .attr('class', 'legend-item')
-            .attr('transform', (d, i) => `translate(${i * 30}, 0)`);
+            .attr('transform', (d, i) => `translate(${i * 40}, 0)`);
+
 
         legendItems?.append('circle')
             .attr('r', 8)
             .attr('cx', 0)
             .attr('cy', 0)
-            .attr('fill', (d: any) => this.color(d));
+            .attr('fill', (d: any) =>  this.props.colors?.colors.get(this.ageGroupMap.get(d) || 'black') || 'black');
 
         legendItems?.append('text')
             .attr('x', 0)
             .attr('y', -10)
-            .attr('text-anchor', 'middle')
+            .attr('text-anchor', 'start')
+            .attr('transform', 'rotate(-20)')
             .text((d: any) => d);
 
         legendItems?.on('mouseover', (event, d) => {
@@ -405,7 +424,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 this.props.onclick?.call(this, d);
                 this.highlightGroup(d);
             });
-        
     }
 
     drawChart(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
@@ -436,9 +454,9 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .append('path')
             .attr('class', 'area')
             .attr('d', (d) => area(d.data) as string)
-            .attr('fill', (d: any) => this.color(d.group))
+            .attr('fill', (d: any) =>  this.props.colors?.colors.get(d.group) || 'black')
             .attr('fill-opacity', 0.25)
-            .attr('stroke', (d: any) => this.color(d.group))
+            .attr('stroke', (d: any) =>  this.props.colors?.colors.get(d.group) || 'black')
             .attr('stroke-width', 2)
             .on('mouseover', (event, d) => {
                 // get groupedBy value from the data and show tool tip at the mouse position
@@ -502,7 +520,13 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         d3.selectAll('.area')
             .attr('fill-opacity', 0.25);
 
-        if(group === '') return;
+        if(group === '')  {
+            // set opacity of all areas to 1
+            d3.selectAll('.area')
+                .attr('fill-opacity', 1);
+
+            return;
+        }
 
         if(this.state.stacked) {
             d3.selectAll('.area')
@@ -516,7 +540,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     }
 
     updateCoEx(coEx?: number) {
-        this.update(coEx);
+        this.update(this.state.groupBy, coEx);
     }
 
     render() {
