@@ -1316,8 +1316,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.areaChart.current?.highlightGroup(group);
     }
 
-    filterUpdate(coEx: number) {
-        this.areaChart.current?.updateCoEx(coEx);
+    filterUpdate(group: string, coEx: number) {
+        this.areaChart.current?.updateCoEx(group, coEx);
     }
 
     render() {
