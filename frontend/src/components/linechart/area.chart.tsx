@@ -85,7 +85,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
                 return sum >= (coEx ? coEx : 3)  && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
             })
-            // _.uniqBy(this.state.links, (link: Link) => link.target.id)
             .forEach((link: Link) => {
                 const year = link.props.data.year;
                 const group = link.props.group;
@@ -539,8 +538,8 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         }
     }
 
-    updateCoEx(coEx?: number) {
-        this.update(this.state.groupBy, coEx);
+    updateCoEx(groupBy: string, coEx?: number) {
+        this.update(groupBy, coEx);
     }
 
     render() {
