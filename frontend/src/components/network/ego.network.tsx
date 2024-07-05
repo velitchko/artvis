@@ -215,7 +215,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
 
-            if (this.props.filterCallback) this.props.filterCallback(this.state.coEx);
+            if (this.props.filterCallback) this.props.filterCallback(this.state.groupBy, this.state.coEx);
         });
     };
 
