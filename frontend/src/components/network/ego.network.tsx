@@ -251,7 +251,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             
             // get list of all age groups
             const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
-            
+
             const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
 
             const priorities = {
@@ -294,9 +294,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             ageGroups.forEach((ageGroup: string, index: number) => {
                 if (!newColors.get(ageGroup)) {
                     const color = (ageGroup: string) => {
-                        if (ageGroup === 'unknown') return '#d3d3d3';
+                        if (ageGroup === 'unknown') return '#333333';
                         if (ageGroup === 'similar') return ageGroupColors(0.5);
-                        if (ageGroup === 'same') return ageGroupColors(0.25);
+                        if (ageGroup === 'same') return '#d3d3d3';
 
                         return ageGroupColors(index / ageGroups.length);
                     };
