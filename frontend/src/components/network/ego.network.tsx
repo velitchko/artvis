@@ -74,17 +74,15 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
-            // force color update
-            this.handleGroupByChange({ target: { value: this.state.groupBy } } as React.ChangeEvent<HTMLSelectElement>);
-            
+        // force color update with countries by default
+        
+        const colors = this.handleColorUpdate({ target: { value: 'country' } } as React.ChangeEvent<HTMLSelectElement>);
+        this.setState(prevState => ({ width: width, height: height, colors: { group: 'country', colors: colors } }), () => {
             this.init();
         });
 
         // set resize handler to window
-        window.addEventListener('resize', this.onResize);
-
-        // this.init();
+        // window.addEventListener('resize', this.onResize);
     }
 
     onResize = () => {
@@ -233,7 +231,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             newColors = countryColors;
 
             // get unique countries from links
-            const countries = _.uniq(this.links.map((link: Link) => link.target.props.data.country));
+            const countries = _.uniq(this.state.links.map((link: Link) => link.target.props.data.country));
             const colorScale = d3.scaleOrdinal<string, string>()
                 .domain(countries)
                 .range(d3.schemeCategory10);
@@ -250,7 +248,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             newColors = this.state.colors.colors;
             
             // get list of all age groups
-            const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
+            const ageGroups = _.uniq(this.state.links.map((link: Link) => link.target.props.ageGroup));
 
             const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
 

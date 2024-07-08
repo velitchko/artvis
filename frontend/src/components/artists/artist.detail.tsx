@@ -108,8 +108,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         });
 
         // set resize handler to window
-        window.addEventListener('resize', this.onResize);
-        // this.init();
+        // window.addEventListener('resize', this.onResize);
     }
 
     onResize = () => {

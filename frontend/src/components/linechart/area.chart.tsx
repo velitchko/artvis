@@ -57,7 +57,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         });
 
         // set resize handler to window
-        window.addEventListener('resize', this.onResize);
+        // window.addEventListener('resize', this.onResize);
     }
 
     onResize = () => {
