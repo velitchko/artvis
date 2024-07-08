@@ -103,7 +103,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
-        this.setState(prevState => ({ width: width, height: height - 20 }), () => {
+        this.setState(prevState => ({ width: width, height: height }), () => {
             this.init();
         });
 
@@ -180,12 +180,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             .text('Exhibitions');
 
         // add title
-        this.svgTimeLineContainer.append('text')
-            .attr('class', 'title')
-            .attr('x', this.state.width / 2)
-            .attr('y', -2 * this.margin.top)
-            .attr('text-anchor', 'middle')
-            .text('Exhibitions over time');
+        // this.svgTimeLineContainer.append('text')
+        //     .attr('class', 'title')
+        //     .attr('x', this.state.width / 2)
+        //     .attr('y', -2 * this.margin.top)
+        //     .attr('text-anchor', 'middle')
+        //     .text('Exhibitions over time');
 
         this.drawTimeline();
         this.addLegend();

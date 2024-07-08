@@ -70,7 +70,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         });
     }
 
-    calculateCoExhibitorGroupDistribution(coEx: number = 3) {
+    calculateCoExhibitorGroupDistribution(group: string = 'country', coEx: number = 3) {
         // coexhibitor map over the years of the artist according to their country
         const coExhibitorGroupDistribution = new Map<number, Map<string, number>>();
 
@@ -86,23 +86,25 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 return sum >= (coEx ? coEx : 3)  && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
             })
             .forEach((link: Link) => {
+                console.log(link);
                 const year = link.props.data.year;
-                const group = link.props.group;
-                if(!group) return;
+                const grouping = link.target.props[group];
+                
+                if(!grouping) return;
                 // if the year is not in the map, add it
                 if (!coExhibitorGroupDistribution.has(year)) {
                     // and add the country to the year with a count of 1
                     coExhibitorGroupDistribution.set(year, new Map<string, number>());
-                    coExhibitorGroupDistribution.get(year)?.set(group, 1);
+                    coExhibitorGroupDistribution.get(year)?.set(grouping, 1);
                 }
 
                 // if the year is in the map, check if the country is in the year map 
-                if (!coExhibitorGroupDistribution.get(year)?.has(group)) {
+                if (!coExhibitorGroupDistribution.get(year)?.has(grouping)) {
                     // if not, add the country with a count of 1
-                    coExhibitorGroupDistribution.get(year)?.set(group, 1);
+                    coExhibitorGroupDistribution.get(year)?.set(grouping, 1);
                 } else {
                     // increment the co-exhibitor's count
-                    coExhibitorGroupDistribution.get(year)?.set(group, coExhibitorGroupDistribution.get(year)?.get(group) as number + 1);
+                    coExhibitorGroupDistribution.get(year)?.set(grouping, coExhibitorGroupDistribution.get(year)?.get(grouping) as number + 1);
                 }
             });
 
@@ -112,7 +114,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
 
     update(group?: string, coEx?: number): void {
         // calculate distribution over the years of the artist's co-exhibitors according to their country
-        const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(coEx);
+        const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(group, coEx);
 
         this.setState({ groupBy: group });
 
@@ -209,12 +211,12 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .text('Number of Co-Exhibitors');
 
         // add title
-        this.svgContainer.append('text')
-            .attr('class', 'title')
-            .attr('x', this.state.width / 2)
-            .attr('y', this.margin.top*2)
-            .attr('text-anchor', 'middle')
-            .text('Co-Exhibitor Groups over time');
+        // this.svgContainer.append('text')
+        //     .attr('class', 'title')
+        //     .attr('x', this.state.width / 2)
+        //     .attr('y', this.margin.top*2)
+        //     .attr('text-anchor', 'middle')
+        //     .text('Co-Exhibitor Groups over time');
 
         this.svgContainer.append('g')
             .attr('id', 'area-wrapper');
