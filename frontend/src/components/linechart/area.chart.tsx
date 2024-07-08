@@ -278,17 +278,28 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .data(stack)
             .join('path')
             .attr('class', 'area')
-            .attr('fill', (d: any) => {
-                
-                // console.log(this.state.colors, this.state.colors?.colors, d.key);
-                return this.state.colors?.colors.get(d.key) || 'black'; // return 
-            })
+            .attr('fill', (d: any) => this.state.colors?.colors.get(d.key) || 'black')
             .attr('fill-opacity', 1)
             .attr('stroke-width', 0)
             .attr('d', (d) => area(d) as string)
             .on('mouseover', (event, d) => {
                 // get groupedBy value from the data and show tool tip at the mouse position
-                const groupedBy = d.key;
+                const group = d.key;
+
+                // get unique groups
+                let label = '';
+                if (this.state.groupBy === 'ageGroup') {
+                    label = group;
+                    if (group.includes('gt')) {
+                        label = `~${group.split('_')[1]}y older`;
+                    }
+                    if (group.includes('lt')) {
+                        label = `~${group.split('_')[1]}y younger`;
+                    }
+                } else {
+                    label = group;
+                }
+
                 const x = event.clientX;
                 const y = event.clientY;
 
@@ -302,7 +313,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${groupedBy}`);
+                    .text(`${label}`);
 
                 // set tooltip ontop of the chart
                 this.tooltip.raise();
@@ -325,11 +336,14 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     d3.selectAll('.area')
                         .attr('fill-opacity', 1);
                 } else {
+                    console.log(this.selectedGroup);
                     this.highlightGroup(this.selectedGroup);
                 }
             })
             .on('click', (event, d) => {
-                const group = this.ageGroupMap.get(d.key) || '';
+                const group = d.key;
+
+                console.log(group);
 
                 if(this.selectedGroup === d.key) {
                     this.selectedGroup = '';
@@ -348,8 +362,46 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         // clear existing legend
         this.svgContainer?.selectAll('.legend-item').remove();
 
-        this.ageGroupMap.clear();
+        if(this.state.groupBy === 'ageGroup') {
+            this.ageGroupMap.clear();
+            const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
 
+            const priorities = {
+                'unknown': 4,
+                'gt': 3,
+                'same': 2,
+                'similar': 1,
+                'lt': 0
+            };
+
+            const getPriority = (str: string) => {
+                if (str === 'unknown') return priorities['unknown'];
+                if (str === 'same') return priorities['same'];
+                if (str === 'similar') return priorities['similar'];
+                if (str.startsWith('gt')) return priorities['gt'];
+                if (str.startsWith('lt')) return priorities['lt'];
+                return -1; // Unknown type, shouldn't happen in this case
+            };
+
+            // sort ageGroups 
+            data.sort((a: { group: string, data: Array<{ year: number, count: number }> }, b: { group: string, data: Array<{ year: number, count: number }> }) => {
+                const priorityA = getPriority(a.group);
+                const priorityB = getPriority(b.group);
+
+                if (priorityA !== priorityB) return priorityA - priorityB;
+
+                // At this point, both a and b have the same priority, compare within their group
+                if (a.group.startsWith('lt') && b.group.startsWith('lt')) {
+                    return parseValue(b.group) - parseValue(a.group); // Descending order
+                }
+
+                if (a.group.startsWith('gt') && b.group.startsWith('gt')) {
+                    return parseValue(a.group) - parseValue(b.group); // Ascending order
+                }
+
+                return 0; // same and similar are already at their correct position by priority
+            });
+        }
         // get unique groups
         const groups = new Set<string>();
         data.forEach((d: any) => {
@@ -362,7 +414,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 }
                 if (d.group.includes('lt')) {
                     label = `~${d.group.split('_')[1]}y younger`;
-                } 
+                }
             } else {
                 label = d.group;
             }
@@ -471,6 +523,20 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 // get groupedBy value from the data and show tool tip at the mouse position
                 const group = (d as any).group;
 
+                // get unique groups
+                let label = '';
+                if(this.state.groupBy === 'ageGroup') {
+                    label = group;
+                    if (group.includes('gt')) {
+                        label = `~${group.split('_')[1]}y older`;
+                    }
+                    if (group.includes('lt')) {
+                        label = `~${group.split('_')[1]}y younger`;
+                    } 
+                } else {
+                    label = group;
+                }
+
                 const x = event.clientX;
                 const y = event.clientY;
                 this.tooltip = d3.select('body').append('div')
@@ -483,7 +549,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     .style('left', `${x}px`)
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
-                    .text(`${group}`);
+                    .text(`${label}`);
 
                 // set tooltip ontop of the chart
                 this.tooltip.raise();
@@ -530,12 +596,13 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     }
 
     highlightGroup(group: string) {
+        this.selectedGroup = group;
         
         // set all areas to 0.25 opacity
         d3.selectAll('.area')
             .attr('fill-opacity', 0.25);
 
-        if(group === '')  {
+        if(this.selectedGroup  === '')  {
             // set opacity of all areas to 1
             d3.selectAll('.area')
                 .attr('fill-opacity', 1);
@@ -545,11 +612,11 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
 
         if(this.state.stacked) {
             d3.selectAll('.area')
-                .filter((d: any) => d.key === group)
+                .filter((d: any) => d.key === this.selectedGroup )
                 .attr('fill-opacity', 1);
         } else {
             d3.selectAll('.area')
-                .filter((d: any) => d.group === group)
+                .filter((d: any) => d.group === this.selectedGroup )
                 .attr('fill-opacity', 1);
         }
     }
