@@ -233,7 +233,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
 
     drawStackedChart(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
         if (!this.svgContainer) return;
-        console.log(data);
         this.svgContainer?.selectAll('.area').exit().remove();
 
         const xAxis = d3.axisBottom(this.xScale as unknown as d3.AxisScale<string>);
@@ -269,8 +268,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             })
             .y0((d: any) => this.yScale ? this.yScale(d[0]) : 0)
             .y1((d: any) => this.yScale ? this.yScale(d[1]) : 0);
-
-        // console.log(stack);
 
         // // Append a group for each series, and a rect for each element in the series.
         this.svgContainer.select('#area-wrapper')
@@ -336,14 +333,11 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                     d3.selectAll('.area')
                         .attr('fill-opacity', 1);
                 } else {
-                    console.log(this.selectedGroup);
                     this.highlightGroup(this.selectedGroup);
                 }
             })
             .on('click', (event, d) => {
                 const group = d.key;
-
-                console.log(group);
 
                 if(this.selectedGroup === d.key) {
                     this.selectedGroup = '';
