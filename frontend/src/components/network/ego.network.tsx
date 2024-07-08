@@ -251,27 +251,28 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             
             // get list of all age groups
             const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
+            
+            const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
+
+            const priorities = {
+                'unknown': 4,
+                'gt': 3,
+                'same': 2,
+                'similar': 1,
+                'lt': 0
+            };
+
+            const getPriority = (str: string) => {
+                if (str === 'unknown') return priorities['unknown'];
+                if (str === 'same') return priorities['same'];
+                if (str === 'similar') return priorities['similar'];
+                if (str.startsWith('gt')) return priorities['gt'];
+                if (str.startsWith('lt')) return priorities['lt'];
+                return -1; // Unknown type, shouldn't happen in this case
+            };
+
             // sort ageGroups 
             ageGroups.sort((a: string, b: string) => {
-                const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
-
-                const priorities = {
-                    'unknown': 4,
-                    'gt': 3,
-                    'same': 2,
-                    'similar': 1,
-                    'lt': 0
-                };
-
-                const getPriority = (str: string) => {
-                    if (str === 'unknown') return priorities['unknown'];
-                    if (str === 'same') return priorities['same'];
-                    if (str === 'similar') return priorities['similar'];
-                    if (str.startsWith('gt')) return priorities['gt'];
-                    if (str.startsWith('lt')) return priorities['lt'];
-                    return -1; // Unknown type, shouldn't happen in this case
-                };
-
                 const priorityA = getPriority(a);
                 const priorityB = getPriority(b);
 
