@@ -3,11 +3,11 @@ import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Node } from '../../models/node';
 import { Link } from '../../models/link';
-import _ from 'lodash';
+import _, { groupBy } from 'lodash';
 import { countryColors, sexColors, ageGroupColors } from '../../colors/colors';
 
 
-class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, stacked?: boolean, groupBy?: string, onclick?: Function }, { links: Array<Link>, width: number, height: number, stacked: boolean, groupBy?: string }> {
+class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, stacked?: boolean, groupBy?: string, onclick?: Function }, { links: Array<Link>, colors: { group: string, colors: Map<string, string> }, width: number, height: number, stacked: boolean, groupBy?: string, coEx?: number }> {
     private svgContainer: d3.Selection<any, any, any, any> | undefined;
     private xAxis: d3.Selection<any, any, any, any> | undefined;
     private yAxis: d3.Selection<any, any, any, any> | undefined;
@@ -20,14 +20,16 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     private selectedGroup: string = '';
     private ageGroupMap: Map<string, string>;
 
-    constructor(props: { links: Array<Link>, colors: { group: string, colors: Map<string, string> }, stacked?: boolean, onclick?: Function, groupBy?: string }) {
+    constructor(props: { links: Array<Link>, colors: { group: string, colors: Map<string, string> }, stacked?: boolean, onclick?: Function, groupBy?: string, coEx?: number }) {
         super(props);
         this.state = {
             links: props.links,
             stacked: props.stacked || false,
             width: 0,
             height: 0,
-            groupBy: props.groupBy
+            groupBy: props.groupBy,
+            colors: props.colors,
+            coEx: props.coEx || 3
         };
 
         this.xScale = undefined;
@@ -58,7 +60,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         window.addEventListener('resize', this.onResize);
     }
 
-
     onResize = () => {
         const width = document.getElementById('area-chart-container')?.clientWidth;
         const height = document.getElementById('area-chart-container')?.clientHeight;
@@ -86,7 +87,6 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
                 return sum >= (coEx ? coEx : 3)  && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
             })
             .forEach((link: Link) => {
-                console.log(link);
                 const year = link.props.data.year;
                 const grouping = link.target.props[group];
                 
@@ -113,65 +113,67 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
     }
 
     update(group?: string, coEx?: number): void {
-        // calculate distribution over the years of the artist's co-exhibitors according to their country
-        const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(group, coEx);
+        if(!group) group = this.state.groupBy || 'country';
+        if(!coEx) coEx = this.state.coEx || 3;
 
-        this.setState({ groupBy: group });
-
-        const groupDataOverTime = new Array<{ group: string, data: Array<{ year: number, count: number }> }>();
-        const groupData = new Map<string, Map<number, number>>();
-        coExhibitorGroupDistribution.forEach((values, year) => {
-            values.forEach((value, key) => {
-                if (!groupData.has(key)) {
-                    groupData.set(key, new Map<number, number>());
-                    groupData.get(key)?.set(year, value);
-                } else {
-                    groupData.get(key)?.set(year, value);
-                }
+        this.setState({ groupBy: group }, () => {
+            // calculate distribution over the years of the artist's co-exhibitors according to their country
+            const coExhibitorGroupDistribution = this.calculateCoExhibitorGroupDistribution(group, coEx);
+            const groupDataOverTime = new Array<{ group: string, data: Array<{ year: number, count: number }> }>();
+            const groupData = new Map<string, Map<number, number>>();
+            coExhibitorGroupDistribution.forEach((values, year) => {
+                values.forEach((value, key) => {
+                    if (!groupData.has(key)) {
+                        groupData.set(key, new Map<number, number>());
+                        groupData.get(key)?.set(year, value);
+                    } else {
+                        groupData.get(key)?.set(year, value);
+                    }
+                });
             });
-        });
 
-        groupData.forEach((values, key) => {
-            const valuesAsArray = new Array<{ year: number, count: number }>();
-            values.forEach((value, key) => {
-                valuesAsArray.push({ year: key, count: value });
-            });
-            // fill missing years with count 0
-            for (let year = this.minYear; year <= this.maxYear; year++) {
-                if (!values.has(year)) {
-                    valuesAsArray.push({ year: year, count: 0 });
+            groupData.forEach((values, key) => {
+                const valuesAsArray = new Array<{ year: number, count: number }>();
+                values.forEach((value, key) => {
+                    valuesAsArray.push({ year: key, count: value });
+                });
+                // fill missing years with count 0
+                for (let year = this.minYear; year <= this.maxYear; year++) {
+                    if (!values.has(year)) {
+                        valuesAsArray.push({ year: year, count: 0 });
+                    }
                 }
+                // sort by year
+                valuesAsArray.sort((a, b) => a.year - b.year);
+
+                groupDataOverTime.push({ group: key, data: valuesAsArray });
+            });
+
+            this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
+            this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
+
+            // set domains
+            this.xScale.domain([this.minYear, this.maxYear]);
+            // get max count of co-exhibitors over the years
+            const maxCount = d3.max(groupDataOverTime, (d) => d3.max(d.data, (d) => d.count) as number);
+            this.yScale.domain([0, maxCount || 0]);
+
+            // sort groupDataOverTime by the sum of the counts of the group
+            groupDataOverTime.sort((a, b) => {
+                const aSum = a.data.reduce((acc, cur) => acc + cur.count, 0);
+                const bSum = b.data.reduce((acc, cur) => acc + cur.count, 0);
+
+                return aSum - bSum;
+            });
+
+            if (this.state.stacked) {
+                this.drawStackedChart(groupDataOverTime);
+            } else {
+                this.drawChart(groupDataOverTime);
             }
-            // sort by year
-            valuesAsArray.sort((a, b) => a.year - b.year);
 
-            groupDataOverTime.push({ group: key, data: valuesAsArray });
+            this.addLegend(groupDataOverTime.reverse()); // draw in reverse order
         });
-
-        this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
-        this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
-
-        // set domains
-        this.xScale.domain([this.minYear, this.maxYear]);
-        // get max count of co-exhibitors over the years
-        const maxCount = d3.max(groupDataOverTime, (d) => d3.max(d.data, (d) => d.count) as number);
-        this.yScale.domain([0, maxCount || 0]);
-
-        // sort groupDataOverTime by the sum of the counts of the group
-        groupDataOverTime.sort((a, b) => {
-            const aSum = a.data.reduce((acc, cur) => acc + cur.count, 0);
-            const bSum = b.data.reduce((acc, cur) => acc + cur.count, 0);
-
-            return aSum - bSum;
-        });
-
-        if (this.state.stacked) {
-            this.drawStackedChart(groupDataOverTime);
-        } else {
-            this.drawChart(groupDataOverTime);
-        }
-
-        this.addLegend(groupDataOverTime.reverse()); // draw in reverse order
     }
 
 
@@ -231,7 +233,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
 
     drawStackedChart(data: Array<{ group: string, data: Array<{ year: number, count: number }> }>) {
         if (!this.svgContainer) return;
-
+        console.log(data);
         this.svgContainer?.selectAll('.area').exit().remove();
 
         const xAxis = d3.axisBottom(this.xScale as unknown as d3.AxisScale<string>);
@@ -268,13 +270,19 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .y0((d: any) => this.yScale ? this.yScale(d[0]) : 0)
             .y1((d: any) => this.yScale ? this.yScale(d[1]) : 0);
 
+        // console.log(stack);
+
         // // Append a group for each series, and a rect for each element in the series.
         this.svgContainer.select('#area-wrapper')
             .selectAll('.area')
             .data(stack)
             .join('path')
             .attr('class', 'area')
-            .attr('fill', (d: any) => this.props.colors?.colors.get(d.key) || 'black')
+            .attr('fill', (d: any) => {
+                
+                // console.log(this.state.colors, this.state.colors?.colors, d.key);
+                return this.state.colors?.colors.get(d.key) || 'black'; // return 
+            })
             .attr('fill-opacity', 1)
             .attr('stroke-width', 0)
             .attr('d', (d) => area(d) as string)
@@ -346,7 +354,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         const groups = new Set<string>();
         data.forEach((d: any) => {
             let label = '';
-            if (this.props.colors?.group === 'ageGroup') {
+            if (this.state.colors?.group === 'ageGroup') {
                 label = d.group;
 
                 if (d.group.includes('gt')) {
@@ -382,7 +390,7 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .attr('r', 8)
             .attr('cx', 0)
             .attr('cy', 0)
-            .attr('fill', (d: any) =>  this.props.colors?.colors.get(this.ageGroupMap.get(d) || 'black') || 'black');
+            .attr('fill', (d: any) =>  this.state.colors?.colors.get(this.ageGroupMap.get(d) || 'black') || 'black');
 
         legendItems?.append('text')
             .attr('x', 0)
@@ -455,9 +463,9 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             .append('path')
             .attr('class', 'area')
             .attr('d', (d) => area(d.data) as string)
-            .attr('fill', (d: any) =>  this.props.colors?.colors.get(d.group) || 'black')
+            .attr('fill', (d: any) =>  this.state.colors?.colors.get(d.group) || 'black')
             .attr('fill-opacity', 0.25)
-            .attr('stroke', (d: any) =>  this.props.colors?.colors.get(d.group) || 'black')
+            .attr('stroke', (d: any) =>  this.state.colors?.colors.get(d.group) || 'black')
             .attr('stroke-width', 2)
             .on('mouseover', (event, d) => {
                 // get groupedBy value from the data and show tool tip at the mouse position
@@ -515,6 +523,12 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
             });
     }
 
+    updateColors(colors: { group: string, colors: Map<string, string> }) {
+        this.setState({ colors: colors }, () => {
+            this.update();
+        });
+    }
+
     highlightGroup(group: string) {
         
         // set all areas to 0.25 opacity
@@ -540,8 +554,10 @@ class AreaChartComponent extends React.Component<{ links: Array<Link>, colors?: 
         }
     }
 
-    updateCoEx(groupBy: string, coEx?: number) {
-        this.update(groupBy, coEx);
+    updateCoEx(groupBy?: string, coEx?: number) {
+        this.setState({ coEx: coEx }, () => {
+            this.update(groupBy, coEx);
+        });
     }
 
     render() {

@@ -1154,7 +1154,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 this.tooltip?.lower();
             });
 
-
         legend.append('path')
             .attr('fill', (d, i) => i === 0 ? 'black' : 'white')
             .attr('fill-opacity', 1)
@@ -1191,7 +1190,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     }
 
     onArtistChange(artistId: string | null) {
-
         if (!artistId) {
             // clear compare timeline
             this.compareTimelineContainer?.selectAll('.compare-abs-half-circle').remove();
@@ -1291,6 +1289,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
     onSyncColors(colors: { group: string, colors: Map<string, string> }) {
         this.setState({ colors: colors });
+        // pass to area chart
+        this.areaChart.current?.updateColors(colors);
     }
 
     onAreaChartClick(group: string) {
@@ -1301,7 +1301,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     onGroupByChange() {
         // notify area chart to update groupBy
         const group = this.egoNetwork.current?.state.groupBy;
-        this.areaChart.current?.update(group);
+        const coEx = this.egoNetwork.current?.state.coEx;
+        this.areaChart.current?.update(group, coEx);
     }
 
     highlightCircleInNetwork(year: number) {
@@ -1316,7 +1317,9 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.areaChart.current?.highlightGroup(group);
     }
 
-    filterUpdate(group: string, coEx: number) {
+    filterUpdate() {
+        const group = this.egoNetwork.current?.state.groupBy;
+        const coEx = this.egoNetwork.current?.state.coEx;
         this.areaChart.current?.updateCoEx(group, coEx);
     }
 

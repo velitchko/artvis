@@ -75,6 +75,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         if (!width || !height) return;
 
         this.setState(prevState => ({ width: width, height: height }), () => {
+            // force color update
+            this.handleGroupByChange({ target: { value: this.state.groupBy } } as React.ChangeEvent<HTMLSelectElement>);
+            
             this.init();
         });
 
@@ -208,7 +211,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     }
 
     handleCoExChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        this.setState(prevState => ({ coEx: parseInt(event.target.value) }), () => {
+        const newColors = this.handleColorUpdate({ target: { value: this.state.groupBy } } as React.ChangeEvent<HTMLSelectElement>);
+        this.setState(prevState => ({ coEx: parseInt(event.target.value), colors: { group: this.state.groupBy, colors: newColors } }), () => {
             const targetNodes = this.filterData(this.state.coEx);
             this.links = targetNodes;
 
@@ -219,16 +223,93 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         });
     };
 
-    handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    handleColorUpdate = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         let newColors = new Map<string, string>();
 
-        if (event.target.value == 'country') newColors = countryColors;
         if (event.target.value == 'sex') newColors = sexColors;
         if (event.target.value == 'living') newColors = livingColors;
 
-        // sync colors with parent
-        if (this.props.syncColors) this.props.syncColors({ group: event.target.value, colors: newColors });
+        if (event.target.value == 'country') {
+            newColors = countryColors;
 
+            // get unique countries from links
+            const countries = _.uniq(this.links.map((link: Link) => link.target.props.data.country));
+            const colorScale = d3.scaleOrdinal<string, string>()
+                .domain(countries)
+                .range(d3.schemeCategory10);
+            // add new colors to color scale for countries not in color scale
+            countries.forEach((country: string) => {
+                if (!newColors.get(country)) {
+                    newColors.set(country, colorScale(country));
+                }
+            });
+        }
+
+        if (event.target.value == 'ageGroup') {
+            // get previously assigned colors
+            newColors = this.state.colors.colors;
+            
+            // get list of all age groups
+            const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
+            // sort ageGroups 
+            ageGroups.sort((a: string, b: string) => {
+                const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
+
+                const priorities = {
+                    'unknown': 4,
+                    'gt': 3,
+                    'same': 2,
+                    'similar': 1,
+                    'lt': 0
+                };
+
+                const getPriority = (str: string) => {
+                    if (str === 'unknown') return priorities['unknown'];
+                    if (str === 'same') return priorities['same'];
+                    if (str === 'similar') return priorities['similar'];
+                    if (str.startsWith('gt')) return priorities['gt'];
+                    if (str.startsWith('lt')) return priorities['lt'];
+                    return -1; // Unknown type, shouldn't happen in this case
+                };
+
+                const priorityA = getPriority(a);
+                const priorityB = getPriority(b);
+
+                if (priorityA !== priorityB) return priorityA - priorityB;
+
+                // At this point, both a and b have the same priority, compare within their group
+                if (a.startsWith('lt') && b.startsWith('lt')) {
+                    return parseValue(b) - parseValue(a); // Descending order
+                }
+
+                if (a.startsWith('gt') && b.startsWith('gt')) {
+                    return parseValue(a) - parseValue(b); // Ascending order
+                }
+
+                return 0; // same and similar are already at their correct position by priority
+            });
+
+            // add new colors to color scale for countries not in color scale
+            ageGroups.forEach((ageGroup: string, index: number) => {
+                if (!newColors.get(ageGroup)) {
+                    const color = (ageGroup: string) => {
+                        if (ageGroup === 'unknown') return '#d3d3d3';
+                        if (ageGroup === 'similar') return ageGroupColors(0.5);
+                        if (ageGroup === 'same') return ageGroupColors(0.25);
+
+                        return ageGroupColors(index / ageGroups.length);
+                    };
+
+                    newColors.set(ageGroup, color(ageGroup));
+                }
+            });
+        }
+
+        return newColors;
+    };
+
+    handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const newColors = this.handleColorUpdate(event);
         this.setState(prevState => ({ groupBy: event.target.value, colors: { group: event.target.value, colors: newColors } }), () => {
             const targetNodes = this.filterData(this.state.coEx);
             this.links = targetNodes;
@@ -236,7 +317,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
 
-            if (this.props.groupByCallBack) this.props.groupByCallBack(this.state.groupBy);
+            if (this.props.groupByCallBack) this.props.groupByCallBack(event.target.value);
+            if (this.props.syncColors) this.props.syncColors({ group: event.target.value, colors: newColors });
         });
     };
 
@@ -469,80 +551,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         if (!this.svgContainer) return;
 
         if (!this.artistContainer) return;
-
-        if (this.state.groupBy == 'country') {
-            // get unique countries from links
-            const countries = _.uniq(this.links.map((link: Link) => link.target.props.data.country));
-            const colorScale = d3.scaleOrdinal<string, string>()
-                .domain(countries)
-                .range(d3.schemeCategory10);
-            // add new colors to color scale for countries not in color scale
-            countries.forEach((country: string) => {
-                if (!this.state.colors.colors.get(country)) {
-                    this.state.colors.colors.set(country, colorScale(country));
-                }
-            });
-        }
-
-        if (this.state.groupBy == 'ageGroup') {
-            // get list of all age groups
-            const ageGroups = _.uniq(this.links.map((link: Link) => link.target.props.ageGroup));
-            // sort ageGroups 
-            ageGroups.sort((a: string, b: string) => {
-                const parseValue = (str: string) => parseInt(str.split('_')[1], 10);
-
-                const priorities = {
-                    'unknown': 4,
-                    'gt': 3,
-                    'same': 2,
-                    'similar': 1,
-                    'lt': 0
-                };
-
-                const getPriority = (str: string) => {
-                    if (str === 'unknown') return priorities['unknown'];
-                    if (str === 'same') return priorities['same'];
-                    if (str === 'similar') return priorities['similar'];
-                    if (str.startsWith('gt')) return priorities['gt'];
-                    if (str.startsWith('lt')) return priorities['lt'];
-                    return -1; // Unknown type, shouldn't happen in this case
-                };
-
-                const priorityA = getPriority(a);
-                const priorityB = getPriority(b);
-
-                if (priorityA !== priorityB) return priorityA - priorityB;
-
-                // At this point, both a and b have the same priority, compare within their group
-                if (a.startsWith('lt') && b.startsWith('lt')) {
-                    return parseValue(b) - parseValue(a); // Descending order
-                }
-
-                if (a.startsWith('gt') && b.startsWith('gt')) {
-                    return parseValue(a) - parseValue(b); // Ascending order
-                }
-
-                return 0; // same and similar are already at their correct position by priority
-            });
-
-            // add new colors to color scale for countries not in color scale
-            ageGroups.forEach((ageGroup: string, index: number) => {
-                if (!this.state.colors.colors.get(ageGroup)) {
-                    const color = (ageGroup: string) => {
-                        if (ageGroup === 'unknown') return '#d3d3d3';
-                        if (ageGroup === 'similar') return ageGroupColors(0.5);
-                        if (ageGroup === 'same') return ageGroupColors(0.25);
-
-                        return ageGroupColors(index / ageGroups.length);
-                    };
-
-                    this.state.colors.colors.set(ageGroup, color(ageGroup));
-                }
-            });
-
-            // sync colors with parent
-            if (this.props.syncColors) this.props.syncColors({ group: this.state.groupBy, colors: this.state.colors });
-        }
 
         this.theta = 2 * Math.PI / _.uniqBy(this.links, (node: Link) => node.targetId).length;
 
