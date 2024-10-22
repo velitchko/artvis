@@ -314,8 +314,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             const targetNodes = this.filterData(this.state.coEx);
             this.links = targetNodes;
 
-            console.log(this.links);
-
             this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
             this.drawCircle();
         });
@@ -324,9 +322,9 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     orderBy(prop: string, links: Array<Link>): Array<Link> {
         switch (prop) {
             case 'default':
-                return _.orderBy(links, ['props.target.name'], ['desc']);
+                return _.orderBy(links, ['props.target.name'], ['asc']);
             case 'alpha':
-                return _.orderBy(links, ['props.target.name'], ['desc']);
+                return _.orderBy(links, ['props.target.name'], ['asc']);
             case 'coex':
                 return _.orderBy(links, (link: Link) => {
                     const sum = links
@@ -337,7 +335,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             case 'age':
                 return _.orderBy(links, ['target.props.age'], ['desc']);
             default:
-                return _.orderBy(links, ['target.props.name'], ['desc']);
+                return _.orderBy(links, ['target.props.name'], ['asc']);
         }
     }
 
