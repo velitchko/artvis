@@ -8,7 +8,7 @@ import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { countryColors, sexColors, ageGroupColors, livingColors } from '../../colors/colors';
 
-class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function, syncColors?: Function }, { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }> {
+class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, colors?: { group: string, colors: Map<string, string> }, width?: number, height?: number, initCallBack?: Function, requestNode?: Function, mouseOverCallBack?: Function, groupByCallBack?: Function, arcClickCallback?: Function, filterCallback?: Function, syncColors?: Function }, { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }> {
     private svgContainer: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | undefined;
     private gridContainer: d3.Selection<any, any, any, any> | undefined;
     private circleContainer: d3.Selection<any, any, any, any> | undefined;
@@ -40,7 +40,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         'Digging through digital archives... Almost done!'
     ]
 
-    constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }) {
+    constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }) {
         super(props);
 
         this.state = {
@@ -51,6 +51,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             height: props.height,
             coEx: 3,
             groupBy: 'country',
+            orderBy: 'default',
             selection: false,
             loading: false,
             colors: props.colors
@@ -75,7 +76,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         if (!width || !height) return;
 
         // force color update with countries by default
-        
+
         const colors = this.handleColorUpdate({ target: { value: 'country' } } as React.ChangeEvent<HTMLSelectElement>);
         this.setState(prevState => ({ width: width, height: height, colors: { group: 'country', colors: colors } }), () => {
             this.init();
@@ -246,7 +247,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         if (event.target.value == 'ageGroup') {
             // get previously assigned colors
             newColors = this.state.colors.colors;
-            
+
             // get list of all age groups
             const ageGroups = _.uniq(this.state.links.map((link: Link) => link.target.props.ageGroup));
 
@@ -306,6 +307,39 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         return newColors;
     };
+
+
+    handleOrderByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        this.setState(prevState => ({ orderBy: event.target.value }), () => {
+            const targetNodes = this.filterData(this.state.coEx);
+            this.links = targetNodes;
+
+            console.log(this.links);
+
+            this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
+            this.drawCircle();
+        });
+    }
+
+    orderBy(prop: string, links: Array<Link>): Array<Link> {
+        switch (prop) {
+            case 'default':
+                return _.orderBy(links, ['props.target.name'], ['desc']);
+            case 'alpha':
+                return _.orderBy(links, ['props.target.name'], ['desc']);
+            case 'coex':
+                return _.orderBy(links, (link: Link) => {
+                    const sum = links
+                        .filter((l: Link) => l.targetId === link.targetId)
+                        .reduce((acc, cur) => acc + cur.props.data.count, 0);
+                    return sum;
+                }, ['desc']);
+            case 'age':
+                return _.orderBy(links, ['target.props.age'], ['desc']);
+            default:
+                return _.orderBy(links, ['target.props.name'], ['desc']);
+        }
+    }
 
     handleGroupByChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const newColors = this.handleColorUpdate(event);
@@ -448,24 +482,21 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 });
 
                 return link.links;
-            })
-            .flat()
-            // sort by group and within each group by age
-            .sort((a: Link, b: Link) => {
-                if (a.props.group > b.props.group) return 1;
-                if (a.props.group < b.props.group) return -1;
-                if (a.target.props.age > b.target.props.age) return 1;
-                if (a.target.props.age < b.target.props.age) return -1;
-                return 0;
             });
 
-        const unique = _.uniqBy(grouped, (link: Link) => link.targetId);
+        const sorted = groupData
+            .map((group) => {
+                return this.orderBy(this.state.orderBy, group.links);
+            })
+            .flat();
+
+        const unique = _.uniqBy(sorted, (link: Link) => link.targetId);
 
         // set angleScale domain to number of unique target nodes
         this.angleScale.domain([0, unique.length]); // == index of target node
 
         // set nodeRScale domain to maxCount
-        this.nodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
+        this.nodeRScale.domain([Math.min(...sorted.map(g => g.props.data.count)), Math.max(...sorted.map(g => g.props.data.count))]);
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
         unique.forEach((link: Link, index: number) => {
@@ -477,7 +508,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             });
         });
 
-        return grouped;
+        return sorted;
     }
 
     getAngle(index: number): number {
@@ -1508,6 +1539,15 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                             <option value='sex'>Sex</option>
                             <option value='ageGroup'>Age Group</option>
                             <option value='living'>Living</option>
+                        </select>
+                    </div>
+                    <div className='block'>
+                        <label htmlFor='co-ex'>Order by:</label>
+                        <select id='order-by' value={this.state.orderBy} onChange={this.handleOrderByChange}>
+                            <option value='default'>Default</option>
+                            <option value='alpha'>Alphabetical</option>
+                            <option value='coex'>Co-Exhibition Count</option>
+                            <option value='age'>Relative Age</option>
                         </select>
                     </div>
                     <div className='block'>
