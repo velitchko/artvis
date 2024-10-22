@@ -20,22 +20,22 @@ const HomePage = (props: any) => {
 
         navigate('/artist/' + id);
     }
-    
-    
-        return (
-            <React.StrictMode>
-                <NavigationComponent showHeading={ false }/>
-                <ParticlesComponent />
-                <div className="w-full flex h-[75vh] justify-center items-center mx-auto">
-                    <HeadingComponent {...title} />
-                    <div className="fixed w-full h-full">
-                        <div className="w-10/12 h-screen translate-y-[60%] flex-col justify-center mx-auto">
-                            <SearchComponent query={ GET_EVERYTHING } onClick={ handleClick }/>
-                        </div>
+
+
+    return (
+        <React.StrictMode>
+            <NavigationComponent showHeading={false} />
+            <ParticlesComponent />
+            <div className="w-full flex h-[75vh] justify-center items-center mx-auto">
+                <HeadingComponent {...title} />
+                <div className="fixed w-full h-full">
+                    <div className="w-10/12 h-screen translate-y-[60%] flex-col justify-center mx-auto">
+                        <SearchComponent query={GET_EVERYTHING} onClick={handleClick} />
                     </div>
                 </div>
-            </React.StrictMode>
-        );
+            </div>
+        </React.StrictMode>
+    );
 
 }
 
