@@ -1,100 +1,149 @@
 export const schema = `type Artist {
-	artistsExhibitedWith: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: IN, properties: "ExhibitedWithProperties")
-	birthdate: Date!
-	birthplace: String!
-	country: String!
-	createdCatalogueEntries: [CatalogueEntry!]! @relationship(type: "CREATED", direction: OUT)
-	createdItemItems: [Item!]! @relationship(type: "CREATED_ITEM", direction: OUT)
-	deathdate: Date!
-	deathplace: String!
-	exhibitedExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED", direction: OUT, properties: "ExhibitedProperties")
-	exhibitedWithArtists: [Artist!]! @relationship(type: "EXHIBITED_WITH", direction: OUT, properties: "ExhibitedWithProperties")
+	artistsCoExhibited: [Artist!]! @relationship(type: "CO_EXHIBITED", direction: IN, properties: "CoExhibitedProperties")
+	artistsCoExhibitedTotal: [Artist!]! @relationship(type: "CO_EXHIBITED_TOTAL", direction: IN, properties: "CoExhibitedTotalProperties")
+	birthdate: String
+	birthplace: String
+	birthplace_tgn: BigInt
+	birthyear: BigInt
+	coExhibitedArtists: [Artist!]! @relationship(type: "CO_EXHIBITED", direction: OUT, properties: "CoExhibitedProperties")
+	coExhibitedTotalArtists: [Artist!]! @relationship(type: "CO_EXHIBITED_TOTAL", direction: OUT, properties: "CoExhibitedTotalProperties")
+	collective: String
+	country: String
+	createdItems: [Item!]! @relationship(type: "CREATED", direction: OUT)
+	deathdate: String
+	deathplace: String
+	deathplace_tgn: BigInt
+	deathyear: BigInt
+	exhibitedAtExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED_AT", direction: OUT, properties: "ExhibitedAtProperties")
+	exile: String
 	firstname: String!
-	id: String!
+	id: BigInt
 	lastname: String!
+	name_variant: String!
+	occupation: String
+	pnd: String
+	profession: String
 	sex: String!
-	title: String!
-	wasFeaturedInCatalogues: [Catalogue!]! @relationship(type: "WAS_FEATURED_IN", direction: OUT)
+	sortname: String!
+	status: BigInt
+	study: String
+	ulan: String
 }
 
-type Catalogue {
-	artistsWasFeaturedIn: [Artist!]! @relationship(type: "WAS_FEATURED_IN", direction: IN)
-	author: String!
-	editor: String!
-	id: String!
-	isCatalogueForExhibitions: [Exhibition!]! @relationship(type: "IS_CATALOGUE_FOR", direction: OUT)
-	place: String!
-	publication_date: String!
-	publisher_id: String!
-	subtitle: String!
-	title: String!
-	type: String!
+interface CoExhibitedProperties @relationshipProperties {
+	count: BigInt!
+	year: BigInt!
 }
 
-type CatalogueEntry {
-	artistsCreated: [Artist!]! @relationship(type: "CREATED", direction: IN)
-	catalogue_id: String!
-	display_creator: String
-	display_date: String
-	entryInExhibitions: [Exhibition!]! @relationship(type: "ENTRY_IN", direction: OUT)
-	id: String!
-	id_exhibition: String!
-	id_item: String!
-	id_person: String!
-	itemsVerifiedInCatalogueEntry: [Item!]! @relationship(type: "VERIFIED_IN_CATALOGUE_ENTRY", direction: IN)
-	style: String
-	technique: String
-	title: String
-	type: String!
+interface CoExhibitedTotalProperties @relationshipProperties {
+	count: BigInt!
 }
 
-interface ExhibitedProperties @relationshipProperties {
-	id: String!
-	title: String!
-}
-
-interface ExhibitedWithProperties @relationshipProperties {
-	enddate: BigInt
-	exhibitionId: String!
-	startdate: BigInt!
-	title: String!
+interface ExhibitedAtProperties @relationshipProperties {
+	year: BigInt!
 }
 
 type Exhibition {
-	artistsExhibited: [Artist!]! @relationship(type: "EXHIBITED", direction: IN, properties: "ExhibitedProperties")
-	catalogueEntriesEntryIn: [CatalogueEntry!]! @relationship(type: "ENTRY_IN", direction: IN)
-	cataloguesIsCatalogueFor: [Catalogue!]! @relationship(type: "IS_CATALOGUE_FOR", direction: IN)
-	enddate: BigInt
-	id: String!
+	artistsExhibitedAt: [Artist!]! @relationship(type: "EXHIBITED_AT", direction: IN, properties: "ExhibitedAtProperties")
+	displaydate: String
+	enddate: String
+	endyear: BigInt
+	id: BigInt!
+	itemsWasExhibitedAt: [Item!]! @relationship(type: "WAS_EXHIBITED_AT", direction: IN)
 	organizer: String
-	startdate: BigInt
-	title: String
-	tookPlaceInHosts: [Host!]! @relationship(type: "TOOK_PLACE_IN", direction: OUT)
-	type: String
+	organizer_type: String
+	organizersOrganized: [Organizer!]! @relationship(type: "ORGANIZED", direction: IN, properties: "OrganizedProperties")
+	organizing_committee: String
+	price: String
+	startdate: String!
+	startyear: BigInt!
+	status: BigInt!
+	title: String!
+	title_alternate: String
+	title_short: String
+	tookPlaceAtLocations: [Location!]! @relationship(type: "TOOK_PLACE_AT", direction: OUT)
+	type: String!
+	venuesHeld: [Venue!]! @relationship(type: "HELD", direction: IN, properties: "HeldProperties")
 }
 
-type Host {
-	country: String!
-	exhibitionsTookPlaceIn: [Exhibition!]! @relationship(type: "TOOK_PLACE_IN", direction: IN)
-	id: String!
-	latitude: String!
-	longitude: String!
+type Geoname {
+	country_code: String
+	id: BigInt!
+	locationsLocatedAt: [Location!]! @relationship(type: "LOCATED_AT", direction: IN)
 	name: String!
-	place: String!
-	place_tgn: String!
-	town: String!
+	name_alternate: String
+	parent_path: String!
+	status: BigInt!
+	tgn: BigInt!
+	tgn_parent: BigInt
 	type: String!
 }
 
+interface HeldProperties @relationshipProperties {
+	date: String!
+	year: BigInt!
+}
+
 type Item {
-	artistsCreatedItem: [Artist!]! @relationship(type: "CREATED_ITEM", direction: IN)
-	catalogue_id: String
-	creator_date: String
-	display_date: String
-	id: String!
+	artistsCreated: [Artist!]! @relationship(type: "CREATED", direction: IN)
+	description: String
+	displaycreator: String
+	flags: BigInt!
+	id: BigInt!
 	measurements: String
+	style: BigInt
 	technique: String
 	title: String
+	title_alternate: String
+	type: BigInt
+	wasExhibitedAtExhibitions: [Exhibition!]! @relationship(type: "WAS_EXHIBITED_AT", direction: OUT)
+}
+
+type Location {
+	country: String
+	dissolutiondate: String
+	dissolutionyear: BigInt
+	exhibitionsTookPlaceAt: [Exhibition!]! @relationship(type: "TOOK_PLACE_AT", direction: IN)
+	flags: BigInt!
+	foundingdate: BigInt
+	gnd: String
+	id: BigInt!
+	locatedAtGeonames: [Geoname!]! @relationship(type: "LOCATED_AT", direction: OUT)
+	name: String!
+	place: String
+	place_tgn: BigInt
+	status: BigInt!
 	type: String
-	verifiedInCatalogueEntryCatalogueEntries: [CatalogueEntry!]! @relationship(type: "VERIFIED_IN_CATALOGUE_ENTRY", direction: OUT)
+	ulan: String
+}
+
+interface OrganizedProperties @relationshipProperties {
+	date: String!
+	year: BigInt!
+}
+
+type Organizer {
+	dissolutiondate: String
+	dissolutionyear: BigInt
+	flags: BigInt!
+	foundingdate: BigInt
+	gnd: String
+	id: BigInt!
+	name: String!
+	organizedExhibitions: [Exhibition!]! @relationship(type: "ORGANIZED", direction: OUT, properties: "OrganizedProperties")
+	place: String
+	place_tgn: BigInt
+	status: BigInt!
+	type: String!
+}
+
+type Venue {
+	flags: BigInt!
+	heldExhibitions: [Exhibition!]! @relationship(type: "HELD", direction: OUT, properties: "HeldProperties")
+	id: BigInt!
+	name: String!
+	place: String!
+	place_tgn: BigInt!
+	status: BigInt!
+	type: String
 }`;
