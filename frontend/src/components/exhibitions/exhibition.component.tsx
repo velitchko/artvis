@@ -119,7 +119,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		//this.setState({ compareWith: null });
 
 		//TODO: change logic... query for exhibitions by artist
-		const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
+		const artist = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === artistId);
 
 		if (artist) {
 			// this.setState({ compareWith: artist });
@@ -191,7 +191,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 		//put exhibitions into a map with exhibition id as key and compute the number of artworks in each exhibition
-		this.state.artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
+		this.state.artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
 			// check if source artist also exhibited in this exhibition
 			//const sourceExhibition = this.state.artist.exhibitedExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
 
@@ -388,7 +388,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		let count = 0;
 
 		this.links.forEach((l: Link) => {
-			const link = compareWith?.exhibitedExhibitions?.find((e: Exhibition) => l.target.id === e.id);
+			const link = compareWith?.exhibitedAtExhibitions?.find((e: Exhibition) => l.target.id === e.id);
 
 			if (link) count++;
 		});
@@ -425,14 +425,14 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 									<div className="float-left text-left pl-2">
 										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-blue-300 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
 										<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
-										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
+										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedAtExhibitions)} exhibitions | {this.state.artist.exhibitedAtExhibitions?.length} artworks</h3>
 									</div>
 
 									{this.state.compareWith &&
 										<div className="float-right text-right pr-2">
 											<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-300 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
 											<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
-											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
+											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedAtExhibitions)} exhibitions | {this.state.compareWith.exhibitedAtExhibitions?.length} artworks</h3>
 
 										</div>
 									}
@@ -446,7 +446,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 								{this.showNetwork &&
-									<ExhibitionLinechartComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
+									<ExhibitionLinechartComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedAtExhibitions} />
 								}
 
 							</div>
@@ -462,13 +462,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 						<div className="lg:row-span-2 md:row-span-1 col-span-2 z-30">
 							<div className="w-full h-full overflow-y-scroll overflow-x-scroll" id="table-container">
-								<EHTableComponent query={GET_EXHIBITIONS_AND_HOSTS} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
+								<EHTableComponent query={GET_EXHIBITIONS_AND_HOSTS} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedAtExhibitions} />
 							</div>
 						</div>
 						<div className="lg:row-span-3 md:row-span-1 col-span-2 z-30">
 							<div className="w-full h-full" id="map-container">
 								{this.showNetwork &&
-									<ExhibitionMapComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedExhibitions} />
+									<ExhibitionMapComponent compareWith={this.state.compareWith} exhibStatistics={this.exhibStatistics} exhibitions={this.state.artist.exhibitedAtExhibitions} />
 								}
 							</div>
 						</div>
