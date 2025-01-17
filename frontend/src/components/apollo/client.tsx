@@ -8,6 +8,7 @@ import {
 
 import { environment } from '../../../environments/environment';
 
+console.log(environment);
 const httpLink: ApolloLink = createHttpLink({
     uri: environment.graphQL
 });
