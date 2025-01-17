@@ -31,10 +31,12 @@ const SearchComponent = (props: any) => {
         value = value.substring(0, 1).toUpperCase() + value.substring(1);
 
         client.query({ query: query, variables: { value: value } }).then((result: any) => {
-            console.log('searched for ' + value); const data = new Array<any>();
+            const data = new Array<any>();
+
             if (result.data.artists) data.push(result.data.artists.map((artist: any) => { return { name: artist.firstname + ' ' + artist.lastname, type: 'Artist', id: artist.id } }));
-            if (result.data.hosts) data.push(result.data.hosts.map((host: any) => { return { name: host.name, type: 'Host', id: host.id } }));
-            if (result.data.exhibition) data.push(result.data.exhibitions.map((exhibition: any) => { return { name: exhibition.title, type: 'Exhibition', id: exhibition.id } }));
+            if (result.data.venues) data.push(result.data.venues.map((venue: any) => { return { name: venue.name, type: 'Venue', id: venue.id } }));
+            if (result.data.exhibitions) data.push(result.data.exhibitions.map((exhibition: any) => { return { name: exhibition.title, type: 'Exhibition', id: exhibition.id } }));
+            if (result.data.organizers) data.push(result.data.organizers.map((organizer: any) => { return { name: organizer.name, type: 'Organizer', id: organizer.id }}));
 
             setResults(data.flat());
             setResultsLoaded(true);

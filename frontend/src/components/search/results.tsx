@@ -8,11 +8,7 @@ const ResultsComponent = (props: any) => {
     const onClick = props.onClick;
     const [showResults, setShowResults] = React.useState(true);
 
-    console.log(results);
-    console.log(value);
-
     const handleSelect = (id: string) => {
-        // console.log(event)
         onClick(id);
         setShowResults(false);
     }
@@ -35,7 +31,7 @@ const ResultsComponent = (props: any) => {
                                         <p className="inline-block" dangerouslySetInnerHTML={{
                                             __html:
                                             result.name.replace(new RegExp(value.current, 'gi'), (match) => {
-                                                return `<b>${match}</b>`
+                                                return `<span class="font-bold bg-amber-300">${match}</span>`
                                             })
                                         }}>
                                         </p>
