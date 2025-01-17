@@ -2,9 +2,9 @@ import * as d3 from 'd3';
 
 export const colors = new Map<string, string>([
     ['Artist', 'bg-red-400'],
-    ['Location', 'bg-amber-400'],
-    ['Venue', 'bg-green-400'],
-    ['Organizing Body', ''],
+    // ['Location', ''],
+    ['Venue', 'bg-lime-400'],
+    ['Organizer', 'bg-orange-400'],
     ['Exhibition', 'bg-indigo-400'],
     // other types
 ]);
