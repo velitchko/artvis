@@ -7,14 +7,17 @@ query Artists ($searchId: String!) {
     artists(where: { id: $searchId }) {
         firstname, 
         lastname,
+        sortname,
         id,
         country,
         sex,
         birthdate,
+        birthyear,
         birthplace,
         deathdate,
+        deathyear,
         deathplace,
-        exhibitedWithArtists {
+        coExhibitedArtists {
             firstname,
             lastname,
             id, 
@@ -24,13 +27,24 @@ query Artists ($searchId: String!) {
             deathdate,
             birthplace,
             deathplace,
-            exhibitedExhibitions {
+            exhibitedAtExhibitions {
                 title,
                 startdate,
                 id
             }  
         }
-        exhibitedExhibitions {
+        coExhibitedTotalArtists {
+            firstname,
+            lastname,
+            id, 
+            country,
+            sex,
+            birthdate,
+            deathdate,
+            birthplace,
+            deathplace
+        }
+        exhibitedAtExhibitions {
             title,
             startdate,
             id
