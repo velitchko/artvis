@@ -1,28 +1,31 @@
 import { gql } from '@apollo/client';
 
-const GET_EVERYTHING = gql`
-query GetEverything($value: String!) { 
-    artists(where: { 
-        OR: [
-            { firstname_CONTAINS: $value },
-            { lastname_CONTAINS: $value }
-        ]
-    }) 
+const GET_EVERYTHING = gql`query GetEverything($value: String!) { 
+    artists(where: { sortname_CONTAINS: $value }) 
     {
         firstname, 
         lastname,
         id
     }
 
-    hosts(where: { name_CONTAINS: $value }) {
-        place,
-        name,
-        town,
-        country
+    exhibitions(where: { 
+        OR:  [
+            {title_CONTAINS: $value },
+            {title_alternate_CONTAINS: $value }
+        ]
+    }) {
+        title,
+        id
     }
 
-    exhibitions(where: {title_CONTAINS: $value }) {
-        title
+    organizers(where: { name_CONTAINS: $value }) {
+        name,
+        id
+    }
+
+    venues(where: { name_CONTAINS: $value }) {
+        name,
+        id
     }
 }
 `;
