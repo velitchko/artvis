@@ -194,13 +194,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     drawTimeline(update?: { newYScale?: number, newRScale?: Array<number> }) {
         if (!this.svgTimeLineContainer) return;
 
-        if (!this.state.artist.exhibitedExhibitions) return;
+        if (!this.state.artist.exhibitedAtExhibitions) return;
 
         // draw timeline of artists and their exhibitions over time
         // iterate over exhibitions array and calculate total amount of exhibitions per year
         const exhibitionsPerYear = new Map<number, Set<string>>();
         const itemsPerYear = new Map<number, number>();
-        this.state.artist.exhibitedExhibitions.forEach((exhibition: Exhibition) => {
+        this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startdate;
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(exhibition.id);
@@ -531,10 +531,10 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // string == exhib.id, 
         let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
-        this.state.artist.exhibitedWithArtists?.forEach((artist: Artist) => {
-            artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
+        this.state.artist.coExhibitedArtists?.forEach((artist: Artist) => {
+            artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
                 // check if source artist also exhibited in this exhibition
-                const sourceExhibition = this.state.artist.exhibitedExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
+                const sourceExhibition = this.state.artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
 
                 if (!sourceExhibition) return;
 
@@ -557,7 +557,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         });
 
         coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<string> }>, key: string) => {
-            const found: Artist | undefined = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => `${artist.id}` === key);
+            const found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => `${artist.id}` === key);
 
             if (!found) {
                 console.log(key + ' not found');
@@ -602,7 +602,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         // draw bars on each year to compare with other artist
         if (!this.svgTimeLineContainer) return;
 
-        if (!this.state.artist.exhibitedExhibitions) return;
+        if (!this.state.artist.exhibitedAtExhibitions) return;
 
         if (!this.state.compareWith) return;
 
@@ -613,7 +613,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const exhibitionsPerYear = new Map<number, Set<string>>();
         const itemsPerYear = new Map<number, number>();
 
-        this.state.compareWith?.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
+        this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startdate;
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(exhibition.id);
@@ -700,8 +700,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!this.compareTimelineContainer) return;
 
-        const commonExhibitions = this.state.compareWith.exhibitedExhibitions?.filter((exhibition: Exhibition) => {
-            return this.state.artist.exhibitedExhibitions?.find((e: Exhibition) => e.id === exhibition.id);
+        const commonExhibitions = this.state.compareWith.exhibitedAtExhibitions?.filter((exhibition: Exhibition) => {
+            return this.state.artist.exhibitedAtExhibitions?.find((e: Exhibition) => e.id === exhibition.id);
         });
 
         const uniqueCommonExhibitions = Array.from(new Set(commonExhibitions));
@@ -1203,7 +1203,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.setState({ compareWith: null });
 
-        const artist = this.state.artist.exhibitedWithArtists?.find((artist: Artist) => artist.id === artistId);
+        const artist = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === artistId);
 
         if (artist) {
             // this.setState({ compareWith: artist });
@@ -1335,13 +1335,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                                 <div className="float-left text-left pl-2">
                                     <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
                                     <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.artist.birthdate)} ({this.state.artist.birthplace}) - {this.formatDate(this.state.artist.deathdate)} ({this.state.artist.deathplace})</h2>
-                                    <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedExhibitions)} exhibitions | {this.state.artist.exhibitedExhibitions?.length} artworks</h3>
+                                    <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedAtExhibitions)} exhibitions | {this.state.artist.exhibitedAtExhibitions?.length} artworks</h3>
                                 </div>
                                 {this.state.compareWith &&
                                     <div className="float-right text-right pr-2">
                                         <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
                                         <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.compareWith.birthdate)} ({this.state.compareWith.birthplace}) - {this.formatDate(this.state.compareWith.deathdate)} ({this.state.compareWith.deathplace})</h2>
-                                        <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedExhibitions)} exhibitions | {this.state.compareWith.exhibitedExhibitions?.length} artworks</h3>
+                                        <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedAtExhibitions)} exhibitions | {this.state.compareWith.exhibitedAtExhibitions?.length} artworks</h3>
                                     </div>
                                 }
                                 <svg id="artist-detail-timeline"></svg>
@@ -1357,7 +1357,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         </div>
                         <div className="lg:row-span-4 md:row-span-1 col-span-2 z-30">
                             <div className="w-full h-full overflow-y-scroll" id="table-container">
-                                <TableComponent ref={this.table} query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedExhibitions} />
+                                <TableComponent ref={this.table} query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedAtExhibitions} />
                             </div>
                         </div>
                         <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
