@@ -5,6 +5,13 @@ import { DocumentNode } from '@apollo/client';
 import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
 import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Host } from '../../models/host.model';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons/faPeopleGroup';
+import { faPerson } from '@fortawesome/free-solid-svg-icons/faPerson';
+import { faGavel } from '@fortawesome/free-solid-svg-icons/faGavel';
+
+
 
 type IResults = {
     artists?: Array<any>,
@@ -52,8 +59,11 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                 prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     
-                    const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
-                    metaExhibition.isCommon = isCommon ? true : false;
+                    let isCommon = false;
+                    
+                    isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id) ? true : false;
+                    
+                    metaExhibition.isCommon = isCommon;
                     metaExhibition.percentBase = exhibition.percentBase;
                     metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
                     
@@ -69,7 +79,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
 
                 return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
             });
-        }
+        } 
     }
 
     setup() {
@@ -165,7 +175,14 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
             // use dir to sort ascending or descending
         } else {
             // else sort by property
-            sorted = _.sortBy(this.state.results.exhibitions, sortBy);
+            if(property === 'host') {
+                sorted = _.sortBy(this.state.results.exhibitions, exhibition => {
+                    return this.checkForHost(exhibition.tookPlaceInHosts).place;
+                });
+            } else {
+                sorted = _.sortBy(this.state.results.exhibitions, sortBy);
+            }
+            
             
             if(this.state.dir === 'desc') sorted.reverse();
             
@@ -179,45 +196,86 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
     exhibitionIsCommon(e: MetaExhibition): boolean {
         // create array of exhibition ids and isCommon property 
         return e.isCommon ? true : false;
+    };
+
+     /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
+    checkForHost(hosts: Host[]): Host {
+
+        const noHost: Host = {
+            id: `-1`,
+            country: "\\N",
+            name: `NA`,
+            latitude: `9999999`,
+            longitude: `9999999`,
+            place: `NA`,
+            place_tgn: `NA`,
+            town: `NA`,
+            type: `NA`,
+            exhibitionsTookPlaceIn: []
+        }
+
+        if (hosts[0]) {
+            return hosts[0];
+        }
+        else return noHost;
+    }
+
+    reset() {
+        // set isCommon to false for all exhibitions
+        this.setState((prevState: any) => { 
+            const exhibitions = new Array<MetaExhibition>();
+            prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
+                const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: exhibition.percentBase };
+                exhibitions.push(metaExhibition);
+            });
+
+            // sort by startdate
+            exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
+                if(a.startdate < b.startdate) return -1;
+                if(a.startdate > b.startdate) return 1;
+                return 0;
+            });
+
+            return { ...prevState,  compareWith: null, results: { ...prevState.results, exhibitions: exhibitions } } 
+        });
     }
 
     render() {
-
         return (
             <>
-                <table className="text-left text-gray-500">
-                    <thead className="text-xs bg-gray-200 text-gray-700 uppercase sticky">
+                <table className="text-left text-black">
+                    <thead className="text-xs bg-black text-white uppercase sticky">
                         <tr>
                             {/* <th scope="col" className="px-6 py-3">
                                 ID
                             </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('type')}>Type</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('startdate')}>Date</button>
                             </th>
-                            {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            {/* <th scope="col" className="px-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('enddate')}>End Date</button>
                             </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('title')}>Title</button>
+                            <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('host')}>City (Country)</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Catalogue Entries</button>
+                            <th scope="col" className="px-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('title')}>Exhibition Title</button>
                             </th>
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('percentBase')}>Base %Entries</button>
+                            <th scope="col" className="px-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('catalogueEntriesEntryIn.length')}>Nr. Artworks</button>
+                            </th>
+                            <th scope="col" className="px-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('percentBase')}>Base Contribution</button>
                             </th>
                             { 
-                            this.state.compareWith && <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('percentCompare')}>Compare %Entries</button>
+                            this.state.compareWith && <th scope="col" className="px-2 border-r border-gray-300">
+                                <button onClick={() => this.sort('percentCompare')}>Compare Contribution</button>
                             </th> 
                             }
-                            {/* <th scope="col" className="px-6 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('tookPlaceInHosts.length')}>Hosts</button>
-                            </th> */}
-                            <th scope="col" className="px-6 py-2 border-r border-gray-300">
+                            <th scope="col" className="px-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
                             </th>
                         </tr>
@@ -248,17 +306,24 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                                 {/* <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                     {exhibition.id}
                                 </th> */}
-                                <td className="px-6 py-4">{exhibition.type}</td>
-                                <td className="px-6 py-4">{exhibition.startdate}</td>
-                                {/* <td className="px-6 py-4">{exhibition.enddate}</td> */}
-                                <td className="px-6 py-4">{exhibition.title}</td>
-                                <td className="px-6 py-4 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
-                                <td className="px-6 py-4 text-right">{exhibition.percentBase}%</td>
+                                <td className="px-2 text-center">
+                                    
+                                    {/* use fontawesome icons depending on type */}
+                                    {exhibition.type === 'group' && <FontAwesomeIcon icon={faPeopleGroup} data-toggle="tooltip" title="Group Exhibition"/>}
+                                    {exhibition.type === 'auction' && <FontAwesomeIcon icon={faGavel} data-toggle="tooltip" title="Auction"/>}
+                                    {exhibition.type === 'solo' && <FontAwesomeIcon icon={faPerson} data-toggle="tooltip" title="Solo Exhibition" />}
+                                </td>
+                                <td className="px-2">{exhibition.startdate}</td>
+                                <td className="px-2">{this.checkForHost(exhibition.tookPlaceInHosts).place} ({this.checkForHost(exhibition.tookPlaceInHosts).country})</td>
+                                {/* <td className="px-4">{exhibition.enddate}</td> */}
+                                <td className="px-2">{exhibition.title}</td>
+                                <td className="px-2 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
+                                <td className="px-2 text-right">{exhibition.percentBase}%</td>
                                 {
-                                    this.state.compareWith && <td className="px-6 py-4 text-right">{exhibition.percentCompare}%</td>
+                                    this.state.compareWith && <td className="px-2 text-right">{exhibition.percentCompare}%</td>
                                 }
-                                {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
-                                <td className="px-6 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
+                                {/* <td className="px-2">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
+                                <td className="px-2 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
                             </tr>
                         
                         ))}
