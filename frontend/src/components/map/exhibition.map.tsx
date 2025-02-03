@@ -143,8 +143,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         //sort descending by artworksbase so bigger circles are drawn before smaller ones and there are less problems with overlap
         this.exhibStats.sort((a, b) => { return b.artworksBase - a.artworksBase });
-        console.log("sorted");
-        console.log(this.exhibStats);
+        /* console.log("sorted");
+        console.log(this.exhibStats); */
 
         /*         //PIE CHARTS________________________________________________
                 // Pie chart variables:
@@ -402,8 +402,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         this.exhibStats.sort((a, b) => { return b.artworksBase - a.artworksBase });
 
-        console.log("half circles exhibsort");
-        console.log(this.exhibStats);
+        /* console.log("half circles exhibsort");
+        console.log(this.exhibStats); */
 
         const artworksPerCityTotal = new Map<string, number>();
         const artworksPerCity = new Map<string, number>();
@@ -428,10 +428,10 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             }
         });
 
-        console.log("artworks per city");
+        /* console.log("artworks per city");
         console.log(artworksPerCity);
         console.log("artworks per city total");
-        console.log(artworksPerCityTotal);
+        console.log(artworksPerCityTotal); */
 
 
 
@@ -449,8 +449,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
         artworks.sort((a, b) => b.count - a.count);
 
-        console.log("sorted artworks");
-        console.log(artworks);
+        /* console.log("sorted artworks");
+        console.log(artworks); */
 
         const artworksTotal: Array<{ latitude: string, longitude: string, count: number }> = [];
         artworksPerCityTotal.forEach((value: number, key: string) => {
@@ -461,8 +461,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         });
 
         artworksTotal.sort((a, b) => b.count - a.count);
-        console.log("sorted artworkstotal");
-        console.log(artworksTotal);
+        /* console.log("sorted artworkstotal");
+        console.log(artworksTotal); */
 
         const totalHalfCircles = this.circleContainer?.selectAll('.total-half-circle');
 
@@ -734,7 +734,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
     componentDidUpdate(prevProps: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width?: number, height?: number, mouseOverCallBack?: Function }>, prevState: Readonly<{ compareWith: Artist | null, exhibStatistics: Array<MetaExhibition>, exhibitions: Array<Exhibition> | undefined, width: number, height: number, coEx: number, selection: boolean }>, snapshot?: any): void {
 
-        console.log("component did update");
+        //console.log("component did update");
         //console.log(prevProps.compareWith);
         //console.log(this.props.compareWith);
         // set state if props.compareWith changes and update results.exhibitions
@@ -851,8 +851,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                     }
 
                 });
-                console.log("common");
-                console.log(commonExhibitions);
+                /* console.log("common");
+                console.log(commonExhibitions); */
 
 
                 const artworksBase = new Map<string, number>();
@@ -860,7 +860,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                 commonExhibitions.forEach((exhibition: MetaExhibition) => {
                     if (exhibition.tookPlaceInHosts[0]) {
-                        console.log("in host");
+                        //console.log("in host");
                         const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
 
                         if (artworksCompare.has(latLong)) {
@@ -884,11 +884,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                         }
                     }
                 });
-                console.log("artworksbase");
+                /* console.log("artworksbase");
                 console.log(artworksBase);
 
                 console.log("artworkscompare");
-                console.log(artworksCompare);
+                console.log(artworksCompare); */
 
 
 
@@ -915,8 +915,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const compareHalfCircles = this.circleContainer?.selectAll('.compare-half-circle');
 
                 const artBaseSorted = new Map([...artworksBase.entries()].sort((a, b) => b[1] - a[1]));
-                console.log("artbase sorted");
-                console.log(artBaseSorted);
+                /* console.log("artbase sorted");
+                console.log(artBaseSorted); */
 
                 artBaseSorted.forEach((value: number, key: string) => {
                     //draw common exhibitions with circles for both artists
@@ -1113,7 +1113,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
     }
 
     handleMarkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        console.log("marker change " + event.target.value);
+        //console.log("marker change " + event.target.value);
 
         this.setState(prevState => ({ ...prevState, marks: event.target.value }), () => {
             if (event.target.value === "circles") {
@@ -1152,8 +1152,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 <div className="absolute w-auto left-3">
                     <div className="block">
                         <select id="order-by" onChange={this.handleMarkChange}>
-                            <option value="circles">Number of artist's exhibited paintings</option>
-                            <option value="halfcircles">Total vs. artist's paintings in exhibitions</option>
+                            <option value="circles">Number of artist's exhibited artworks</option>
+                            <option value="halfcircles">Total vs. artist's artworks in exhibitions</option>
                         </select>
                     </div>
                 </div>

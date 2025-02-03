@@ -43,8 +43,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
     componentDidMount(): void {
         this.setup();
-        console.log("table compare did mount");
-        console.log(this.state.compareWith);
+        /* console.log("table compare did mount");
+        console.log(this.state.compareWith); */
     }
 
     componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: string, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
@@ -83,8 +83,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
         //const ids = +this.state.baseId;
 
-        console.log("table compare ");
-        console.log(this.state.compareWith);
+        /*  console.log("table compare ");
+         console.log(this.state.compareWith); */
         this.getResults(this.state.query, ids);
     }
 
@@ -152,7 +152,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
         if (!exhibition) return 0;
 
         // get length of catalogueEntriesEntryIn
-        const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+        //const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+        const baseLength = exhibition.catalogueEntriesEntryIn?.length;
 
 
         // get amount of catalogueEntries with id_person === id
