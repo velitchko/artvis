@@ -1,17 +1,27 @@
 import { Artist } from "./artist.model";
-import { Catalogue } from "./catalogue.model";
-import { CatalogueEntry } from "./catalogueEntry.model";
-import { Host } from "./host.model";
+import { Item } from "./item.model";
+import { Organizer } from "./organizer.model";
+import { Venue } from "./venue.model";
 
 export type Exhibition = {
-	id: string;
-	startdate: number;
-	enddate: number;
+	id: number;
+	startdate: Date;
+	startyear: number;
+	enddate: Date;
+	endyear: number;
+	displaydate: String,
 	organizer: String;
-	title: string;
+	organizer_type: String;
+	organizing_committee: String;
+	price: String;
+	status: number;
+	title: String;
+	title_short: String;
+	title_alternate: String;
 	type: String;
-	catalogueEntriesEntryIn: Array<CatalogueEntry>
-	tookPlaceInHosts: Array<Host>;
-	cataloguesIsCatalogueFor: Array<Catalogue>;
-	artistsExhibited: Array<Artist>;
+	tookPlaceAtLocations: Array<Location>;
+	venuesHeldAt: Array<Venue>;
+	artistsExhibitedAt: Array<Artist>;
+	organizersOrganizedBy: Array<Organizer>;
+	itemsWasExhibitedAt: Array<Item>;
 };
