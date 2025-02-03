@@ -198,14 +198,14 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // draw timeline of artists and their exhibitions over time
         // iterate over exhibitions array and calculate total amount of exhibitions per year
-        const exhibitionsPerYear = new Map<number, Set<string>>();
+        const exhibitionsPerYear = new Map<number, Set<number>>();
         const itemsPerYear = new Map<number, number>();
         this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startdate;
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(exhibition.id);
             } else {
-                exhibitionsPerYear.set(year, new Set<string>([exhibition.id]));
+                exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
             }
 
             if (itemsPerYear.has(year)) {
@@ -530,7 +530,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         };
 
         // string == exhib.id, 
-        let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<string> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<string> }>>();
+        let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<number> }>>();
         this.state.artist.coExhibitedArtists?.forEach((artist: Artist) => {
             artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
                 // check if source artist also exhibited in this exhibition
@@ -542,21 +542,21 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 const key = `${artist.id}`;
 
                 if (coexhibMap.has(key)) {
-                    const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<string> }>;
-                    const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<string> }) => d.year === year);
+                    const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
+                    const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
 
                     if (yearData) {
                         yearData.exhibitionIds.add(exhibition.id);
                     } else {
-                        value.add({ year, exhibitionIds: new Set<string>([exhibition.id]) });
+                        value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
                     }
                 } else {
-                    coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<string> }>([{ year, exhibitionIds: new Set<string>([exhibition.id]) }]));
+                    coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
                 }
             });
         });
 
-        coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<string> }>, key: string) => {
+        coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<number> }>, key: string) => {
             const found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => `${artist.id}` === key);
 
             if (!found) {
@@ -572,7 +572,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             };
 
             // iterate over value set
-            value.forEach((item: { year: number, exhibitionIds: Set<string> }) => {
+            value.forEach((item: { year: number, exhibitionIds: Set<number> }) => {
                 const link: Link = {
                     sourceId: `${source.id}`,
                     targetId: `${target.id}`,
@@ -610,7 +610,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         // from this.state.compareWith artist calculate total amount of exhibitions per year
         // iterate over exhibitions array and calculate total amount of exhibitions per year
-        const exhibitionsPerYear = new Map<number, Set<string>>();
+        const exhibitionsPerYear = new Map<number, Set<number>>();
         const itemsPerYear = new Map<number, number>();
 
         this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
@@ -618,7 +618,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(exhibition.id);
             } else {
-                exhibitionsPerYear.set(year, new Set<string>([exhibition.id]));
+                exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
             }
 
             if (itemsPerYear.has(year)) {
@@ -1188,7 +1188,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
     }
 
-    onArtistChange(artistId: string | null) {
+    onArtistChange(artistId: Number | null) {
         if (!artistId) {
             // clear compare timeline
             this.compareTimelineContainer?.selectAll('.compare-abs-half-circle').remove();
@@ -1282,7 +1282,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         return deathdate.getFullYear() - birthdate.getFullYear();
     }
 
-    nodeClickedCallback(id: string) {
+    nodeClickedCallback(id: Number) {
         this.onArtistChange(id);
     }
 

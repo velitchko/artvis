@@ -74,7 +74,7 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
     drawTimeline() {
         if(!this.svgContainer) return;
 
-        if(!this.state.artist.exhibitedExhibitions) return;
+        if(!this.state.artist.exhibitedAtExhibitions) return;
 
         // draw timeline of artists and their exhibitions over time
         const timeline = this.svgContainer.select('.timeline-container');
@@ -84,7 +84,7 @@ class ArtistCardComponent extends React.Component<{ artist: Artist, width: numbe
         // iterate over exhibitions array and calculate total amount of exhibitions per year
         const exhibitionsPerYear = new Map<number, number>();
         
-        this.state.artist.exhibitedExhibitions
+        this.state.artist.exhibitedAtExhibitions
         // get unique ids 
         .filter((exhibition, index, self) => self.findIndex(e => e.id === exhibition.id) === index)
         .forEach((exhibition: Exhibition) => {

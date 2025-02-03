@@ -36,7 +36,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     artists.forEach((artist: Artist) => {
         // ADD ARTIST TO MAP
         artistExhibitionCountPerYear.set(artist.id, new Map<number, number>());
-        artist.exhibitedExhibitions?.filter((exhibition: Exhibition, index, self) => self.findIndex((t) => t.id === exhibition.id) === index)
+        artist.exhibitedAtExhibitions?.filter((exhibition: Exhibition, index, self) => self.findIndex((t) => t.id === exhibition.id) === index)
             .forEach((exhibition: Exhibition) => {
                 // save count per year for each artist
                 const count = totalYearCount.get(+exhibition.startdate);
@@ -185,7 +185,7 @@ const hierarchicalClustering = (similarityScores: Array<Array<number>>) => {
         setArtists(new Array<Artist>());
 
         const baseArtist = objects.find((artist: Artist) => artist.id === id);
-        const aExhibitions = baseArtist?.exhibitedExhibitions?.filter((exhibition: Exhibition, index, self) => self.findIndex((t) => t.id === exhibition.id) === index)
+        const aExhibitions = baseArtist?.exhibitedAtExhibitions?.filter((exhibition: Exhibition, index: number, self) => self.findIndex((t) => t.id === exhibition.id) === index)
             .map((exhibition: Exhibition) => +exhibition.startdate);
         const aExhibitionsCount = new Map<number, number>();
         aExhibitions?.filter((year: number) => year <= 1915)
@@ -207,7 +207,7 @@ const hierarchicalClustering = (similarityScores: Array<Array<number>>) => {
 
         objects.forEach((b: Artist) => {
             // const aExhibitions = a.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);
-            const bExhibitions = b.exhibitedExhibitions?.filter((exhibition: Exhibition, index, self) => self.findIndex((t) => t.id === exhibition.id) === index)
+            const bExhibitions = b.exhibitedAtExhibitions?.filter((exhibition: Exhibition, index: number, self) => self.findIndex((t) => t.id === exhibition.id) === index)
                 .map((exhibition: Exhibition) => +exhibition.startdate);
             // const aExhibitionsCount = new Map<number, number>();
             const bExhibitionsCount = new Map<number, number>();
@@ -271,9 +271,9 @@ const hierarchicalClustering = (similarityScores: Array<Array<number>>) => {
                 break;
             case 'count':
                 objects.sort((a: Artist, b: Artist) => {
-                    return a.exhibitedExhibitions && b.exhibitedExhibitions ? a.exhibitedExhibitions.length - b.exhibitedExhibitions.length : 0;
+                    return a.exhibitedAtExhibitions && b.exhibitedAtExhibitions ? a.exhibitedAtExhibitions.length - b.exhibitedAtExhibitions.length : 0;
                 });
-                break;
+                break;  
             case 'age':
                 break;
             case 'country':

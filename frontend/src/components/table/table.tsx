@@ -4,29 +4,27 @@ import client from '../apollo/client';
 import { DocumentNode } from '@apollo/client';
 import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
-import { Host } from '../../models/host.model';
+import { Venue } from '../../models/venue.model';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons/faPeopleGroup';
 import { faPerson } from '@fortawesome/free-solid-svg-icons/faPerson';
 import { faGavel } from '@fortawesome/free-solid-svg-icons/faGavel';
+import { Item } from '../../models/item.model';
 
 
 
 type IResults = {
     artists?: Array<any>,
-    hosts?: Array<any>,
+    venues?: Array<any>,
     exhibitions?: Array<any>,
-    catalogues?: Array<any>,
-    catalogueEntries?: Array<any>,
     items?: Array<any>
 };
 
 type MetaExhibition = Exhibition & { isCommon: boolean, percentBase: number, percentCompare: number };
 
-class TableComponent extends React.Component<{ query: DocumentNode, baseId: string, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined }, { query: DocumentNode, baseId: string, compareWith: Artist, results: IResults, loaded: boolean, dir: string }> {
+class TableComponent extends React.Component<{ query: DocumentNode, baseId: Number, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined }, { query: DocumentNode, baseId: Number, compareWith: Artist, results: IResults, loaded: boolean, dir: string }> {
 
-    constructor(props: { query: DocumentNode, baseId: string, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
+    constructor(props: { query: DocumentNode, baseId: Number, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
         super(props);
 
         this.state = {
@@ -34,10 +32,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
             baseId: props.baseId,
             results: {
                 artists: [],
-                hosts: [],
+                venues: [],
                 exhibitions: [],
-                catalogues: [],
-                catalogueEntries: [],
                 items: []
             },
             query: props.query,
@@ -50,7 +46,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
         this.setup();
     }
 
-    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: string, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
+    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: Number, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
         // set state if props.compareWith changes and update results.exhibitions
         if(prevProps.compareWith !== this.props.compareWith) {
             this.setState((prevState: any) => { 
@@ -61,7 +57,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                     
                     let isCommon = false;
                     
-                    isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id) ? true : false;
+                    isCommon = this.props.compareWith?.exhibitedAtExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id) ? true : false;
                     
                     metaExhibition.isCommon = isCommon;
                     metaExhibition.percentBase = exhibition.percentBase;
@@ -90,7 +86,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
         this.getResults(this.state.query, ids);
     }
 
-    getResults(query: DocumentNode, ids: Array<string>) {
+    getResults(query: DocumentNode, ids: Array<Number>) {
         if(this.state.loaded) return;
 
         client.query({
@@ -115,7 +111,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
 
                 exhibitions.forEach((exhibition: Exhibition) => {
                     // if startdate is less than 1905 or enddate is greater than 1915 skip
-                    if(exhibition.startdate < 1905 || exhibition.enddate > 1915) return;
+                    if(Number(exhibition.startyear) < 1905 || Number(exhibition.endyear) > 1915) return;
                     
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
@@ -141,17 +137,17 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
         });
     };
 
-    getPercentage(exhibition: MetaExhibition, id?: string): number {
+    getPercentage(exhibition: MetaExhibition, id?: Number): number {
         if(!id) id = this.props.baseId;
 
         if(!exhibition) return 0;
 
         // get length of catalogueEntriesEntryIn
-        const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+        const baseLength = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated.map(a => a.sortname).includes('\\N')).length;
 
         
         // get amount of catalogueEntries with id_person === id
-        const entries = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === id)?.length;
+        const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated.map(a => Number(a.id)).includes(Number(id)))?.length;
         
         // calculate percentage
         const percentage = (entries / baseLength) * 100;
@@ -199,25 +195,23 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
     };
 
      /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
-    checkForHost(hosts: Host[]): Host {
+    checkForHost(venues: Venue[]): Venue {
 
-        const noHost: Host = {
-            id: `-1`,
-            country: "\\N",
+        console.log(venues);
+
+        const noVenue: Venue = {
+            id: -1,
+            place: "\\N",
             name: `NA`,
-            latitude: `9999999`,
-            longitude: `9999999`,
-            place: `NA`,
             place_tgn: `NA`,
-            town: `NA`,
             type: `NA`,
-            exhibitionsTookPlaceIn: []
+            heldExhibitions: []
         }
 
-        if (hosts[0]) {
-            return hosts[0];
+        if (venues[0]) {
+            return venues[0];
         }
-        else return noHost;
+        else return noVenue;
     }
 
     reset() {
@@ -302,7 +296,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                         ))} */}
     
                         {this.state.results.exhibitions && this.state.results.exhibitions.map((exhibition: MetaExhibition) => (      
-                            <tr className={`${this.exhibitionIsCommon(exhibition) ? 'bg-amber-100' : 'bg-white'} border-b`} key={exhibition.id}>
+                            <tr className={`${this.exhibitionIsCommon(exhibition) ? 'bg-amber-100' : 'bg-white'} border-b`} key={exhibition.id.toString()}>
                                 {/* <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                     {exhibition.id}
                                 </th> */}
@@ -313,17 +307,17 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: stri
                                     {exhibition.type === 'auction' && <FontAwesomeIcon icon={faGavel} data-toggle="tooltip" title="Auction"/>}
                                     {exhibition.type === 'solo' && <FontAwesomeIcon icon={faPerson} data-toggle="tooltip" title="Solo Exhibition" />}
                                 </td>
-                                <td className="px-2">{exhibition.startdate}</td>
-                                <td className="px-2">{this.checkForHost(exhibition.tookPlaceInHosts).place} ({this.checkForHost(exhibition.tookPlaceInHosts).country})</td>
+                                <td className="px-2">{exhibition.startyear.toString()}</td>
+                                <td className="px-2">{this.checkForHost(exhibition.venuesHeldAt).place} ({this.checkForHost(exhibition.venuesHeldAt).place})</td>
                                 {/* <td className="px-4">{exhibition.enddate}</td> */}
                                 <td className="px-2">{exhibition.title}</td>
-                                <td className="px-2 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
+                                <td className="px-2 text-right">{exhibition.itemsWasExhibitedAt && exhibition.itemsWasExhibitedAt.length}</td>
                                 <td className="px-2 text-right">{exhibition.percentBase}%</td>
                                 {
                                     this.state.compareWith && <td className="px-2 text-right">{exhibition.percentCompare}%</td>
                                 }
                                 {/* <td className="px-2">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
-                                <td className="px-2 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
+                                <td className="px-2 text-right">{exhibition.artistsExhibitedAt && _.uniqBy(exhibition.artistsExhibitedAt, (a: Artist) => a.id).length}</td>
                             </tr>
                         
                         ))}
