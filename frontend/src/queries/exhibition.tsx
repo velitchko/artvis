@@ -9,21 +9,23 @@ query Exhibitions($where: ExhibitionWhere) {
         organizer,
         title,
         type,
-        catalogueEntriesEntryIn {
+        itemsWasExhibitedAt {
             id,
-            id_person
+            artistsCreated {
+                id
+            }
         }
-        tookPlaceInHosts {
+        tookPlaceAtLocations {
             id,
             name,
             place,
             country
         }
-        artistsExhibited {
+        artistsExhibitedAt {
             id
         }
     }
-}   
+}    
 `;
 
 export default GET_EXHIBITION;

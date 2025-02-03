@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 
 // TODO: calculate age on the fly
 const GET_ARTIST = gql`
-query Artists ($searchId: String!) { 
+query Artists ($searchId: BigInt!) { 
     artists(where: { id: $searchId }) {
         firstname, 
         lastname,
