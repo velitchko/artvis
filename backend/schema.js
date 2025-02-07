@@ -48,6 +48,7 @@ type Exhibition {
 	displaydate: String
 	enddate: String
 	endyear: BigInt
+	exhibitsItems: [Item!]! @relationship(type: "EXHIBITS", direction: OUT)
 	id: BigInt!
 	itemsWasExhibitedAt: [Item!]! @relationship(type: "WAS_EXHIBITED_AT", direction: IN)
 	organizer: String
@@ -69,6 +70,8 @@ type Exhibition {
 type Geoname {
 	country_code: String
 	id: BigInt!
+    latitude: Float
+    longitude: Float
 	locationsLocatedAt: [Location!]! @relationship(type: "LOCATED_AT", direction: IN)
 	name: String!
 	name_alternate: String
@@ -88,6 +91,7 @@ type Item {
 	artistsCreated: [Artist!]! @relationship(type: "CREATED", direction: IN)
 	description: String
 	displaycreator: String
+	exhibitionsExhibits: [Exhibition!]! @relationship(type: "EXHIBITS", direction: IN)
 	flags: BigInt!
 	id: BigInt!
 	measurements: String
