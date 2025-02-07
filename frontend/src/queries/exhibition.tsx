@@ -18,8 +18,12 @@ query Exhibitions($where: ExhibitionWhere) {
         tookPlaceAtLocations {
             id,
             name,
-            place,
-            country
+            locatedAtGeonames {
+                country_code,
+                latitude,
+                longitude,
+                name
+            }
         }
         artistsExhibitedAt {
             id

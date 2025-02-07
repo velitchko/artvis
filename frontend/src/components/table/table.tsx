@@ -57,7 +57,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                     
                     let isCommon = false;
                     
-                    isCommon = this.props.compareWith?.exhibitedAtExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id) ? true : false;
+                    isCommon = this.props.compareWith?.exhibitedAtExhibitions?.find((exh: Exhibition) => +exh.id === exhibition.id) ? true : false;
                     
                     metaExhibition.isCommon = isCommon;
                     metaExhibition.percentBase = exhibition.percentBase;
@@ -75,8 +75,6 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
 
                 return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
             });
-        
-            console.log(this.state.results.exhibitions);
         } 
     }
 
@@ -85,7 +83,6 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
         if(!ids) return;
 
         this.getResults(this.state.query, ids);
-        console.log(this.state.results.exhibitions);
     }
 
     getResults(query: DocumentNode, ids: Array<Number>) {
@@ -139,7 +136,6 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                     exhibition.percentBase = this.getPercentage(exhibition);
                 });
 
-                console.log(this.state.results.exhibitions);
                 // force update
                 this.setState((prevState: any) => { return { ...prevState } });
             });
@@ -152,15 +148,15 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
 
         if(!exhibition) return 0;
 
-        // get length of catalogueEntriesEntryIn
-        const baseLength = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated.map(a => a.sortname).includes('\\N')).length;
+        const totalArtworksExhibited = exhibition.itemsWasExhibitedAt?.length;
+        const artWorksByBaseArtist = exhibition.itemsWasExhibitedAt?.filter((item: Item) => item.artistsCreated.find((artist: Artist) => artist.id === id)).length;
 
-        
-        // get amount of catalogueEntries with id_person === id
-        const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated.map(a => Number(a.id)).includes(Number(id)))?.length;
-        
+        // console.log(exhibition);
+        // console.log(totalArtworksExhibited, artWorksByBaseArtist);
+        // console.log('-------')
+
         // calculate percentage
-        const percentage = (entries / baseLength) * 100;
+        const percentage = (artWorksByBaseArtist / totalArtworksExhibited) * 100;
 
         return +percentage.toFixed(2);
     }
@@ -183,7 +179,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
             // else sort by property
             if(property === 'host') {
                 sorted = _.sortBy(this.state.results.exhibitions, exhibition => {
-                    return this.checkForHost(exhibition.tookPlaceInHosts).place;
+                    return this.checkForHost(exhibition.tookPlaceAtLocations).place;
                 });
             } else {
                 sorted = _.sortBy(this.state.results.exhibitions, sortBy);
@@ -204,11 +200,13 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
         return e.isCommon ? true : false;
     };
 
+    getCountryAndCity(exhibition: MetaExhibition): string {
+        if(exhibition.tookPlaceAtLocations.length === 0) return 'NA';
+        return exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].name + ' (' + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].country_code + ')';
+    }
+
      /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
     checkForHost(venues: Venue[]): Venue {
-
-        console.log(venues);
-
         const noVenue: Venue = {
             id: -1,
             place: "\\N",
@@ -280,7 +278,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                             </th> 
                             }
                             <th scope="col" className="px-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
+                                <button onClick={() => this.sort('artistsExhibitedAt.length')}>Artists</button>
                             </th>
                         </tr>
                     </thead>
@@ -318,7 +316,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                                     {exhibition.type === 'solo' && <FontAwesomeIcon icon={faPerson} data-toggle="tooltip" title="Solo Exhibition" />}
                                 </td>
                                 <td className="px-2">{exhibition.startyear.toString()}</td>
-                                <td className="px-2">XX</td>
+                                <td className="px-2">{this.getCountryAndCity(exhibition)}</td>
                                 {/* <td className="px-2">{this.checkForHost(exhibition.venuesHeldAt).place} ({this.checkForHost(exhibition.venuesHeldAt).place})</td> */}
                                 {/* <td className="px-4">{exhibition.enddate}</td> */}
                                 <td className="px-2">{exhibition.title}</td>

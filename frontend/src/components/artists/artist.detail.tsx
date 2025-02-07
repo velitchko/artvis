@@ -201,21 +201,26 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const exhibitionsPerYear = new Map<number, Set<number>>();
         const itemsPerYear = new Map<number, number>();
         this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startdate;
+            const year = +exhibition.startyear;
             if (exhibitionsPerYear.has(year)) {
-                exhibitionsPerYear.get(year)?.add(exhibition.id);
+                exhibitionsPerYear.get(year)?.add(+exhibition.id);
             } else {
                 exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
             }
-
-            if (itemsPerYear.has(year)) {
-                const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + 1);
-            } else {
-                itemsPerYear.set(year, 1);
-            }
         });
 
+        this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
+            const year = +exhibition.startyear;
+            console.log(exhibition);
+            // iterate over items
+            if (itemsPerYear.has(year)) {
+                const count = itemsPerYear.get(year) || 0;
+                itemsPerYear.set(year, count + exhibition.itemsWasExhibitedAtAggregate.count);
+            } else {
+                itemsPerYear.set(year, exhibition.itemsWasExhibitedAtAggregate.count);
+            }
+        });
+        
         // convert exhibitions by year from number, Set<string> to number, number (count)
         const exhibitionData = [...exhibitionsPerYear].map(([year, set]) => ({ year, count: set.size })).sort((a, b) => a.year - b.year);
 
@@ -614,18 +619,22 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const itemsPerYear = new Map<number, number>();
 
         this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startdate;
+            const year = +exhibition.startyear;
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(exhibition.id);
             } else {
                 exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
             }
+        });
 
+        this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
+            const year = +exhibition.startyear;
+            // iterate over items
             if (itemsPerYear.has(year)) {
                 const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + 1);
+                itemsPerYear.set(year, count + exhibition.itemsWasExhibitedAtAggregate.count);
             } else {
-                itemsPerYear.set(year, 1);
+                itemsPerYear.set(year, exhibition.itemsWasExhibitedAtAggregate.count);
             }
         });
 
@@ -1188,7 +1197,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
     }
 
-    onArtistChange(artistId: Number | null) {
+    onArtistChange(artistId: number | null) {
         if (!artistId) {
             // clear compare timeline
             this.compareTimelineContainer?.selectAll('.compare-abs-half-circle').remove();
@@ -1214,13 +1223,16 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             });
             // this.drawCompare();
         } else {
-            console.log('artist not found');
             this.loadingExternalData = true;
+        
+            // convert artistId to string
+            const artistIdQuery = BigInt(artistId);
+
             // query artist by id
             client.query({
                 query: GET_ARTIST,
                 variables: {
-                    searchId: artistId
+                    searchId: `${artistIdQuery}`
                 }
             }).then(result => {
                 this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
@@ -1271,7 +1283,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         return (artist.deathyear ? artist.deathyear : new Date().getFullYear()) - artist.birthyear;
     }
 
-    nodeClickedCallback(id: Number) {
+    nodeClickedCallback(id: number) {
         this.onArtistChange(id);
     }
 

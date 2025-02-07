@@ -25,4 +25,5 @@ export type Exhibition = {
 	artistsExhibitedAt: Array<Artist>;
 	organizersOrganizedBy: Array<Organizer>;
 	itemsWasExhibitedAt: Array<Item>;
+	itemsWasExhibitedAtAggregate: { count: number };
 };

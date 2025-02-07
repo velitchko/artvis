@@ -7,11 +7,14 @@ import ArtistDetailComponent from '../components/artists/artist.detail';
 import { useParams } from 'react-router-dom';
 
 const ArtistDetailPage = () => {
+    let resolvedId = BigInt(1);
 
     let { id } = useParams();
     if (id === undefined) {
         // set id to random number 1-14000
-        id = Math.floor(Math.random() * 14000).toString();
+        resolvedId = BigInt(Math.floor(Math.random() * 14000));
+    } else {
+        resolvedId = BigInt(id);
     }
     
     const [artist, setArtist] = useState(null as unknown as Artist);
@@ -21,7 +24,7 @@ const ArtistDetailPage = () => {
         client.query({
             query: GET_ARTIST,
             variables: {
-                searchId: id
+                searchId: `${resolvedId}`
             }
         })
         .then(result => {

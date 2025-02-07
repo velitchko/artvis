@@ -104,7 +104,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     }
 
     // request node broadcasts node id to parent
-    requestNode(node?: string | number) {
+    requestNode(node?: number) {
         // emit event to parent
         if (this.props.requestNode) this.props.requestNode(node);
     }
@@ -406,7 +406,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // create an array of all target ages from filteredLinks
         const targetAges = filteredLinks.map((link: Link) => {
             // calculate age of person at the given exhibiton time
-            let age = link.props.data.year - +link.target.props.data.birthdate.split('-')[0];
+            let age = link.props.data.year - link.target.props.data.birthyear;
 
             if (isNaN(age)) return '?';
             if (age <= 0) return '?';
@@ -429,8 +429,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     l.props.group = link.group;
 
                     // set living status based on birth and death dates
-                    const birthYear = +l.target.props.data.birthdate.split('-')[0];
-                    const deathYear = +l.target.props.data.deathdate.split('-')[0];
+                    const birthYear = +l.target.props.data.birthyear;
+                    const deathYear = +l.target.props.data.deathyear;
 
                     if (birthYear <= 1915 && (deathYear >= 1905 || isNaN(deathYear))) {
                         l.target.props.living = 'alive';
@@ -444,13 +444,13 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     l.target.props.sex = l.target.props.data.sex;
 
                     // calculate age of person and set to link.target.props.age
-                    const age = +l.target.props.data.deathdate.split('-')[0] - +l.target.props.data.birthdate.split('-')[0];
+                    const age = +l.target.props.data.deathyear - +l.target.props.data.birthyear;
                     // check if age is a number and set to age or unknown
                     l.target.props.age = isNaN(age) ? 'unknown' : `${age}`;
 
 
                     // calculate difference of birthdates between target and base node
-                    const diff = +l.target.props.data.birthdate.split('-')[0] - +this.state.baseNode.props.data.birthdate.split('-')[0];
+                    const diff = +l.target.props.data.birthyear - +this.state.baseNode.props.data.birthdyear;
 
                     const ageGroup = ageRanges.reduce((closest: string | null, age: string) => {
                         if (closest === null) return age;
@@ -630,7 +630,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     .style('top', `${y}px`)
                     .style('z-index', 1000)
                     .html(`
-                        <p><b>${data.target.name} (${data.props.data.year - data.target.props.data.birthdate.split('-')[0]})</b></p>
+                        <p><b>${data.target.name} (${data.props.data.year - data.target.props.data.birthyear})</b></p>
                         <p>Group: ${data.props.group}</p>
                         <p>(${data.props.data.year}) ${data.props.data.count} co-exhibitions</p>
                         `);
@@ -892,6 +892,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 const id = (d.target as SVGCircleElement).id;
 
                 const data = d3.select(`#${id}`).datum() as Link;
+
+                console.log(data);
 
                 if (!data) return;
 
@@ -1263,15 +1265,17 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         // Set the selected node to the node passed in 
         this.setState(prevState => ({ compareNode: node.target, loading: true }));
 
+        const artistIdQuery = BigInt(node.target.id);
+
         // for each targetNode make a request to get the exhibitedWithArtists for that node
         client.query({
             query: GET_ARTIST_EXHIBITED_WITH,
             variables: {
-                searchId: node.target.id
+                searchId: `${artistIdQuery}`,
             }
         }).then((res: any) => {
             // filter res.data.artists[0].exhibitedWithArtists to have only artists that are in targetNodes
-            const exhibitors = res.data.artists[0].exhibitedWithArtists
+            const exhibitors = res.data.artists[0].coExhibitedArtists
                 .filter((artist: Artist) => {
                     // check if artist is in links array
                     const link = this.links.find((link: Link) => link.target.id == artist.id);
