@@ -4,8 +4,8 @@ const GET_EXHIBITION = gql`
 query Exhibitions($where: ExhibitionWhere) { 
     exhibitions(where: $where) {
         id,
-        startdate,
-        enddate,
+        startyear,
+        endyear,
         organizer,
         title,
         type,

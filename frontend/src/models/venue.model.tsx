@@ -2,9 +2,9 @@ import { Exhibition } from "./exhibition.model";
 
 export type Venue = {
 	id: number;
-	name: String;
-	place: String;
-	place_tgn: String;
-	type: String;
+	name: string;
+	place: string;
+	place_tgn: string;
+	type: string;
 	heldExhibitions: Array<Exhibition>;
 };

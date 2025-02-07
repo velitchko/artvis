@@ -5,8 +5,6 @@ import { gql } from '@apollo/client';
 const GET_ARTIST = gql`
 query Artists ($searchId: BigInt!) { 
     artists(where: { id: $searchId }) {
-        firstname, 
-        lastname,
         sortname,
         id,
         country,
@@ -18,8 +16,7 @@ query Artists ($searchId: BigInt!) {
         deathyear,
         deathplace,
         coExhibitedArtists {
-            firstname,
-            lastname,
+            sortname,
             id, 
             country,
             sex,
@@ -30,12 +27,12 @@ query Artists ($searchId: BigInt!) {
             exhibitedAtExhibitions {
                 title,
                 startdate,
-                id
+                id,
+                startyear
             }  
         }
         coExhibitedTotalArtists {
-            firstname,
-            lastname,
+            sortname,
             id, 
             country,
             sex,
@@ -47,7 +44,8 @@ query Artists ($searchId: BigInt!) {
         exhibitedAtExhibitions {
             title,
             startdate,
-            id
+            id,
+            startyear
         }
     }
 }

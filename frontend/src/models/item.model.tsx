@@ -3,14 +3,14 @@ import { Exhibition } from "./exhibition.model";
 
 export type Item = {
     id: number;
-    title: String;
-    title_alternate: String;
+    title: string;
+    title_alternate: string;
     type: number;
-    description: String;
-    displaycreator: String;
+    description: string;
+    displaycreator: string;
     style: number;
-    measurements: String;
-    technique: String;
+    measurements: string;
+    technique: string;
     wasExhibitedAtExhibitions: Array<Exhibition>;
     artistsCreated: Array<Artist>;
 };

@@ -8,20 +8,25 @@ query Artists($searchId: String!) {
         startdate
         title
         type
-        tookPlaceInHosts {
+        tookPlaceAtLocations  {
           country
           id
-          latitude
-          longitude
           name
           place
-          town
           type
           place_tgn
+          locatedAtGeonames {
+            latitude
+            longitude
+            name
+            country_code
+          }
         }
-        catalogueEntriesEntryIn {
+        itemsWasExhibitedAt {
           id,
-          id_person
+            artistsCreated {
+              id
+            }
       } 
         organizer
       }

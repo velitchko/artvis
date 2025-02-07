@@ -4,8 +4,10 @@ import client from '../apollo/client';
 import { DocumentNode } from '@apollo/client';
 import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Item } from '../../models/item.model';
+import { Venue } from '../../models/venue.model';
 import { Host } from '../../models/host.model';
+import { Location } from '../../models/location.model';
 
 type IResults = {
     artists?: Array<any>,
@@ -18,9 +20,9 @@ type IResults = {
 
 type MetaExhibition = Exhibition & { isCommon: boolean, percentBase: number, percentCompare: number };
 
-class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: string, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, type?: string }, { query: DocumentNode, baseId: string, compareWith: Artist, exhibitions: Array<Exhibition>, results: IResults, loaded: boolean, dir: string }> {
+class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: number, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined, type?: string }, { query: DocumentNode, baseId: number, compareWith: Artist, exhibitions: Array<Exhibition>, results: IResults, loaded: boolean, dir: string }> {
 
-    constructor(props: { query: DocumentNode, baseId: string, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
+    constructor(props: { query: DocumentNode, baseId: number, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
         super(props);
 
         this.state = {
@@ -47,7 +49,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
         console.log(this.state.compareWith); */
     }
 
-    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: string, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
+    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: number, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
         // set state if props.compareWith changes and update results.exhibitions
         if (prevProps.compareWith !== this.props.compareWith) {
             this.setState((prevState: any) => {
@@ -56,7 +58,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                 prevState.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
 
-                    const isCommon = this.props.compareWith?.exhibitedExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
+                    const isCommon = this.props.compareWith?.exhibitedAtExhibitions?.find((exh: Exhibition) => exh.id === exhibition.id);
                     metaExhibition.isCommon = isCommon ? true : false;
                     metaExhibition.percentBase = exhibition.percentBase;
                     metaExhibition.percentCompare = this.getPercentage(metaExhibition, this.props.compareWith?.id);
@@ -88,7 +90,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
         this.getResults(this.state.query, ids);
     }
 
-    getResults(query: DocumentNode, ids: Array<string>) {
+    getResults(query: DocumentNode, ids: Array<number>) {
         if (this.state.loaded) return;
 
         client.query({
@@ -111,8 +113,8 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
 
                 // sort exhibitions by startdate
                 exhibitions.sort((a: Exhibition, b: Exhibition) => {
-                    if (a.startdate < b.startdate) return -1;
-                    if (a.startdate > b.startdate) return 1;
+                    if (a.startyear < b.startyear) return -1;
+                    if (a.startyear > b.startyear) return 1;
                     return 0;
                 });
 
@@ -120,7 +122,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                     //console.log("exhibitions " + exhibition.tookPlaceInHosts[0]);
 
                     // if startdate is less than 1905 or enddate is greater than 1915 skip
-                    if (exhibition.startdate < 1905 || exhibition.enddate > 1915) return;
+                    if (exhibition.startyear < 1905 || exhibition.endyear > 1915) return;
 
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
@@ -146,18 +148,18 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
         });
     };
 
-    getPercentage(exhibition: MetaExhibition, id?: string): number {
+    getPercentage(exhibition: MetaExhibition, id?: number): number {
         if (!id) id = this.props.baseId;
 
         if (!exhibition) return 0;
 
         // get length of catalogueEntriesEntryIn
         //const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
-        const baseLength = exhibition.catalogueEntriesEntryIn?.length;
+        const baseLength = exhibition.itemsWasExhibitedAt?.length;
 
 
         // get amount of catalogueEntries with id_person === id
-        const entries = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === id)?.length;
+        const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === id)?.length;
 
         // calculate percentage
         const percentage = (entries / baseLength) * 100;
@@ -208,25 +210,32 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
     }
 
     /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
-    checkForHost(hosts: Host[]): Host {
-
-        const noHost: Host = {
-            id: `-1`,
-            country: "\\N",
-            name: `NA`,
-            latitude: `9999999`,
-            longitude: `9999999`,
-            place: `NA`,
-            place_tgn: `NA`,
-            town: `NA`,
-            type: `NA`,
-            exhibitionsTookPlaceIn: []
-        }
-
+    checkForHost(hosts: Location[]): Host {
         if (hosts[0]) {
-            return hosts[0];
+            return {
+                id: hosts[0].id,
+                country: hosts[0].locatedAtGeonames[0].country_code || 'Unknown',
+                name: hosts[0].locatedAtGeonames[0].name || 'Unknown',
+                latitude: hosts[0].locatedAtGeonames[0].latitude || 9999999,
+                longitude: hosts[0].locatedAtGeonames[0].longitude || 9999999,
+                place: hosts[0].place || 'Unknown',
+                place_tgn: hosts[0].place_tgn || 0,
+                type: hosts[0].type || 'Unknown',
+                exhibitionsTookPlaceIn: [] // TODO: FIX
+            };
         }
-        else return noHost;
+
+        return {
+            id: -1,
+            country: 'Unknown',
+            name: 'Unknown',
+            latitude: 9999999,
+            longitude: 9999999,
+            place: 'Unknown',
+            place_tgn: 0,
+            type: 'Unknown',
+            exhibitionsTookPlaceIn: []
+        };
     }
 
 
@@ -312,21 +321,21 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: st
                                     {exhibition.id}
                                 </th> */}
                                 <td className="px-2 py-4">{exhibition.type}</td>
-                                <td className="px-2 py-4">{exhibition.startdate}</td>
+                                <td className="px-2 py-4">{exhibition.startyear}</td>
                                 {/* <td className="px-6 py-4">{exhibition.enddate}</td> */}
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).place}</td>
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).country}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).place}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).country}</td>
                                 <td className="px-2 py-4">{exhibition.title}</td>
-                                <td className="px-2 py-4 text-right">{exhibition.catalogueEntriesEntryIn && exhibition.catalogueEntriesEntryIn.length}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.itemsWasExhibitedAt && exhibition.itemsWasExhibitedAt.length}</td>
                                 <td className="px-2 py-4 text-right">{exhibition.percentBase}%</td>
                                 {
                                     this.state.compareWith && <td className="px-2 py-4 text-right">{exhibition.percentCompare}%</td>
                                 }
                                 {/* <td className="px-6 py-4">{exhibition.tookPlaceInHosts && exhibition.tookPlaceInHosts.length}</td> */}
-                                <td className="px-2 py-4 text-right">{exhibition.artistsExhibited && _.uniqBy(exhibition.artistsExhibited, (a: Artist) => a.id).length}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.artistsExhibitedAt && _.uniqBy(exhibition.artistsExhibitedAt, (a: Artist) => a.id).length}</td>
                                 {/*<td className="px-6 py-4">{exhibition.tookPlaceInHosts[0].name}</td>*/}
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).name}</td>
-                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceInHosts).type}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).name}</td>
+                                <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).type}</td>
 
                             </tr>
 

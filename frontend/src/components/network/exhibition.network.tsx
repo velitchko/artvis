@@ -7,7 +7,7 @@ import client from '../apollo/client';
 import GET_ARTIST_EXHIBITED_WITH from '../../queries/exhibitedWith';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Item } from '../../models/item.model';
 
 class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links: Array<Link>, compareWith: Artist | null, width?: number, height?: number, requestNode?: Function, mouseOverCallBack?: Function }, { baseNode: Node, links: Array<Link>, compareWith: Artist | null, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, marks: string }> {
 
@@ -1093,10 +1093,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
             return { targetId: link.targetId, sum: sum };
-        }), (node: { targetId: string, sum: number }) => node.targetId);
+        }), (node: { targetId: number, sum: number }) => node.targetId);
 
         // set outerNodeRScale domain to min and max sum
-        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: number, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: number, sum: number }) => node.sum))]);
 
 
         //OUTER CIRCLE CONTAINER_____________________________________________________________________
@@ -1987,10 +1987,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
             return { targetId: link.targetId, sum: sum };
-        }), (node: { targetId: string, sum: number }) => node.targetId);
+        }), (node: { targetId: number, sum: number }) => node.targetId);
 
         // set outerNodeRScale domain to min and max sum
-        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: number, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: number, sum: number }) => node.sum))]);
 
 
         //OUTER CIRCLE CONTAINER_____________________________________________________________________
@@ -2856,10 +2856,10 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
             return { targetId: link.targetId, sum: sum };
-        }), (node: { targetId: string, sum: number }) => node.targetId);
+        }), (node: { targetId: number, sum: number }) => node.targetId);
 
         // set outerNodeRScale domain to min and max sum
-        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: number, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: number, sum: number }) => node.sum))]);
 
 
         //OUTER CIRCLE CONTAINER_____________________________________________________________________
@@ -3419,7 +3419,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //get all Links with common exhibitions of both artists
         this.links.forEach((l: Link) => {
             //const link = compareWith?.exhibitedExhibitions?.find((artist: Artist) => artist.id === artistId);
-            const link = compareWith?.exhibitedExhibitions?.find((e: Exhibition) => l.target.id === e.id);
+            const link = compareWith?.exhibitedAtExhibitions?.find((e: Exhibition) => l.target.id === e.id);
 
             if (link) commonExhibitions.push(l);
 
@@ -3534,9 +3534,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
         this.links.forEach((l: Link) => {
 
-            const exhibition = compareWith?.exhibitedExhibitions?.find(x => x.id === l.targetId);
+            const exhibition = compareWith?.exhibitedAtExhibitions?.find(x => x.id === l.targetId);
 
-            const count = exhibition?.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === compareWith?.id)?.length;
+            const count = exhibition?.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith?.id)?.length;
 
             if (count) {
                 l.props.data.compareCount = count;

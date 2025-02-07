@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import client from '../components/apollo/client';
 import { Artist } from '../models/artist.model';
 import GET_ARTIST from '../queries/artist';
-import SmallHeadingComponent from '../components/heading/small.heading';
 import NavigationComponent from '../components/navigation/navigation';
 import ArtistDetailComponent from '../components/artists/artist.detail';
 import { useParams } from 'react-router-dom';

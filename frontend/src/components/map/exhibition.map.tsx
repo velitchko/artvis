@@ -9,9 +9,11 @@ import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 //import data from '../../resources/map.geo.json';
 import data from '../../resources/complete-map.geo.json';
-import { Host } from '../../models/host.model';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Venue } from '../../models/venue.model';
+import { Item } from '../../models/item.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
+import { Host } from '../../models/host.model';
+import { Location } from '../../models/location.model';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -228,9 +230,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 let long = -999999999.0;
                 let lat = -99999999999.0;
 
-                if (d.tookPlaceInHosts[0]) {
-                    long = parseFloat(d.tookPlaceInHosts[0].longitude);
-                    lat = parseFloat(d.tookPlaceInHosts[0].latitude);
+                if (d.tookPlaceAtLocations[0]) {
+                    long = d.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
+                    lat = d.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude;
 
                 }
                 return projection([long, lat])![0];
@@ -243,9 +245,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 let long = -99999999.0;
                 let lat = -999999999.0;
 
-                if (d.tookPlaceInHosts[0]) {
-                    long = parseFloat(d.tookPlaceInHosts[0].longitude);
-                    lat = parseFloat(d.tookPlaceInHosts[0].latitude);
+                if (d.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                    long = d.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
+                    lat = d.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude;
 
                 }
                 return projection([long, lat])![1];
@@ -255,7 +257,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             //.attr("r", 2)
             .attr('r', (d: MetaExhibition) => this.rScale(d.artworksBase))
             .attr('opacity', (d: MetaExhibition) => {
-                if (d.tookPlaceInHosts[0]) {
+                if (d.tookPlaceAtLocations[0]) {
                     return 0.5;
                 } //hide exhibitions without hosts
                 else return 0;
@@ -272,7 +274,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
             }) */
             .append("title").append('tspan')
-            .text((d: MetaExhibition) => `${d.title} (${d.startdate})\n${this.checkForHost(d.tookPlaceInHosts).name}, ${this.checkForHost(d.tookPlaceInHosts).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
+            .text((d: MetaExhibition) => `${d.title} (${d.startdate})\n${this.checkForHost(d.tookPlaceAtLocations).name}, ${this.checkForHost(d.tookPlaceAtLocations).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
 
         //CIRCLE MARKS END_______________________________________________________________
 
@@ -409,8 +411,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         const artworksPerCity = new Map<string, number>();
 
         this.exhibStats.forEach((exhibition: MetaExhibition) => {
-            if (exhibition.tookPlaceInHosts[0]) {
-                const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+            if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
                 if (artworksPerCityTotal.has(latLong)) {
                     const count = artworksPerCityTotal.get(latLong) || 0;
@@ -839,11 +841,11 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const commonExhibitions: Array<MetaExhibition> = [];
 
                 this.exhibStats.forEach((exhibition: MetaExhibition) => {
-                    const common = compareWith?.exhibitedExhibitions?.find((exhib: Exhibition) => exhibition.id == exhib.id);
+                    const common = compareWith?.exhibitedAtExhibitions?.find((exhib: Exhibition) => exhibition.id == exhib.id);
 
                     if (common) {
                         //console.log(common.catalogueEntriesEntryIn);
-                        const entries = common.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === compareWith.id)?.length;
+                        const entries = common.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith.id)?.length;
                         //console.log("entries" + entries);
                         //TODO stuffed number of artworks of ccompare artist into field for percentages for now... maybe change
                         const metaExhibition: MetaExhibition = { ...exhibition, isCommon: true, percentCompare: entries };
@@ -859,9 +861,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const artworksCompare = new Map<string, number>();
 
                 commonExhibitions.forEach((exhibition: MetaExhibition) => {
-                    if (exhibition.tookPlaceInHosts[0]) {
+                    if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                         //console.log("in host");
-                        const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+                        const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
                         if (artworksCompare.has(latLong)) {
                             const count = artworksCompare.get(latLong) || 0;
@@ -873,8 +875,8 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 });
 
                 this.exhibStats.forEach((exhibition: MetaExhibition) => {
-                    if (exhibition.tookPlaceInHosts[0]) {
-                        const latLong = exhibition.tookPlaceInHosts[0].latitude + "," + exhibition.tookPlaceInHosts[0].longitude;
+                    if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                        const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
                         if (artworksBase.has(latLong)) {
                             const count = artworksBase.get(latLong) || 0;
@@ -1043,7 +1045,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 //console.log("compareWith ");
                 //console.log(this.state.compareWith);
                 //console.log(this.props.compareWith);
-                const common = this.props.compareWith?.exhibitedExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
+                const common = this.props.compareWith?.exhibitedAtExhibitions?.find((exhibition: Exhibition) => exhibition.id == d.id);
                 //return common ? "yellow" : "crimson";
                 //return common ? "#ff7f0e" : "#1f77b4";
                 return common ? "yellow" : "#1f77b4";
@@ -1057,25 +1059,32 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
 
     /** Checks if there is a host, otherwise returns dummy host (for filling the tooltip with data) */
-    checkForHost(hosts: Host[]): Host {
-
-        const noHost: Host = {
-            id: `-1`,
-            country: "\\N",
-            name: `NA`,
-            latitude: `9999999`,
-            longitude: `9999999`,
-            place: `NA`,
-            place_tgn: `NA`,
-            town: `NA`,
-            type: `NA`,
-            exhibitionsTookPlaceIn: []
-        }
-
+    checkForHost(hosts: Location[]): Host {
         if (hosts[0]) {
-            return hosts[0];
+            return {
+                id: hosts[0].id,
+                country: hosts[0].locatedAtGeonames[0].country_code || 'Unknown',
+                name: hosts[0].locatedAtGeonames[0].name || 'Unknown',
+                latitude: hosts[0].locatedAtGeonames[0].latitude || 9999999,
+                longitude: hosts[0].locatedAtGeonames[0].longitude || 9999999,
+                place: hosts[0].place || 'Unknown',
+                place_tgn: hosts[0].place_tgn || 0,
+                type: hosts[0].type || 'Unknown',
+                exhibitionsTookPlaceIn: [] // TODO: FIX
+            };
         }
-        else return noHost;
+
+        return {
+            id: -1,
+            country: 'Unknown',
+            name: 'Unknown',
+            latitude: 9999999,
+            longitude: 9999999,
+            place: 'Unknown',
+            place_tgn: 0,
+            type: 'Unknown',
+            exhibitionsTookPlaceIn: []
+        };
     }
 
 

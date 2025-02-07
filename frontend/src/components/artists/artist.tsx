@@ -29,7 +29,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         setArtists(props.artists);
     }, props.artists);
 
-    const artistExhibitionCountPerYear = new Map<string, Map<number, number>>();
+    const artistExhibitionCountPerYear = new Map<number, Map<number, number>>();
 
 
     // iterate through all artists and their exhibitions and keep track of the max number of exhibitions in a year
@@ -179,7 +179,7 @@ const hierarchicalClustering = (similarityScores: Array<Array<number>>) => {
         setArtists(reordered)
     }
 
-    const reorderArtistBySim = (id: string) => {
+    const reorderArtistBySim = (id: number) => {
         let objects = [...artists]; // need a copy here to avoide read-only errors
 
         setArtists(new Array<Artist>());
@@ -203,7 +203,7 @@ const hierarchicalClustering = (similarityScores: Array<Array<number>>) => {
         const sortedAExhibCount = new Map([...aExhibitionsCount.entries()].sort());
         const aExhibitionsCountArray = Array.from(sortedAExhibCount.values());
 
-        const scores = new Map<string, number>();
+        const scores = new Map<number, number>();
 
         objects.forEach((b: Artist) => {
             // const aExhibitions = a.exhibitedExhibitions?.map((exhibition: Exhibition) => exhibition.startdate);

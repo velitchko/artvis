@@ -2,6 +2,7 @@ import { Artist } from "./artist.model";
 import { Item } from "./item.model";
 import { Organizer } from "./organizer.model";
 import { Venue } from "./venue.model";
+import { Location } from "./location.model";
 
 export type Exhibition = {
 	id: number;
@@ -9,16 +10,16 @@ export type Exhibition = {
 	startyear: number;
 	enddate: Date;
 	endyear: number;
-	displaydate: String,
-	organizer: String;
-	organizer_type: String;
-	organizing_committee: String;
-	price: String;
+	displaydate: string,
+	organizer: string;
+	organizer_type: string;
+	organizing_committee: string;
+	price: string;
 	status: number;
-	title: String;
-	title_short: String;
-	title_alternate: String;
-	type: String;
+	title: string;
+	title_short: string;
+	title_alternate: string;
+	type: string;
 	tookPlaceAtLocations: Array<Location>;
 	venuesHeldAt: Array<Venue>;
 	artistsExhibitedAt: Array<Artist>;

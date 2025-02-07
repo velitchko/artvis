@@ -118,8 +118,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
         this.svgContainer = d3.select('#ego-net');
 
-
-
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.25, 10])
             .extent([[0, 0], [this.state.width, this.state.height]])
@@ -201,6 +199,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .range([1, 6]);
 
         const targetNodes = this.filterData(this.state.coEx);
+        console.log(targetNodes);
         this.links = targetNodes;
 
         this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
@@ -381,6 +380,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
             return sum >= (numCoEx ? numCoEx : 3) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
+
+        console.log(filteredLinks);
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
 
@@ -911,10 +912,10 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
 
             return { targetId: link.targetId, sum: sum };
-        }), (node: { targetId: string, sum: number }) => node.targetId);
+        }), (node: { targetId: number, sum: number }) => node.targetId);
 
         // set outerNodeRScale domain to min and max sum
-        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: string, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: string, sum: number }) => node.sum))]);
+        this.outerNodeRScale.domain([Math.min(...sums.map((node: { targetId: number, sum: number }) => node.sum)), Math.max(...sums.map((node: { targetId: number, sum: number }) => node.sum))]);
 
         // draw circles on the outside one for each unique target node 
         this.outerCircleContainer.selectAll('circle')
@@ -1281,8 +1282,8 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             // convert exhibitors array to links with source = baseNode and target = exhibitor
             exhibitors.forEach((exhibitor: any) => {
                 const link = {
-                    sourceId: `${node.target.id}`,
-                    targetId: exhibitor.id,
+                    sourceId: +node.target.id,
+                    targetId: +exhibitor.id,
                     props: {
                         // find originalIndex for the link in links array
                         originalIndex: this.links.find((link: Link) => link.targetId == exhibitor.id)?.props.originalIndex,
@@ -1294,12 +1295,17 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 // add link to links array
                 links.push(link);
             });
-            this.drawSecondaryLinks(`${node.target.id}`, links);
+            this.drawSecondaryLinks(node.target.id, links);
         });
     }
 
-    drawSecondaryLinks(id: string, links: Array<Link>): void {
+    drawSecondaryLinks(id: string | number, links: Array<Link>): void {
         if (!this.state.compareNode) return;
+
+        // Check if ID is number if not parse as number
+        if (typeof id === 'string') {
+            id = parseInt(id);
+        }
 
         // set loading false
         this.setState(prevState => ({ loading: false }));

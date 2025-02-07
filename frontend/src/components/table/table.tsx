@@ -22,9 +22,9 @@ type IResults = {
 
 type MetaExhibition = Exhibition & { isCommon: boolean, percentBase: number, percentCompare: number };
 
-class TableComponent extends React.Component<{ query: DocumentNode, baseId: Number, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined }, { query: DocumentNode, baseId: Number, compareWith: Artist, results: IResults, loaded: boolean, dir: string }> {
+class TableComponent extends React.Component<{ query: DocumentNode, baseId: number, compareWith: Artist | null, exhibitions: Array<Exhibition> | undefined }, { query: DocumentNode, baseId: number, compareWith: Artist, results: IResults, loaded: boolean, dir: string }> {
 
-    constructor(props: { query: DocumentNode, baseId: Number, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
+    constructor(props: { query: DocumentNode, baseId: number, exhibitions: Array<Exhibition>, compareWith: Artist, results: IResults, loaded: boolean, dir: string }) {
         super(props);
 
         this.state = {
@@ -46,7 +46,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
         this.setup();
     }
 
-    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: Number, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
+    componentDidUpdate(prevProps: Readonly<{ query: DocumentNode; baseId: number, compareWith: Artist | null; exhibitions: Array<Exhibition>; }>, prevState: Readonly<{ query: DocumentNode; compareWith: Artist; results: IResults; loaded: boolean; dir: string; }>, snapshot?: any): void {
         // set state if props.compareWith changes and update results.exhibitions
         if(prevProps.compareWith !== this.props.compareWith) {
             this.setState((prevState: any) => { 
@@ -75,15 +75,17 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
 
                 return { ...prevState, compareWith: this.props.compareWith, results: { ...prevState.results, exhibitions: exhibitions } } 
             });
+        
+            console.log(this.state.results.exhibitions);
         } 
     }
 
     setup() {
         const ids = _.uniqBy(this.props.exhibitions, (exhibition: Exhibition) => exhibition.id).map((exhibition: Exhibition) => exhibition.id);
-
         if(!ids) return;
 
         this.getResults(this.state.query, ids);
+        console.log(this.state.results.exhibitions);
     }
 
     getResults(query: DocumentNode, ids: Array<Number>) {
@@ -102,16 +104,22 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
                 // create deep copy of res.data.exhibitions
                 const exhibitions = JSON.parse(JSON.stringify(res.data.exhibitions));
 
-                // sort exhibitions by startdate
+                // sort exhibitions by startyear
+                exhibitions.forEach((e: Exhibition) => {
+                    e.startyear = +e.startyear
+                    e.endyear = +e.endyear
+                    e.id = +e.id
+                });
+                
                 exhibitions.sort((a: Exhibition, b: Exhibition) => {
-                    if(a.startdate < b.startdate) return -1;
-                    if(a.startdate > b.startdate) return 1;
+                    if(a.startyear < b.startyear) return -1;
+                    if(a.startyear > b.startyear) return 1;
                     return 0;
                 });
 
                 exhibitions.forEach((exhibition: Exhibition) => {
-                    // if startdate is less than 1905 or enddate is greater than 1915 skip
-                    if(Number(exhibition.startyear) < 1905 || Number(exhibition.endyear) > 1915) return;
+                    // if startyear is less than 1905 or enddate is greater than 1915 skip
+                    if(exhibition.startyear < 1905 || exhibition.endyear > 1915) return;
                     
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
@@ -130,6 +138,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
                 this.state.results.exhibitions?.forEach((exhibition: MetaExhibition) => {
                     exhibition.percentBase = this.getPercentage(exhibition);
                 });
+
+                console.log(this.state.results.exhibitions);
                 // force update
                 this.setState((prevState: any) => { return { ...prevState } });
             });
@@ -137,7 +147,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
         });
     };
 
-    getPercentage(exhibition: MetaExhibition, id?: Number): number {
+    getPercentage(exhibition: MetaExhibition, id?: number): number {
         if(!id) id = this.props.baseId;
 
         if(!exhibition) return 0;
@@ -223,10 +233,10 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
                 exhibitions.push(metaExhibition);
             });
 
-            // sort by startdate
+            // sort by startyear
             exhibitions.sort((a: MetaExhibition, b: MetaExhibition) => {
-                if(a.startdate < b.startdate) return -1;
-                if(a.startdate > b.startdate) return 1;
+                if(a.startyear < b.startyear) return -1;
+                if(a.startyear > b.startyear) return 1;
                 return 0;
             });
 
@@ -247,7 +257,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
                                 <button onClick={() => this.sort('type')}>Type</button>
                             </th>
                             <th scope="col" className="px-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('startdate')}>Date</button>
+                                <button onClick={() => this.sort('startyear')}>Date</button>
                             </th>
                             {/* <th scope="col" className="px-2 border-r border-gray-300">
                                 <button onClick={() => this.sort('enddate')}>End Date</button>
@@ -308,7 +318,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: Numb
                                     {exhibition.type === 'solo' && <FontAwesomeIcon icon={faPerson} data-toggle="tooltip" title="Solo Exhibition" />}
                                 </td>
                                 <td className="px-2">{exhibition.startyear.toString()}</td>
-                                <td className="px-2">{this.checkForHost(exhibition.venuesHeldAt).place} ({this.checkForHost(exhibition.venuesHeldAt).place})</td>
+                                <td className="px-2">XX</td>
+                                {/* <td className="px-2">{this.checkForHost(exhibition.venuesHeldAt).place} ({this.checkForHost(exhibition.venuesHeldAt).place})</td> */}
                                 {/* <td className="px-4">{exhibition.enddate}</td> */}
                                 <td className="px-2">{exhibition.title}</td>
                                 <td className="px-2 text-right">{exhibition.itemsWasExhibitedAt && exhibition.itemsWasExhibitedAt.length}</td>

@@ -5,27 +5,27 @@ import { Item } from './item.model';
 export type Artist = {
     // FROM THE SCHEMA
 	id: number;
-	firstname: String;
-	lastname: String;
+	firstname: string;
+	lastname: string;
 	birthdate?: Date;
 	birthyear: number;
-	birthplace?: String;
-	birthplace_tgn: String;
-	collective: String;
-	country?: String;
+	birthplace?: string;
+	birthplace_tgn: string;
+	collective: string;
+	country?: string;
 	deathdate?: Date;
 	deathyear: number;
-	deathplace?: String;
-	deathplace_tgn: String;
-	sex?: String;
-	title?: String;
-	name_variant: String;
-	occupation: String;
-	pnd: String;
-	ulan: String;
-	profession: String;
-	sortname: String;
-	study: String;
+	deathplace?: string;
+	deathplace_tgn: string;
+	sex?: string;
+	title?: string;
+	name_variant: string;
+	occupation: string;
+	pnd: string;
+	ulan: string;
+	profession: string;
+	sortname: string;
+	study: string;
     artistsCoExhibited: Array<Artist>; // IN Direction
 	artistsCoExhibitedTotal: Array<Artist>; // IN Direction
 	coExhibitedArtists?: Array<Artist>; // OUT Direction

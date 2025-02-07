@@ -9,22 +9,27 @@ query Exhibitions($where: ExhibitionWhere) {
         organizer,
         title,
         type,       
-        catalogueEntriesEntryIn {
+        itemsWasExhibitedAt {
             id,
-            id_person
+            artistsCreated {
+                id
+            }
         } 
-        tookPlaceInHosts {
-            id,
-            name,
-            country,
-            place,
-            latitude,
-            longitude,
-            place_tgn,
-            town,
+        tookPlaceAtLocations {
+            id
+            name
+            country
+            place
+            place_tgn
             type
-        }       
-        artistsExhibited {
+            locatedAtGeonames {
+                latitude
+                longitude
+                name
+                country_code
+            }
+        }    
+        artistsExhibitedAt {
             id
         } 
     }

@@ -10,7 +10,7 @@ import { Exhibition } from '../../models/exhibition.model';
 //import data from '../../resources/map.geo.json';
 import data from '../../resources/complete-map.geo.json';
 import { Host } from '../../models/host.model';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Item } from '../../models/item.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
@@ -491,17 +491,17 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
         let exhibMap: Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>> = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 
 
-        artist.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
+        artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             //this.props.compareWith?.exhibitedExhibitions?.forEach((exhibition: Exhibition) => {
 
             const year = +exhibition.startdate;
             const key = `${exhibition.id}`;
 
-            const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
+            const baseLength = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
 
             //TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
-            // get amount of catalogueEntries with id_person === id
-            const entries = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === this.state.compareWith?.id)?.length;
+            // get amount of catalogueEntries with artistsCreated[0].id === id
+            const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.compareWith?.id)?.length;
 
             // calculate percentage
             const percentage = (entries / baseLength) * 100;

@@ -1,15 +1,15 @@
 import { Exhibition } from './exhibition.model';
 
 export type Organizer = {
-	dissolutiondate: String;
+	dissolutiondate: string;
 	dissolutionyear: number;
 	foundingdate: number;
-	gnd: String;
+	gnd: string;
 	id: number;
-	name: String;
+	name: string;
 	organizedExhibitions: Array<Exhibition>;
-	place: String;
+	place: string;
 	place_tgn: number;
 	status: number;
-	type: String;
+	type: string;
 };

@@ -12,8 +12,8 @@ import EgoNetworkComponent from '../network/ego.network';
 import AreaChartComponent from '../linechart/area.chart';
 import TableComponent from '../table/table';
 import _ from 'lodash';
-import GET_EXHIBITION from '../../queries/exhibition';
 import { countryColors } from '../../colors/colors';
+import GET_EXHIBITION from '../../queries/exhibition';
 // TODO: Move line chart to separate component
 class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
 
@@ -43,7 +43,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private areaChart = React.createRef<AreaChartComponent>();
     private table = React.createRef<TableComponent>();
 
-    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors:{ group: string, colors: Map<string, string> } }) {
+    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors: { group: string, colors: Map<string, string> } }) {
         super(props);
 
         this.state = {
@@ -71,7 +71,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.compareItemCountExtentAvg = [0, 0];
 
         // initialize colors
-        if(this.state.colors.group === 'country') {
+        if (this.state.colors.group === 'country') {
             // set colors map 
             this.state.colors.colors = countryColors;
         };
@@ -349,7 +349,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.firstname} ${this.state.artist.lastname} (${d.year})`);
+                        .text(`${this.state.artist.sortname} (${d.year})`);
 
                     text.append('tspan')
                         .attr('x', xPos + 15)
@@ -458,7 +458,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.firstname} ${this.state.artist.lastname} (${d.year})`);
+                        .text(`${this.state.artist.sortname} (${d.year})`);
 
                     text.append('tspan')
                         .attr('x', xPos + 15)
@@ -524,13 +524,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     drawNetwork() {
         const source: Node = {
             id: this.state.artist.id,
-            name: this.state.artist.firstname + ' ' + this.state.artist.lastname,
+            name: this.state.artist.sortname,
             type: 'artist',
             props: { data: this.state.artist }
         };
 
         // string == exhib.id, 
-        let coexhibMap: Map<string, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map<string, Set<{ year: number, exhibitionIds: Set<number> }>>();
+        let coexhibMap: Map<number, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map<number, Set<{ year: number, exhibitionIds: Set<number> }>>();
         this.state.artist.coExhibitedArtists?.forEach((artist: Artist) => {
             artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
                 // check if source artist also exhibited in this exhibition
@@ -538,8 +538,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
                 if (!sourceExhibition) return;
 
-                const year = +exhibition.startdate;
-                const key = `${artist.id}`;
+                const year = +exhibition.startyear;
+                const key = artist.id;
 
                 if (coexhibMap.has(key)) {
                     const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
@@ -556,8 +556,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             });
         });
 
-        coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<number> }>, key: string) => {
-            const found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => `${artist.id}` === key);
+        coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<number> }>, key: number) => {
+            const found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === key);
 
             if (!found) {
                 console.log(key + ' not found');
@@ -566,7 +566,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
             const target: Node = {
                 id: key,
-                name: found.firstname + ' ' + found.lastname,
+                name: found.sortname,
                 type: 'artist',
                 props: { data: found }
             };
@@ -574,8 +574,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             // iterate over value set
             value.forEach((item: { year: number, exhibitionIds: Set<number> }) => {
                 const link: Link = {
-                    sourceId: `${source.id}`,
-                    targetId: `${target.id}`,
+                    sourceId: +source.id,
+                    targetId: +target.id,
                     props: {
                         data: {
                             year: item.year,
@@ -866,7 +866,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.firstname} ${this.state.artist.lastname} (${d.year})`);
+                        .text(`${this.state.artist.sortname} (${d.year})`);
 
                     text.append('tspan')
                         .attr('x', xPos + 15)
@@ -976,7 +976,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${this.state.compareWith?.firstname} ${this.state.compareWith?.lastname} (${d.year})`);
+                        .text(`${this.state.compareWith?.sortname} (${d.year})`);
 
                     text.append('tspan')
                         .attr('x', xPos + 15)
@@ -1333,13 +1333,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                         <div className="row-span-1 col-span-2 z-40">
                             <div className="w-full h-[80%]" id="timeline-container">
                                 <div className="float-left text-left pl-2">
-                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
+                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.sortname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
                                     <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.artist.birthdate)} ({this.state.artist.birthplace}) - {this.formatDate(this.state.artist.deathdate)} ({this.state.artist.deathplace})</h2>
                                     <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedAtExhibitions)} exhibitions | {this.state.artist.exhibitedAtExhibitions?.length} artworks</h3>
                                 </div>
                                 {this.state.compareWith &&
                                     <div className="float-right text-right pr-2">
-                                        <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
+                                        <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.sortname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
                                         <h2 className="lg:text-md sm:text-sm font-medium">{this.formatDate(this.state.compareWith.birthdate)} ({this.state.compareWith.birthplace}) - {this.formatDate(this.state.compareWith.deathdate)} ({this.state.compareWith.deathplace})</h2>
                                         <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedAtExhibitions)} exhibitions | {this.state.compareWith.exhibitedAtExhibitions?.length} artworks</h3>
                                     </div>

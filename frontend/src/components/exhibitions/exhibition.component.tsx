@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import * as d3 from 'd3';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
+import { Location } from '../../models/location.model';
 import GET_EXHIBITION from '../../queries/exhibition';
 import SearchComponent from '../search/search';
 import GET_ARTIST_BY_NAME from '../../queries/artistByName';
@@ -11,15 +12,17 @@ import { Link } from '../../models/link';
 import { Node } from '../../models/node';
 import EHTableComponent from '../table/exhibition.host.table';
 import ExhibitionNetworkComponent from '../network/exhibition.network';
-import { Host } from '../../models/host.model';
+import { Venue } from '../../models/venue.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
-import { CatalogueEntry } from '../../models/catalogueEntry.model';
+import { Item } from '../../models/item.model';
+import { Host } from '../../models/host.model';
 import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
+
 
 class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
 
@@ -104,7 +107,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	}
 
 
-	onArtistChange(artistId: string) {
+	onArtistChange(artistId: number) {
 		// client.query({
 		// 	query: GET_ARTIST,
 		// 	variables: {
@@ -214,13 +217,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			console.log(exhibition); */
 
 			//const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
-			const baseLength = exhibition.catalogueEntriesEntryIn?.length;
+			const baseLength = exhibition.itemsWasExhibitedAt?.length;
 
 			//console.log("baselength " + baseLength);
 
 			//TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
 			// get amount of catalogueEntries with id_person === id
-			const entries = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person === this.state.artist.id)?.length;
+			const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.artist.id)?.length;
 
 			// calculate percentage
 			const percentage = (entries / baseLength) * 100;
@@ -312,23 +315,35 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 					let hosts: Host[] = [];
 
 					//if the exhibition already has hosts, set them as hosts
-					if (item.exhibition.tookPlaceInHosts[0]) {
+					if (item.exhibition.tookPlaceAtLocations[0]) {
 
-						hosts = [...item.exhibition.tookPlaceInHosts];
+						// hosts = [...item.exhibition.tookPlaceAtLocations];
+						hosts = item.exhibition.tookPlaceAtLocations.map((location: Location) => {
+							return {
+							id: location?.id || -1,
+							country: location?.locatedAtGeonames[0].country_code || 'Unknown',
+							name: location?.locatedAtGeonames[0].name || 'Unknown',
+							latitude: location?.locatedAtGeonames[0].latitude || -999999999,
+							longitude: location?.locatedAtGeonames[0].longitude || -999999999,
+							place: location?.place || 'Unknown',
+							place_tgn: location?.place_tgn || 0,
+							type: location?.type || 'Unknown',
+							exhibitionsTookPlaceIn: []
+						};
+					});
 						//console.log(hosts[0].country);
 					}
 					//if the exhibition does not have hosts, insert a dummy host
 					else {
 						const noHost: Host = {
-							id: `-1`,
-							country: "\\N",
-							name: `NA`,
-							latitude: `-999999999`,
-							longitude: `-999999999`,
-							place: `NA`,
-							place_tgn: `NA`,
-							town: `NA`,
-							type: `NA`,
+							id: -1,
+							country: "Unknown",
+							name: 'Unknown	',
+							latitude: -999999999,
+							longitude: -999999999,
+							place: 'Unknown',
+							place_tgn: 0,
+							type: 'Unknown',
 							exhibitionsTookPlaceIn: []
 						}
 						//console.log("tookplaceinhosts " + item.exhibition.tookPlaceInHosts);
@@ -371,8 +386,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 					const link: Link = {
-						sourceId: `${source.id}`,
-						targetId: `${target.id}`,
+						sourceId: +source.id,
+						targetId: +target.id,
 						props: {
 							data: {
 								year: item.year,
