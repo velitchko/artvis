@@ -23,7 +23,7 @@ export const schema = `type Artist {
 	occupation: String
 	pnd: String
 	profession: String
-	sex: String!
+	sex: String
 	sortname: String!
 	status: BigInt
 	study: String
