@@ -3,7 +3,7 @@ type Artist {
 	artistsCoExhibitedTotal: [Artist!]! @relationship(type: "CO_EXHIBITED_TOTAL", direction: IN, properties: "CoExhibitedTotalProperties")
 	birthdate: String
 	birthplace: String
-	birthplace_tgn: BigInt
+	birthplace_tgn: String
 	birthyear: BigInt
 	coExhibitedArtists: [Artist!]! @relationship(type: "CO_EXHIBITED", direction: OUT, properties: "CoExhibitedProperties")
 	coExhibitedTotalArtists: [Artist!]! @relationship(type: "CO_EXHIBITED_TOTAL", direction: OUT, properties: "CoExhibitedTotalProperties")
@@ -12,22 +12,24 @@ type Artist {
 	createdItems: [Item!]! @relationship(type: "CREATED", direction: OUT)
 	deathdate: String
 	deathplace: String
-	deathplace_tgn: BigInt
 	deathyear: BigInt
 	exhibitedAtExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED_AT", direction: OUT, properties: "ExhibitedAtProperties")
 	exile: String
-	firstname: String!
+	firstname: String
 	id: BigInt
 	lastname: String!
-	name_variant: String!
+	name_variant: String
 	occupation: String
+	organization: String
 	pnd: String
 	profession: String
-	sex: String!
+	sex: String
 	sortname: String!
 	status: BigInt
 	study: String
 	ulan: String
+	urlan: String
+	wikidata: String
 }
 
 interface CoExhibitedProperties @relationshipProperties {
@@ -50,7 +52,6 @@ type Exhibition {
 	endyear: BigInt
 	exhibitsItems: [Item!]! @relationship(type: "EXHIBITS", direction: OUT)
 	id: BigInt!
-	itemsWasExhibitedAt: [Item!]! @relationship(type: "WAS_EXHIBITED_AT", direction: IN)
 	organizer: String
 	organizer_type: String
 	organizersOrganized: [Organizer!]! @relationship(type: "ORGANIZED", direction: IN, properties: "OrganizedProperties")
@@ -78,6 +79,8 @@ type Geoname {
 	tgn: BigInt!
 	tgn_parent: BigInt
 	type: String!
+	latitude: Float
+	longitude: Float
 }
 
 interface HeldProperties @relationshipProperties {
@@ -98,7 +101,6 @@ type Item {
 	title: String
 	title_alternate: String
 	type: BigInt
-	wasExhibitedAtExhibitions: [Exhibition!]! @relationship(type: "WAS_EXHIBITED_AT", direction: OUT)
 }
 
 type Location {
