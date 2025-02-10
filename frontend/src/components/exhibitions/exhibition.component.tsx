@@ -20,11 +20,12 @@ import { Item } from '../../models/item.model';
 import { Host } from '../../models/host.model';
 import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
+import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
 
-class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, width: number, height: number }> {
+class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, baseNumberOfArtworks: number, compareNumberOfArtworks: number, width: number, height: number }> {
 
 	private showNetwork: boolean = false;
 	private exhibitionNetwork = React.createRef<ExhibitionNetworkComponent>();
@@ -54,6 +55,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			artist: props.artist,
 			baseNode: {} as Node,
 			links: new Array<Link>(),
+			baseNumberOfArtworks: 0,
+			compareNumberOfArtworks: 0,
 			width: 0,
 			height: 0,
 			compareWith: null
@@ -134,6 +137,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			this.setState(prevState => ({ compareWith: artist }), () => {
 				//this.drawCompare();
 				//this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+				this.getNumberOfArtworks(false);
 				this.exhibitionNetwork.current?.highlightCommonExhibitions(this.state.compareWith);
 			});
 			// this.drawCompare();
@@ -151,6 +155,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 				this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
 					//this.drawCompare();
 					//this.exhibitionNetwork.current?.highlightArtist(this.state.compareWith);
+					this.getNumberOfArtworks(false);
 					this.exhibitionNetwork.current?.highlightCommonExhibitions(this.state.compareWith);
 				});
 				this.loadingExternalData = false;
@@ -172,6 +177,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		if (!width || !height) return;
 
+		this.getNumberOfArtworks(true);
+
 		this.setState(prevState => ({ width: width, height: height }), () => {
 			//console.log("setState in did mount");
 			this.init();
@@ -188,7 +195,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		//console.log(this.state.artist);
 		const source: Node = {
 			id: this.state.artist.id,
-			name: this.state.artist.firstname + ' ' + this.state.artist.lastname,
+			name: this.state.artist.sortname,
 			type: 'artist',
 			props: { data: this.state.artist }
 		};
@@ -209,7 +216,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 			//if (!sourceExhibition) return;
 
-			const year = +exhibition.startdate;
+			const year = +exhibition.startyear;
 			const key = `${exhibition.id}`;
 			//const artworksCount = +1;
 
@@ -217,13 +224,13 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			console.log(exhibition); */
 
 			//const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
-			const baseLength = exhibition.itemsWasExhibitedAt?.length;
+			const baseLength = exhibition.exhibitsItems?.length;
 
 			//console.log("baselength " + baseLength);
 
 			//TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
 			// get amount of catalogueEntries with id_person === id
-			const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.artist.id)?.length;
+			const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0]?.id === this.state.artist.id)?.length;
 
 			// calculate percentage
 			const percentage = (entries / baseLength) * 100;
@@ -369,6 +376,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						props: { data: this.state.artist, exhibition: item.exhibition, hosts: hosts }
 					};
 
+					console.log(target);
+
 					//console.log("artist:");
 					//console.log(this.state.artist);
 
@@ -390,12 +399,12 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						targetId: +target.id,
 						props: {
 							data: {
-								year: item.year,
+								year: +item.year,
 								//count: item.artworksCount,
 								count: item.entries,
 								baseLength: item.baseLength,
 								percentage: item.percentage
-							}
+							},
 						},
 						source: source,
 						target: target
@@ -427,6 +436,30 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 		return uniqueExhibitions.length;
 	}
+
+	getNumberOfArtworks(base: boolean = true): void {
+        client.query({
+            query: GET_ARTIST_EXHIBITIONS_BY_ID,
+            variables: {
+                searchId: base ? this.state.artist.id : this.state.compareWith?.id
+            }
+        }).then(result => {
+            let numberOfArtworks = 0;
+
+            result.data.artists[0].exhibitedAtExhibitions
+                .forEach((exhibition: Exhibition) => {
+                    exhibition.exhibitsItems.forEach((i: Item) => {
+                        numberOfArtworks += i.artistsCreated.filter((artist: Artist) => artist.id === (base ? this.state.artist.id : this.state.compareWith?.id)).length;
+                    })
+                });
+
+            if(base) {
+                this.setState({ baseNumberOfArtworks: numberOfArtworks });
+            } else {
+                this.setState({ compareNumberOfArtworks: numberOfArtworks });
+            }
+        });
+    }
 
 	/** get number of common exhibitions of 2 artists */
 	getCommonExhibitionNumber(compareWith?: Artist): number {
@@ -469,16 +502,16 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 								<div className="sticky">
 									<div className="float-left text-left pl-2">
-										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-blue-300 border-solid">{this.state.artist.firstname} {this.state.artist.lastname} ({this.state.artist.country})</h1>
+										<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-blue-300 border-solid">{this.state.artist.sortname} ({this.state.artist.country})</h1>
 										<h2 className="lg:text-md sm:text-sm font-medium">{(this.state.artist.birthdate?.toString().substring(0, 4))} ({this.state.artist.birthplace}) - {(this.state.artist.deathdate?.toString().substring(0, 4))} ({this.state.artist.deathplace})</h2>
-										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedAtExhibitions)} exhibitions | {this.state.artist.exhibitedAtExhibitions?.length} artworks</h3>
+										<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.artist.exhibitedAtExhibitions?.length} exhibitions | {this.state.baseNumberOfArtworks} artworks</h3>
 									</div>
 
 									{this.state.compareWith &&
 										<div className="float-right text-right pr-2">
-											<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-300 border-dashed">{this.state.compareWith.firstname} {this.state.compareWith.lastname} ({this.state.compareWith.country})</h1>
+											<h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-orange-300 border-dashed">{this.state.compareWith.sortname} ({this.state.compareWith.country})</h1>
 											<h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthdate?.toString().substring(0, 4)} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathdate?.toString().substring(0, 4)} ({this.state.compareWith.deathplace})</h2>
-											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedAtExhibitions)} exhibitions | {this.state.compareWith.exhibitedAtExhibitions?.length} artworks</h3>
+											<h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.compareWith?.exhibitedAtExhibitions?.length} exhibitions | {this.state.compareNumberOfArtworks} artworks</h3>
 
 										</div>
 									}

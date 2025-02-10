@@ -374,7 +374,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
         const filteredLinks = this.state.links.filter((link: Link) => {
             const sum = this.state.links
                 .filter((l: Link) => {
-                    return l.targetId == link.targetId && link.target.props.data.country != '\\N';
+                    return l.targetId == link.targetId && link.target.props.data.country !== null;
                 })
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
             return sum >= (numCoEx ? numCoEx : 3) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);

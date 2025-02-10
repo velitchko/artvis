@@ -6,7 +6,6 @@ query Exhibitions($where: ExhibitionWhere) {
         id,
         startyear,
         endyear,
-        organizer,
         title,
         type,
         exhibitsItems {

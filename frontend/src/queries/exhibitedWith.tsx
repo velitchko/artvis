@@ -17,7 +17,7 @@ query Artists ($searchId: BigInt!) {
                 title,
                 startyear,
                 id,
-                itemsWasExhibitedAtAggregate {
+                exhibitsItemsAggregate {
                     count
                 }
             }  

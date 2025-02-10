@@ -155,11 +155,11 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
 
         // get length of catalogueEntriesEntryIn
         //const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
-        const baseLength = exhibition.itemsWasExhibitedAt?.length;
+        const baseLength = exhibition.exhibitsItems?.length;
 
 
         // get amount of catalogueEntries with id_person === id
-        const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === id)?.length;
+        const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0]?.id === id)?.length;
 
         // calculate percentage
         const percentage = (entries / baseLength) * 100;
@@ -326,7 +326,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
                                 <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).place}</td>
                                 <td className="px-2 py-4">{this.checkForHost(exhibition.tookPlaceAtLocations).country}</td>
                                 <td className="px-2 py-4">{exhibition.title}</td>
-                                <td className="px-2 py-4 text-right">{exhibition.itemsWasExhibitedAt && exhibition.itemsWasExhibitedAt.length}</td>
+                                <td className="px-2 py-4 text-right">{exhibition.exhibitsItems && exhibition.exhibitsItems.length}</td>
                                 <td className="px-2 py-4 text-right">{exhibition.percentBase}%</td>
                                 {
                                     this.state.compareWith && <td className="px-2 py-4 text-right">{exhibition.percentCompare}%</td>

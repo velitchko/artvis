@@ -3,40 +3,40 @@ import { gql } from '@apollo/client';
 
 // TODO: calculate age on the fly
 const GET_ARTIST_AND_CATALOGUES = gql`
-query Artists ($searchId: String!) { 
+query Artists ($searchId: BigInt!) { 
     artists(where: { id: $searchId }) {
-        firstname, 
-        lastname,
+        sortname,
         id,
         country,
         sex,
-        birthdate,
+        birthyear,
         birthplace,
-        deathdate,
+        deathyear,
         deathplace,
-        exhibitedWithArtists {
-            firstname,
-            lastname,
+        coExhibitedArtists {
+            sortname,
             id, 
             country,
             sex,
-            birthdate,
-            deathdate,
+            birthyear,
+            deathyear,
             birthplace,
             deathplace,
-            exhibitedExhibitions {
+            exhibitedAtExhibitions {
                 title,
-                startdate,
+                startyear,
                 id
             }  
         }
-        exhibitedExhibitions {
+        exhibitedAtExhibitions {
             title,
-            startdate,
+            startyear,
             id
-          catalogueEntriesEntryIn {
-            id_person
-          }
+            exhibitsItems {  
+                artistCreated {
+                    id
+                }
+            }
         }
     }
 }

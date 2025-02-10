@@ -298,7 +298,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             case 'year':
                 {
                     //console.log("switch year");
-                    links.sort((a, b) => a.target.props.exhibition.startdate.localeCompare(b.target.props.exhibition.startdate));
+                    links.sort((a, b) => a.props.data.year - b.props.data.year);
                     break;
                 }
             case 'title':
@@ -325,8 +325,6 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
-
-        console.log("groupby");
         console.log(_.groupBy(links, (link: Link) => link.target.props.exhibition.type));
 
         /* links.forEach(function (value) {
@@ -345,7 +343,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             case 'type':
                 return _.groupBy(links, (link: Link) => link.target.props.exhibition.type);
             case 'year':
-                return _.groupBy(links, (link: Link) => link.target.props.exhibition.startdate);
+                return _.groupBy(links, (link: Link) => link.target.props.exhibition.startyear);
             // case 'title':
             //     return _.groupBy(links, (link: Link) => link.target.props.exhibition.title);
             default:
@@ -3536,7 +3534,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
             const exhibition = compareWith?.exhibitedAtExhibitions?.find(x => x.id === l.targetId);
 
-            const count = exhibition?.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith?.id)?.length;
+            const count = exhibition?.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith?.id)?.length;
 
             if (count) {
                 l.props.data.compareCount = count;

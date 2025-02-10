@@ -244,8 +244,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 //for undefined hosts, so they are not shown on the map
                 let long = -99999999.0;
                 let lat = -999999999.0;
-
-                if (d.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                if (d.tookPlaceAtLocations[0] && d.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                     long = d.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
                     lat = d.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude;
 
@@ -845,7 +844,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                     if (common) {
                         //console.log(common.catalogueEntriesEntryIn);
-                        const entries = common.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith.id)?.length;
+                        const entries = common.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith.id)?.length;
                         //console.log("entries" + entries);
                         //TODO stuffed number of artworks of ccompare artist into field for percentages for now... maybe change
                         const metaExhibition: MetaExhibition = { ...exhibition, isCommon: true, percentCompare: entries };

@@ -184,7 +184,7 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
 
         //find number of artworks and exhibitions for artist per year
         this.exhibStats.forEach((exhibition: MetaExhibition) => {
-            const year = +exhibition.startdate;
+            const year = +exhibition.startyear;
             // if (exhibitionsPerYear.has(year)) {
             //     exhibitionsPerYear.get(year)?.add(exhibition.id);
             // } else {
@@ -497,11 +497,11 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             const year = +exhibition.startdate;
             const key = `${exhibition.id}`;
 
-            const baseLength = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
+            const baseLength = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
 
             //TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
             // get amount of catalogueEntries with artistsCreated[0].id === id
-            const entries = exhibition.itemsWasExhibitedAt?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.compareWith?.id)?.length;
+            const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.compareWith?.id)?.length;
 
             // calculate percentage
             const percentage = (entries / baseLength) * 100;

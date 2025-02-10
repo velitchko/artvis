@@ -4,12 +4,11 @@ const GET_EXHIBITIONS_AND_HOSTS = gql`
 query Exhibitions($where: ExhibitionWhere) { 
     exhibitions(where: $where) {
         id,
-        startdate,
-        enddate,
-        organizer,
+        startyear,
+        endyear,
         title,
         type,       
-        itemsWasExhibitedAt {
+        exhibitsItems {
             id,
             artistsCreated {
                 id
