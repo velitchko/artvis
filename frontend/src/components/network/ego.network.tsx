@@ -27,7 +27,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     private maxYear = 1915;
     public isInitialized: boolean = false;
     private selectedGroup: string = '';
-    
+
     constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }) {
         super(props);
 
@@ -435,7 +435,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
 
 
                     // calculate difference of birthdates between target and base node
-                    const diff = +l.target.props.data.birthyear - +this.state.baseNode.props.data.birthdyear;
+                    const diff = +l.target.props.data.birthyear - +this.state.baseNode.props.data.birthyear;
 
                     const ageGroup = ageRanges.reduce((closest: string | null, age: string) => {
                         if (closest === null) return age;
