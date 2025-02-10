@@ -19,6 +19,25 @@ const ArtistDetailPage = () => {
     
     const [artist, setArtist] = useState(null as unknown as Artist);
     const [loading, setLoading ] = useState(true);
+    const [moreLoading, setMoreLoading] = useState(false);
+    const catchy = [
+        'Brushing up on art history... Hold tight!',
+        'Uncovering masterpieces... Just a moment!',
+        'Painting a picture of data... Almost there!',
+        'Dusting off old canvases... Please wait!',
+        'Sculpting your results... Hang on!',
+        'Restoring the Renaissance... Fetching data!',
+        'Channeling our inner art historian... Loading!',
+        'Analyzing ancient art... One sec!',
+        'Polishing our Monets... Data incoming!',
+        'Digging through digital archives... Almost done!'
+    ];
+    
+
+    const load = (result: boolean) => {
+        console.log("load more", result);
+        setMoreLoading(result);
+    }
 
     useEffect(() => {
         client.query({
@@ -39,9 +58,17 @@ const ArtistDetailPage = () => {
                 <NavigationComponent showHeading={ true } />
                 {/* wait to load then rneder artists component  */}
                 <div className="h-[80px]"></div>
-                { !loading && 
-                    <ArtistDetailComponent artist={artist} /> 
-                }
+                { !loading ? (
+                    <>
+                        { !moreLoading && (
+                            <div className='absolute top-0 left-0 z-10 w-full h-full flex items-center justify-center bg-white bg-opacity-50'>
+                                <p className='text-4xl text-black'>{catchy[Math.floor(Math.random() * catchy.length)]}</p>
+                                <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900'></div>
+                            </div>
+                        )}
+                        <ArtistDetailComponent artist={artist} loadCallback={load}/> 
+                    </>
+                ) : null }
             </React.StrictMode>
         </>
     );

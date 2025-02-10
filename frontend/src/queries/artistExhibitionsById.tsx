@@ -6,6 +6,7 @@ query Artists ($searchId: BigInt!) {
     artists(where: { id: $searchId }) {
         exhibitedAtExhibitions {
             id,
+            startyear,
             exhibitsItems {
                 artistsCreated {
                     id

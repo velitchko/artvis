@@ -18,7 +18,7 @@ import { Item } from '../../models/item.model';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 
 // TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, baseNumberOfArtworks: number, compareNumberOfArtworks: number, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallback: Function }, { artist: Artist, compareWith: Artist | null, exhibitionsList: Array<Exhibition>, baseNode: Node, links: Array<Link>, rendered: boolean, baseNumberOfArtworks: number, compareNumberOfArtworks: number, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
@@ -41,16 +41,17 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private maxYear: number = 0;
     private links: Array<Link>;
     private showNetwork: boolean = false;
-    private loadingExternalData: boolean = true;
     private egoNetwork = React.createRef<EgoNetworkComponent>();
     private areaChart = React.createRef<AreaChartComponent>();
     private table = React.createRef<TableComponent>();
+    private loaded: boolean = false;
 
-    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors: { group: string, colors: Map<string, string> } }) {
+    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors: { group: string, colors: Map<string, string> }, loadCallback: Function }) {
         super(props);
 
         this.state = {
             artist: props.artist,
+            exhibitionsList: new Array<Exhibition>(),
             baseNumberOfArtworks: 0,
             compareNumberOfArtworks: 0,
             width: 0,
@@ -112,7 +113,6 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.setState(prevState => ({ width: width, height: height }), () => {
             this.init();
-            this.loadingExternalData = false;
         });
 
         // set resize handler to window
@@ -194,9 +194,23 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         //     .attr('text-anchor', 'middle')
         //     .text('Exhibitions over time');
 
-        this.drawTimeline();
-        this.addLegend();
-        this.drawNetwork();
+        client.query({
+            query: GET_ARTIST_EXHIBITIONS_BY_ID,
+            variables: {
+                searchId: this.state.artist.id
+            }
+        }).then(result => {
+            const exhibitions = result.data.artists[0].exhibitedAtExhibitions;
+            this.setState(prevState => ({
+                exhibitionsList: exhibitions
+            }), () => {
+                console.log('updating callback')
+                this.props.loadCallback(true);
+                this.drawTimeline();
+                this.addLegend();
+                this.drawNetwork();
+            });
+        });
     }
 
     drawTimeline(update?: { newYScale?: number, newRScale?: Array<number> }) {
@@ -208,7 +222,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         // iterate over exhibitions array and calculate total amount of exhibitions per year
         const exhibitionsPerYear = new Map<number, Set<number>>();
         const itemsPerYear = new Map<number, number>();
-        this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
+        this.state.exhibitionsList.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startyear;
             if (exhibitionsPerYear.has(year)) {
                 exhibitionsPerYear.get(year)?.add(+exhibition.id);
@@ -217,14 +231,15 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             }
         });
 
-        this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
+        this.state.exhibitionsList.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startyear;
+            const itemsByArtist = exhibition.exhibitsItems?.filter((item: Item) => item.artistsCreated?.find((artist: Artist) => artist.id === this.state.artist.id)).length;
             // iterate over items
             if (itemsPerYear.has(year)) {
                 const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + exhibition.exhibitsItemsAggregate.count);
+                itemsPerYear.set(year, count + itemsByArtist);
             } else {
-                itemsPerYear.set(year, exhibition.exhibitsItemsAggregate.count);
+                itemsPerYear.set(year, itemsByArtist);
             }
         });
         
@@ -1205,6 +1220,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     }
 
     onArtistChange(artistId: number | null) {
+        this.props.loadCallback(false);
         if (!artistId) {
             // clear compare timeline
             this.compareTimelineContainer?.selectAll('.compare-abs-half-circle').remove();
@@ -1224,14 +1240,14 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         if (artist) {
             // this.setState({ compareWith: artist });
             this.setState(prevState => ({ compareWith: artist }), () => {
+                console.log('updating callback')
+                this.props.loadCallback(true);
                 this.getNumberOfArtworks(false);
                 this.drawCompare();
                 this.egoNetwork.current?.highlightArtist(this.state.compareWith);
             });
             // this.drawCompare();
         } else {
-            this.loadingExternalData = true;
-        
             // convert artistId to string
             const artistIdQuery = BigInt(artistId);
 
@@ -1243,10 +1259,11 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 }
             }).then(result => {
                 this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
+                    console.log('updating callback')
+                    this.props.loadCallback(true);
                     this.getNumberOfArtworks(false);
                     this.drawCompare();
                     this.egoNetwork.current?.highlightArtist(this.state.compareWith);
-                    this.loadingExternalData = false;
                 });
             });
         }
@@ -1360,7 +1377,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 <div className="absolute top-4 left-48 w-[88%] z-50 m-auto">
                     <SearchComponent query={GET_ARTIST_BY_NAME} onClick={this.onClick}></SearchComponent>
                 </div>
-                {this.state.artist &&
+                {this.state.artist && 
                     <div className="grid gap-y-10 gap-x-0 lg:grid-cols-5 lg:grid-rows-5 gap-1 pt-2 sm:grid-cols-1 md:grid-rows-3 w-full h-[92vh]">
                         <div className="row-span-1 col-span-2 z-40">
                             <div className="w-full h-[80%]" id="timeline-container">
