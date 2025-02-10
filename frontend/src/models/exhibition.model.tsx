@@ -24,6 +24,6 @@ export type Exhibition = {
 	venuesHeldAt: Array<Venue>;
 	artistsExhibitedAt: Array<Artist>;
 	organizersOrganizedBy: Array<Organizer>;
-	itemsWasExhibitedAt: Array<Item>;
-	itemsWasExhibitedAtAggregate: { count: number };
+	exhibitsItems: Array<Item>;
+	exhibitsItemsAggregate: { count: number };
 };

@@ -14,8 +14,11 @@ import TableComponent from '../table/table';
 import _ from 'lodash';
 import { countryColors } from '../../colors/colors';
 import GET_EXHIBITION from '../../queries/exhibition';
+import { Item } from '../../models/item.model';
+import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
+
 // TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
+class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, rendered: boolean, baseNumberOfArtworks: number, compareNumberOfArtworks: number, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
 
     private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
     private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
@@ -38,7 +41,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
     private maxYear: number = 0;
     private links: Array<Link>;
     private showNetwork: boolean = false;
-    private loadingExternalData: boolean = false;
+    private loadingExternalData: boolean = true;
     private egoNetwork = React.createRef<EgoNetworkComponent>();
     private areaChart = React.createRef<AreaChartComponent>();
     private table = React.createRef<TableComponent>();
@@ -48,6 +51,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.state = {
             artist: props.artist,
+            baseNumberOfArtworks: 0,
+            compareNumberOfArtworks: 0,
             width: 0,
             height: 0,
             compareWith: null,
@@ -103,8 +108,11 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         if (!width || !height) return;
 
+        this.getNumberOfArtworks(true);
+
         this.setState(prevState => ({ width: width, height: height }), () => {
             this.init();
+            this.loadingExternalData = false;
         });
 
         // set resize handler to window
@@ -211,13 +219,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
 
         this.state.artist.exhibitedAtExhibitions.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startyear;
-            console.log(exhibition);
             // iterate over items
             if (itemsPerYear.has(year)) {
                 const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + exhibition.itemsWasExhibitedAtAggregate.count);
+                itemsPerYear.set(year, count + exhibition.exhibitsItemsAggregate.count);
             } else {
-                itemsPerYear.set(year, exhibition.itemsWasExhibitedAtAggregate.count);
+                itemsPerYear.set(year, exhibition.exhibitsItemsAggregate.count);
             }
         });
         
@@ -632,9 +639,9 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
             // iterate over items
             if (itemsPerYear.has(year)) {
                 const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + exhibition.itemsWasExhibitedAtAggregate.count);
+                itemsPerYear.set(year, count + exhibition.exhibitsItemsAggregate.count);
             } else {
-                itemsPerYear.set(year, exhibition.itemsWasExhibitedAtAggregate.count);
+                itemsPerYear.set(year, exhibition.exhibitsItemsAggregate.count);
             }
         });
 
@@ -1213,11 +1220,11 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         this.setState({ compareWith: null });
 
         const artist = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === artistId);
-
+        
         if (artist) {
             // this.setState({ compareWith: artist });
             this.setState(prevState => ({ compareWith: artist }), () => {
-
+                this.getNumberOfArtworks(false);
                 this.drawCompare();
                 this.egoNetwork.current?.highlightArtist(this.state.compareWith);
             });
@@ -1236,12 +1243,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                 }
             }).then(result => {
                 this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
+                    this.getNumberOfArtworks(false);
                     this.drawCompare();
                     this.egoNetwork.current?.highlightArtist(this.state.compareWith);
+                    this.loadingExternalData = false;
                 });
-                this.loadingExternalData = false;
             });
-
         }
     }
 
@@ -1276,6 +1283,30 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
         const uniqueExhibitions = Array.from(new Set(exhibitions));
 
         return uniqueExhibitions.length;
+    }
+
+    getNumberOfArtworks(base: boolean = true): void {
+        client.query({
+            query: GET_ARTIST_EXHIBITIONS_BY_ID,
+            variables: {
+                searchId: base ? this.state.artist.id : this.state.compareWith?.id
+            }
+        }).then(result => {
+            let numberOfArtworks = 0;
+
+            result.data.artists[0].exhibitedAtExhibitions
+                .forEach((exhibition: Exhibition) => {
+                    exhibition.exhibitsItems.forEach((i: Item) => {
+                        numberOfArtworks += i.artistsCreated.filter((artist: Artist) => artist.id === (base ? this.state.artist.id : this.state.compareWith?.id)).length;
+                    })
+                });
+
+            if(base) {
+                this.setState({ baseNumberOfArtworks: numberOfArtworks });
+            } else {
+                this.setState({ compareNumberOfArtworks: numberOfArtworks });
+            }
+        });
     }
 
     getArtistAge(artist: Artist): number {
@@ -1336,13 +1367,13 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist }, { artist
                                 <div className="float-left text-left pl-2">
                                     <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.sortname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
                                     <h2 className="lg:text-md sm:text-sm font-medium">{this.state.artist.birthyear} ({this.state.artist.birthplace}) - {this.state.artist.deathyear} ({this.state.artist.deathplace})</h2>
-                                    <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.artist.exhibitedAtExhibitions)} exhibitions | {this.state.artist.exhibitedAtExhibitions?.length} artworks</h3>
+                                    <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.artist.exhibitedAtExhibitions?.length} exhibitions | {this.state.baseNumberOfArtworks} artworks</h3>
                                 </div>
                                 {this.state.compareWith &&
                                     <div className="float-right text-right pr-2">
                                         <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.sortname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
                                         <h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthyear} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathyear} ({this.state.compareWith.deathplace})</h2>
-                                        <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.getUniqueExhibitions(this.state.compareWith.exhibitedAtExhibitions)} exhibitions | {this.state.compareWith.exhibitedAtExhibitions?.length} artworks</h3>
+                                        <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.compareWith.exhibitedAtExhibitions?.length} exhibitions | {this.state.compareNumberOfArtworks} artworks</h3>
                                     </div>
                                 }
                                 <svg id="artist-detail-timeline"></svg>

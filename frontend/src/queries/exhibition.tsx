@@ -9,7 +9,7 @@ query Exhibitions($where: ExhibitionWhere) {
         organizer,
         title,
         type,
-        itemsWasExhibitedAt {
+        exhibitsItems {
             id,
             artistsCreated {
                 id

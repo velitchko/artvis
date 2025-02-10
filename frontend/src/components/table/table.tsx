@@ -79,7 +79,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
     }
 
     setup() {
-        const ids = _.uniqBy(this.props.exhibitions, (exhibition: Exhibition) => exhibition.id).map((exhibition: Exhibition) => exhibition.id);
+        const ids = this.props.exhibitions?.map((exhibition: Exhibition) => exhibition.id);
         if(!ids) return;
 
         this.getResults(this.state.query, ids);
@@ -100,7 +100,6 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                 const metaExhibitions = new Array<MetaExhibition>();
                 // create deep copy of res.data.exhibitions
                 const exhibitions = JSON.parse(JSON.stringify(res.data.exhibitions));
-
                 // sort exhibitions by startyear
                 exhibitions.forEach((e: Exhibition) => {
                     e.startyear = +e.startyear
@@ -148,8 +147,8 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
 
         if(!exhibition) return 0;
 
-        const totalArtworksExhibited = exhibition.itemsWasExhibitedAt?.length;
-        const artWorksByBaseArtist = exhibition.itemsWasExhibitedAt?.filter((item: Item) => item.artistsCreated.find((artist: Artist) => artist.id === id)).length;
+        const totalArtworksExhibited = exhibition.exhibitsItems?.length;
+        const artWorksByBaseArtist = exhibition.exhibitsItems?.filter((item: Item) => item.artistsCreated.find((artist: Artist) => artist.id === id)).length;
 
         // console.log(exhibition);
         // console.log(totalArtworksExhibited, artWorksByBaseArtist);
@@ -320,7 +319,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                                 {/* <td className="px-2">{this.checkForHost(exhibition.venuesHeldAt).place} ({this.checkForHost(exhibition.venuesHeldAt).place})</td> */}
                                 {/* <td className="px-4">{exhibition.enddate}</td> */}
                                 <td className="px-2">{exhibition.title}</td>
-                                <td className="px-2 text-right">{exhibition.itemsWasExhibitedAt && exhibition.itemsWasExhibitedAt.length}</td>
+                                <td className="px-2 text-right">{exhibition.exhibitsItems && exhibition.exhibitsItems.length}</td>
                                 <td className="px-2 text-right">{exhibition.percentBase}%</td>
                                 {
                                     this.state.compareWith && <td className="px-2 text-right">{exhibition.percentCompare}%</td>

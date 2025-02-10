@@ -25,7 +25,7 @@ query Artists ($searchId: BigInt!) {
                 startdate,
                 id,
                 startyear,
-                itemsWasExhibitedAtAggregate {
+                exhibitsItemsAggregate {
                     count
                 }
             }  
@@ -45,7 +45,7 @@ query Artists ($searchId: BigInt!) {
             startdate,
             id,
             startyear,
-            itemsWasExhibitedAtAggregate {
+            exhibitsItemsAggregate {
                 count
             }
         }

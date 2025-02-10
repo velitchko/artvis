@@ -199,7 +199,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
             .range([1, 6]);
 
         const targetNodes = this.filterData(this.state.coEx);
-        console.log(targetNodes);
         this.links = targetNodes;
 
         this.gridLines(_.uniqBy(this.links, (node: Link) => node.targetId).length);
@@ -380,8 +379,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
             return sum >= (numCoEx ? numCoEx : 3) && (link.props.data.year >= this.minYear && link.props.data.year <= this.maxYear);
         });
-
-        console.log(filteredLinks);
 
         const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
 
