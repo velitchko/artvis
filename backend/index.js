@@ -16,8 +16,8 @@ import compression from 'compression';
 const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
-	'neo4j://localhost:7687',
-	neo4j.auth.basic('neo4j', 'root1234')
+	'bolt+ssc://artvis-db:7687',
+	neo4j.auth.basic('artvis', 'gyro-Appendix-hungrily-4amply-1resolved-4crummy')
 );
 const app = express();
 

@@ -5,4 +5,4 @@ COPY . /usr/frontend
 
 RUN npm install
 
-CMD npm run start
+CMD npm run deploy
