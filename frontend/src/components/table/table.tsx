@@ -244,6 +244,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
     render() {
         return (
             <>
+            {(this.state.results.exhibitions?.length !== 0) &&
                 <table className="text-left text-black">
                     <thead className="text-xs bg-black text-white uppercase sticky">
                         <tr>
@@ -302,7 +303,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                             </tr>
                         ))} */}
     
-                        {this.state.results.exhibitions && this.state.results.exhibitions.map((exhibition: MetaExhibition) => (      
+                        {this.state.results.exhibitions?.map((exhibition: MetaExhibition) => (      
                             <tr className={`${this.exhibitionIsCommon(exhibition) ? 'bg-amber-100' : 'bg-white'} border-b`} key={exhibition.id.toString()}>
                                 {/* <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                                     {exhibition.id}
@@ -361,6 +362,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                         ))}  */}
                     </tbody>
                 </table>
+            }
             </>
         );
     }

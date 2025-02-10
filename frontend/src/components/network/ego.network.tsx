@@ -27,19 +27,7 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
     private maxYear = 1915;
     public isInitialized: boolean = false;
     private selectedGroup: string = '';
-    private catchy = [
-        'Brushing up on art history... Hold tight!',
-        'Uncovering masterpieces... Just a moment!',
-        'Painting a picture of data... Almost there!',
-        'Dusting off old canvases... Please wait!',
-        'Sculpting your results... Hang on!',
-        'Restoring the Renaissance... Fetching data!',
-        'Channeling our inner art historian... Loading!',
-        'Analyzing ancient art... One sec!',
-        'Polishing our Monets... Data incoming!',
-        'Digging through digital archives... Almost done!'
-    ]
-
+    
     constructor(props: { baseNode: Node, compareNode?: Node, links: Array<Link>, width: number, height: number, coEx: number, groupBy: string, orderBy: string, selection: boolean, loading: boolean, colors: { group: string, colors: Map<string, string> } }) {
         super(props);
 
@@ -1561,12 +1549,6 @@ class EgoNetworkComponent extends React.Component<{ baseNode: Node, links: Array
                     </div>
                 </div>
                 <svg id='ego-net' width={this.state.width} height={this.state.height}></svg>
-                {this.state.loading && (
-                    <div className='absolute top-0 left-0 z-60 w-full h-full flex items-center justify-center bg-white bg-opacity-50'>
-                        <p className='text-4xl text-black'>{this.catchy[Math.floor(Math.random() * this.catchy.length)]}</p>
-                        <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900'></div>
-                    </div>
-                )}
                 {/* <div id='ego-tooltip' ref={this.tooltip} className='absolute w-auto h-auto font-medium p-2 bg-black text-white'></div> */}
             </>
         )
