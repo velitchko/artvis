@@ -1230,6 +1230,7 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
             this.compareTimelineContainer?.selectAll('.common-exhibition').remove();
 
             this.table.current?.reset();
+            this.props.loadCallback(true);
             return;
         }
 
