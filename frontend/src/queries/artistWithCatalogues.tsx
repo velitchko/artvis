@@ -33,7 +33,7 @@ query Artists ($searchId: BigInt!) {
             startyear,
             id
             exhibitsItems {  
-                artistCreated {
+                artistsCreated {
                     id
                 }
             }

@@ -327,17 +327,17 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						// hosts = [...item.exhibition.tookPlaceAtLocations];
 						hosts = item.exhibition.tookPlaceAtLocations.map((location: Location) => {
 							return {
-							id: location?.id || -1,
-							country: location?.locatedAtGeonames[0].country_code || 'Unknown',
-							name: location?.locatedAtGeonames[0].name || 'Unknown',
-							latitude: location?.locatedAtGeonames[0].latitude || -999999999,
-							longitude: location?.locatedAtGeonames[0].longitude || -999999999,
-							place: location?.place || 'Unknown',
-							place_tgn: location?.place_tgn || 0,
-							type: location?.type || 'Unknown',
-							exhibitionsTookPlaceIn: []
-						};
-					});
+								id: location?.id || -1,
+								country: location?.locatedAtGeonames[0].country_code || 'Unknown',
+								name: location?.locatedAtGeonames[0].name || 'Unknown',
+								latitude: location?.locatedAtGeonames[0].latitude || -999999999,
+								longitude: location?.locatedAtGeonames[0].longitude || -999999999,
+								place: location?.place || 'Unknown',
+								place_tgn: location?.place_tgn || 0,
+								type: location?.type || 'Unknown',
+								exhibitionsTookPlaceIn: []
+							};
+						});
 						//console.log(hosts[0].country);
 					}
 					//if the exhibition does not have hosts, insert a dummy host
@@ -438,28 +438,28 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 	}
 
 	getNumberOfArtworks(base: boolean = true): void {
-        client.query({
-            query: GET_ARTIST_EXHIBITIONS_BY_ID,
-            variables: {
-                searchId: base ? this.state.artist.id : this.state.compareWith?.id
-            }
-        }).then(result => {
-            let numberOfArtworks = 0;
+		client.query({
+			query: GET_ARTIST_EXHIBITIONS_BY_ID,
+			variables: {
+				searchId: base ? this.state.artist.id : this.state.compareWith?.id
+			}
+		}).then(result => {
+			let numberOfArtworks = 0;
 
-            result.data.artists[0].exhibitedAtExhibitions
-                .forEach((exhibition: Exhibition) => {
-                    exhibition.exhibitsItems.forEach((i: Item) => {
-                        numberOfArtworks += i.artistsCreated.filter((artist: Artist) => artist.id === (base ? this.state.artist.id : this.state.compareWith?.id)).length;
-                    })
-                });
+			result.data.artists[0].exhibitedAtExhibitions
+				.forEach((exhibition: Exhibition) => {
+					exhibition.exhibitsItems.forEach((i: Item) => {
+						numberOfArtworks += i.artistsCreated.filter((artist: Artist) => artist.id === (base ? this.state.artist.id : this.state.compareWith?.id)).length;
+					})
+				});
 
-            if(base) {
-                this.setState({ baseNumberOfArtworks: numberOfArtworks });
-            } else {
-                this.setState({ compareNumberOfArtworks: numberOfArtworks });
-            }
-        });
-    }
+			if (base) {
+				this.setState({ baseNumberOfArtworks: numberOfArtworks });
+			} else {
+				this.setState({ compareNumberOfArtworks: numberOfArtworks });
+			}
+		});
+	}
 
 	/** get number of common exhibitions of 2 artists */
 	getCommonExhibitionNumber(compareWith?: Artist): number {
