@@ -844,7 +844,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
                     if (common) {
                         //console.log(common.catalogueEntriesEntryIn);
-                        const entries = common.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === compareWith.id)?.length;
+                        const entries = common.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0]?.id === compareWith.id)?.length;
                         //console.log("entries" + entries);
                         //TODO stuffed number of artworks of ccompare artist into field for percentages for now... maybe change
                         const metaExhibition: MetaExhibition = { ...exhibition, isCommon: true, percentCompare: entries };
@@ -860,7 +860,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 const artworksCompare = new Map<string, number>();
 
                 commonExhibitions.forEach((exhibition: MetaExhibition) => {
-                    if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                    if (exhibition.tookPlaceAtLocations[0] && exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                         //console.log("in host");
                         const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
@@ -874,7 +874,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 });
 
                 this.exhibStats.forEach((exhibition: MetaExhibition) => {
-                    if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+                    if (exhibition.tookPlaceAtLocations[0] && exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                         const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
                         if (artworksBase.has(latLong)) {
