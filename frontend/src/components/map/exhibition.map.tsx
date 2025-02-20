@@ -230,7 +230,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
                 let long = -999999999.0;
                 let lat = -99999999999.0;
 
-                if (d.tookPlaceAtLocations[0]) {
+                if (d.tookPlaceAtLocations[0] && d.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                     long = d.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
                     lat = d.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude;
 
@@ -410,7 +410,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         const artworksPerCity = new Map<string, number>();
 
         this.exhibStats.forEach((exhibition: MetaExhibition) => {
-            if (exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
+            if (exhibition.tookPlaceAtLocations[0] && exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0]) {
                 const latLong = exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].latitude + "," + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].longitude;
 
                 if (artworksPerCityTotal.has(latLong)) {

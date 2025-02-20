@@ -16,7 +16,7 @@ import compression from 'compression';
 const typeDefs = gql`${schema}`;
 
 const driver = neo4j.driver(
-	'bolt+ssc://artvis-db:7687',
+	'bolt+s://artvis.cvast.tuwien.ac.at:7687',
 	neo4j.auth.basic('artvis', 'gyro-Appendix-hungrily-4amply-1resolved-4crummy')
 );
 const app = express();
@@ -44,13 +44,13 @@ neoSchema.getSchema().then(async (schema) => {
 		// expressMiddleware accepts the same arguments:
 		// an Apollo Server instance and optional configuration options
 		expressMiddleware(server, {
-			context: async ({ req }) => ({ 
-				token: req.headers.token 
+			context: async ({ req }) => ({
+				token: req.headers.token
 			}),
 		}),
 	);
 
-	app.use('/cypher', cors(),	bodyParser.json(), cypherRouter);
+	app.use('/cypher', cors(), bodyParser.json(), cypherRouter);
 
 	app.use('/api', (_, res) => res.redirect('/graphql'));
 

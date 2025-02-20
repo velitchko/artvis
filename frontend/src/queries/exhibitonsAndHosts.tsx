@@ -13,7 +13,7 @@ query Exhibitions($where: ExhibitionWhere) {
             artistsCreated {
                 id
             }
-        } 
+        }
         tookPlaceAtLocations {
             id
             name
@@ -27,10 +27,18 @@ query Exhibitions($where: ExhibitionWhere) {
                 name
                 country_code
             }
-        }    
+        } 
+        venuesHeld {
+            id
+            name
+	        place
+	        place_tgn
+	        type
+        }     
         artistsExhibitedAt {
             id
-        } 
+        }
+        
     }
 }   
 `;
