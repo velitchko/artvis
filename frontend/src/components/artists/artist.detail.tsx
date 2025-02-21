@@ -558,6 +558,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
 
         // string == exhib.id, 
         let coexhibMap: Map<number, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map<number, Set<{ year: number, exhibitionIds: Set<number> }>>();
+
+        // (source artist) -> (co-exhibited artist)
         this.state.artist.coExhibitedArtists?.forEach((artist: Artist) => {
             artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
                 // check if source artist also exhibited in this exhibition
@@ -583,8 +585,42 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
             });
         });
 
+        // (co-exhibited artist) -> (source artist)
+        this.state.artist.artistsCoExhibited?.forEach((artist: Artist) => {
+            artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
+                // check if source artist also exhibited in this exhibition
+                const sourceExhibition = this.state.artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
+
+                if (!sourceExhibition) return;
+
+                const year = +exhibition.startyear;
+                const key = artist.id;
+
+                if (coexhibMap.has(key)) {
+                    const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
+                    const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
+
+                    if (yearData) {
+                        yearData.exhibitionIds.add(exhibition.id);
+                    } else {
+                        value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
+                    }
+                } else {
+                    coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
+                }
+            });
+        });
+
+
         coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<number> }>, key: number) => {
-            const found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === key);
+            let found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === key);
+
+            if (!found) {
+                found = this.state.artist.artistsCoExhibited?.find((artist: Artist) => artist.id === key);
+            }
+
+            // check if artist is in artistsCoExhibited array
+
 
             if (!found) {
                 console.log(key + ' not found');

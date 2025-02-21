@@ -11,6 +11,25 @@ query Artists ($searchId: BigInt!) {
         birthplace,
         deathyear,
         deathplace,
+        artistsCoExhibited {
+            sortname,
+            id, 
+            country,
+            sex,
+            birthyear,
+            deathyear,
+            birthplace,
+            deathplace,
+            exhibitedAtExhibitions {
+                title,
+                startdate,
+                id,
+                startyear,
+                exhibitsItemsAggregate {
+                    count
+                }
+            }
+        }  
         coExhibitedArtists {
             sortname,
             id, 
