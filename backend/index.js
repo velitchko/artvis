@@ -15,9 +15,10 @@ import compression from 'compression';
 
 const typeDefs = gql`${schema}`;
 
+// TODO: Load from secrets
 const driver = neo4j.driver(
-	'bolt+s://artvis.cvast.tuwien.ac.at:7687',
-	neo4j.auth.basic('artvis', 'gyro-Appendix-hungrily-4amply-1resolved-4crummy')
+	'bolt://localhost:7687',
+	neo4j.auth.basic('neo4j', 'password')
 );
 const app = express();
 
