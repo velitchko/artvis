@@ -200,7 +200,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
     };
 
     getCountryAndCity(exhibition: MetaExhibition): string {
-        if(exhibition.tookPlaceAtLocations.length === 0) return 'NA';
+        if(exhibition.tookPlaceAtLocations.length === 0 || exhibition.tookPlaceAtLocations[0].locatedAtGeonames.length === 0) return 'NA';
         return exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].name + ' (' + exhibition.tookPlaceAtLocations[0].locatedAtGeonames[0].country_code + ')';
     }
 
