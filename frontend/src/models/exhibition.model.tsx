@@ -21,7 +21,7 @@ export type Exhibition = {
 	title_alternate: string;
 	type: string;
 	tookPlaceAtLocations: Array<Location>;
-	venuesHeldAt: Array<Venue>;
+	venuesHeld: Array<Venue>;
 	artistsExhibitedAt: Array<Artist>;
 	organizersOrganizedBy: Array<Organizer>;
 	exhibitsItems: Array<Item>;

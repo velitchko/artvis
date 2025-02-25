@@ -497,11 +497,16 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             const year = +exhibition.startdate;
             const key = `${exhibition.id}`;
 
-            const baseLength = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
+            console.log("EXHIBITION");
+            console.log(exhibition);
+
+            //const baseLength = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
+            const baseLength = exhibition.exhibitsItems?.length;
 
             //TODO: entries == artworksCount but easier computation. --> remove artworksCount + rename entries to artworksCount
             // get amount of catalogueEntries with artistsCreated[0].id === id
-            const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.compareWith?.id)?.length;
+            //const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id === this.state.compareWith?.id)?.length;
+            const entries = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0]?.id === this.state.compareWith?.id)?.length;
 
             // calculate percentage
             const percentage = (entries / baseLength) * 100;
