@@ -30,6 +30,12 @@ query Artists($searchId: BigInt!) {
             country_code
           }
         },
+        venuesHeld{
+          id,
+          name,
+          place,
+          type
+        }
         exhibitsItems {
           id,
             artistsCreated {

@@ -129,8 +129,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 		//TODO: change logic... query for exhibitions by artist
 		const artist = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === artistId);
 
-		console.log("artist (comp with)");
-		console.log(artist);
+		//console.log("artist (comp with)");
+		//console.log(artist);
 
 		if (artist) {
 			// this.setState({ compareWith: artist });
@@ -220,8 +220,8 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 			const key = `${exhibition.id}`;
 			//const artworksCount = +1;
 
-			/* console.log("exhibited exhib");
-			console.log(exhibition); */
+			//console.log("exhibited exhib");
+			//console.log(exhibition);
 
 			//const baseLength = exhibition.catalogueEntriesEntryIn?.filter((entry: CatalogueEntry) => entry.id_person !== '\\N').length;
 			const baseLength = exhibition.exhibitsItems?.length;
@@ -376,7 +376,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						props: { data: this.state.artist, exhibition: item.exhibition, hosts: hosts }
 					};
 
-					console.log(target);
+					//console.log(target);
 
 					//console.log("artist:");
 					//console.log(this.state.artist);

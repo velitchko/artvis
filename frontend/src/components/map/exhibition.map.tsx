@@ -133,6 +133,9 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         this.totalRScale.domain([Math.min(...this.exhibStats.map(g => g.artworksTotal)), Math.max(...this.exhibStats.map(g => g.artworksTotal))]);
         this.drawCircles();
 
+        //console.log("MAP exhibitions");
+        //console.log(this.exhibStats);
+
     }
 
 
@@ -273,7 +276,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
 
             }) */
             .append("title").append('tspan')
-            .text((d: MetaExhibition) => `${d.title} (${d.startdate})\n${this.checkForHost(d.tookPlaceAtLocations).name}, ${this.checkForHost(d.tookPlaceAtLocations).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
+            .text((d: MetaExhibition) => `${d.title} (${d.startyear})\n${this.checkForHost(d.tookPlaceAtLocations).name}, ${this.checkForHost(d.tookPlaceAtLocations).place}\n${d.artworksBase} artworks of ${d.artworksTotal} in total`);
 
         //CIRCLE MARKS END_______________________________________________________________
 
@@ -1063,7 +1066,7 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
             return {
                 id: hosts[0].id,
                 country: hosts[0].locatedAtGeonames[0].country_code || 'Unknown',
-                name: hosts[0].locatedAtGeonames[0].name || 'Unknown',
+                name: hosts[0].name || 'Unknown',
                 latitude: hosts[0].locatedAtGeonames[0].latitude || 9999999,
                 longitude: hosts[0].locatedAtGeonames[0].longitude || 9999999,
                 place: hosts[0].place || 'Unknown',
