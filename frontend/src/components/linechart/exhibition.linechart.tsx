@@ -497,8 +497,8 @@ class ExhibitionLinechartComponent extends React.Component<{ compareWith: Artist
             const year = +exhibition.startdate;
             const key = `${exhibition.id}`;
 
-            console.log("EXHIBITION");
-            console.log(exhibition);
+            //console.log("EXHIBITION");
+            //console.log(exhibition);
 
             //const baseLength = exhibition.exhibitsItems?.filter((entry: Item) => entry.artistsCreated[0].id !== -1).length;
             const baseLength = exhibition.exhibitsItems?.length;

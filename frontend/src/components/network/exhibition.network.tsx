@@ -325,7 +325,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
     groupBy(prop: string, links: Array<Link>): Dictionary<Link[]> {
-        console.log(_.groupBy(links, (link: Link) => link.target.props.exhibition.type));
+        //console.log(_.groupBy(links, (link: Link) => link.target.props.exhibition.type));
 
         /* links.forEach(function (value) {
             console.log("links " + value.target.props.exhibition.title);
@@ -374,14 +374,14 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
         //const groupedLinks = this.groupBy(this.state.groupBy, filteredLinks);
         //console.log("filter " + this.state.orderBy + " " + this.state.groupBy);
-        console.log("filtereddata");
-        console.log(filteredLinks);
-        console.log(this.state.groupBy);
+        //console.log("filtereddata");
+        //console.log(filteredLinks);
+        //console.log(this.state.groupBy);
 
         const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, filteredLinks);
         //const groupedLinks = this.orderBy(this.state.orderBy, this.state.groupBy, this.state.links);
 
-        console.log(groupedLinks);
+        //console.log(groupedLinks);
 
         let groupData: Array<{ group: string, links: Array<Link> }> = [];
 
@@ -391,8 +391,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             groupData.push({ group: group, links: links });
         });
 
-        console.log("groupdata");
-        console.log(groupData);
+        //console.log("groupdata");
+        //console.log(groupData);
 
         // sort group data array by percent
         //groupData = _.orderBy(groupData, ['percentage'], ['desc']);
@@ -474,9 +474,9 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         this.percentNodeRScale.domain([Math.min(...grouped.map(g => g.props.data.count)), Math.max(...grouped.map(g => g.props.data.count))]);
         this.minimum = Math.min(...grouped.map(g => g.props.data.count));
 
-        console.log("minmax");
-        console.log(Math.min(...grouped.map(g => g.props.data.count)));
-        console.log(Math.max(...grouped.map(g => g.props.data.count)));
+        //console.log("minmax");
+        //console.log(Math.min(...grouped.map(g => g.props.data.count)));
+        //console.log(Math.max(...grouped.map(g => g.props.data.count)));
 
 
         // iterate over unique links and find original link in filteredLinks and set link.props.originalIndex to index of unique link
@@ -490,8 +490,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             });
         });
 
-        console.log("grouped");
-        console.log(grouped);
+        //console.log("grouped");
+        //console.log(grouped);
 
         return grouped;
     }
@@ -665,6 +665,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 console.log(id);
 
                 const data = d3.select(`#${id}`).datum() as Link;
+                console.log("network");
                 console.log(data);
 
                 if (!data) return;
@@ -705,7 +706,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+                        .text(`${data.target.props.exhibition.tookPlaceAtLocations[0]?.name}, ${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -884,6 +885,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 const id = (d.target as SVGCircleElement).id;
 
                 const data = d3.select(`#${id}`).datum() as Link;
+
                 if (!data) return;
 
                 if (!this.state.selection) {
@@ -962,7 +964,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`Age ${data.target.props.age}`);
-                        .text(`Year ${data.target.props.exhibition.startdate}`);
+                        .text(`Year ${data.target.props.exhibition.startyear}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -997,7 +999,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
 
                     // get bbox of text
@@ -1225,7 +1227,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`${sum} co-exhibitions`);
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -1462,11 +1464,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //let color = d3.schemeCategory10;
 
         let color = ["#1f77b4", "#ff7f0e", "#cbd5e8"];
-        console.log("links ");
-        console.log(this.links);
+        //console.log("links ");
+        //console.log(this.links);
 
-        console.log("compare pies");
-        console.log(this.getCompareArtworks(this.state.compareWith));
+        //console.log("compare pies");
+        //console.log(this.getCompareArtworks(this.state.compareWith));
 
         let points = this.artistContainer.selectAll('g')
             //let points = this.artistContainer.selectAll('.pies')
@@ -1524,8 +1526,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 return piearc(d);
             })
             .attr("fill", function (d, i) {
-                console.log("color");
-                console.log(color[i]);
+                //console.log("color");
+                //console.log(color[i]);
                 return color[i];
                 /* if (i === 0) {
                     return color[i];
@@ -1547,20 +1549,20 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             .attr('opacity', 0.75);
         //PIE CHARTS END__________________________________________________________
 
-        console.log(this.artistContainer.selectAll('.pies'));
+        //console.log(this.artistContainer.selectAll('.pies'));
 
         //Tooltips + highlight year circle ______________________________________________________
         this.artistContainer.selectAll('.pies')
             .on('mouseover', (d: PointerEvent) => {
-                console.log("mouse");
+                //console.log("mouse");
                 // get data from d 
                 const id = (d.target as SVGCircleElement).id;
-                console.log(d);
-                console.log(id);
+                //console.log(d);
+                //console.log(id);
 
                 const data = d3.select(`#${id}`).datum() as Link;
 
-                console.log(data);
+                //console.log(data);
 
                 if (!data) return;
 
@@ -1600,7 +1602,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+                        .text(`${data.target.props.exhibition.tookPlaceAtLocations[0]?.name}, ${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -1856,7 +1858,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`Age ${data.target.props.age}`);
-                        .text(`Year ${data.target.props.exhibition.startdate}`);
+                        .text(`Year ${data.target.props.exhibition.startyear}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -1891,7 +1893,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
 
                     // get bbox of text
@@ -2119,7 +2121,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`${sum} co-exhibitions`);
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -2414,7 +2416,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
         //CIRCLES END______________________________________________________________________________
 
 
-        console.log(this.artistContainer.selectAll('circle'));
+        //console.log(this.artistContainer.selectAll('circle'));
 
 
         //Tooltips + highlight year circle ______________________________________________________
@@ -2423,11 +2425,11 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                 // get data from d 
                 const id = (d.target as SVGCircleElement).id;
 
-                console.log(d.target);
-                console.log(id);
+                //console.log(d.target);
+                //console.log(id);
 
                 const data = d3.select(`#${id}`).datum() as Link;
-                console.log(data);
+                //console.log(data);
 
                 if (!data) return;
 
@@ -2467,7 +2469,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`${data.target.props.hosts[0].name}, ${data.target.props.hosts[0].place}`);
+                        .text(`${data.target.props.exhibition.tookPlaceAtLocations[0]?.name}, ${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -2725,7 +2727,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`Age ${data.target.props.age}`);
-                        .text(`Year ${data.target.props.exhibition.startdate}`);
+                        .text(`Year ${data.target.props.exhibition.startyear}`);
 
                     text.append('tspan')
                         .attr('x', cx + 15)
@@ -2760,7 +2762,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('font-size', '12px')
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
 
                     // get bbox of text
@@ -2988,7 +2990,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                         .attr('fill', 'white')
                         .attr('font-weight', 'bold')
                         //.text(`${sum} co-exhibitions`);
-                        .text(`Host: ${data.target.props.hosts[0].name} (${data.target.props.hosts[0].place}, ${data.target.props.hosts[0].country})`);
+                        .text(`Organizer: ${data.target.props.exhibition.tookPlaceAtLocations[0]?.name} (${data.target.props.exhibition.tookPlaceAtLocations[0]?.place}, ${data.target.props.hosts[0].country})`);
 
                     // get bbox of text
                     const bbox = text.node()?.getBBox();
@@ -3362,7 +3364,7 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
 
 
                 console.log("update");
-                console.log(this.currentMark);
+                //console.log(this.currentMark);
 
                 if (this.currentMark === "pies") {
                     this.artistContainer?.selectAll('circle').remove();
@@ -3525,8 +3527,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
     /** assign number of compare artist's artworks to the common exhibitions */
     getCompareArtworks(compareWith: Artist | null): Array<Link> {
 
-        console.log("comparewith");
-        console.log(compareWith);
+        //console.log("comparewith");
+        //console.log(compareWith);
 
         let links: Link[] = [];
 
@@ -3546,8 +3548,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
             links.push(l);
 
         });
-        console.log("compare links");
-        console.log(links);
+        //console.log("compare links");
+        //console.log(links);
 
         return links;
 
@@ -3654,8 +3656,8 @@ class ExhibitionNetworkComponent extends React.Component<{ baseNode: Node, links
                             <option value="year">Year</option>
                             <option value="country">Country</option>
                             <option value="hostcity">City</option>
-                            <option value="hosttype">Host Type</option>
-                            <option value="hostname">Host Name</option>
+                            <option value="hosttype">Organizer Type</option>
+                            <option value="hostname">Organizer Name</option>
                         </select>
                     </div>
                     <div className="block">

@@ -215,7 +215,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
             return {
                 id: hosts[0].id,
                 country: hosts[0].locatedAtGeonames[0].country_code || 'Unknown',
-                name: hosts[0].locatedAtGeonames[0].name || 'Unknown',
+                name: hosts[0].name || 'Unknown',
                 latitude: hosts[0].locatedAtGeonames[0].latitude || 9999999,
                 longitude: hosts[0].locatedAtGeonames[0].longitude || 9999999,
                 place: hosts[0].place || 'Unknown',
@@ -286,10 +286,10 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
                                 <button onClick={() => this.sort('artistsExhibited.length')}>Artists</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('name.host')}>Host</button>
+                                <button onClick={() => this.sort('name.host')}>Organizing Body</button>
                             </th>
                             <th scope="col" className="px-2 py-2 border-r border-gray-300">
-                                <button onClick={() => this.sort('type.host')}>Hosttype</button>
+                                <button onClick={() => this.sort('type.host')}>Organizer Type</button>
                             </th>
                         </tr>
                     </thead>
