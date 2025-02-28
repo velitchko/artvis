@@ -30,7 +30,7 @@ query Artists($searchId: BigInt!) {
             country_code
           }
         },
-        venuesHeld{
+        venuesHeld {
           id,
           name,
           place,
