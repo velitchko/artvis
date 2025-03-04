@@ -328,10 +328,10 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 						hosts = item.exhibition.tookPlaceAtLocations.map((location: Location) => {
 							return {
 								id: location?.id || -1,
-								country: location?.locatedAtGeonames[0].country_code || 'Unknown',
-								name: location?.locatedAtGeonames[0].name || 'Unknown',
-								latitude: location?.locatedAtGeonames[0].latitude || -999999999,
-								longitude: location?.locatedAtGeonames[0].longitude || -999999999,
+								country: location?.locatedAtGeonames[0]?.country_code || 'Unknown',
+								name: location?.locatedAtGeonames[0]?.name || 'Unknown',
+								latitude: location?.locatedAtGeonames[0]?.latitude || -999999999,
+								longitude: location?.locatedAtGeonames[0]?.longitude || -999999999,
 								place: location?.place || 'Unknown',
 								place_tgn: location?.place_tgn || 0,
 								type: location?.type || 'Unknown',

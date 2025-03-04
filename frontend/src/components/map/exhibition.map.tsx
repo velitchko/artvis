@@ -1065,10 +1065,10 @@ class ExhibitionMapComponent extends React.Component<{ compareWith: Artist | nul
         if (hosts[0]) {
             return {
                 id: hosts[0].id,
-                country: hosts[0].locatedAtGeonames[0].country_code || 'Unknown',
+                country: hosts[0].locatedAtGeonames[0]?.country_code || 'Unknown',
                 name: hosts[0].name || 'Unknown',
-                latitude: hosts[0].locatedAtGeonames[0].latitude || 9999999,
-                longitude: hosts[0].locatedAtGeonames[0].longitude || 9999999,
+                latitude: hosts[0].locatedAtGeonames[0]?.latitude || 9999999,
+                longitude: hosts[0].locatedAtGeonames[0]?.longitude || 9999999,
                 place: hosts[0].place || 'Unknown',
                 place_tgn: hosts[0].place_tgn || 0,
                 type: hosts[0].type || 'Unknown',
