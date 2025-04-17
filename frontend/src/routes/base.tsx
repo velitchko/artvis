@@ -7,6 +7,7 @@ import ErrorPage from "./not-found";
 import ExplorerPage from "../pages/explorer";
 import ArtistDetailPage from "../pages/artist.detail";
 import ExhibitionsPage from "../pages/exhibitions";
+import GroupsPage from "../pages/groups";
 
 
 export default function Base() {
@@ -20,6 +21,7 @@ export default function Base() {
                 <Route path="/artist/:id" element={<ArtistDetailPage />} />
                 <Route path="/artist/" element={<ArtistDetailPage />} />
                 <Route path="/exhibitions/:artist" element={<ExhibitionsPage />} />
+                <Route path="/groups" element={<GroupsPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
         </React.StrictMode>

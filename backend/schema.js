@@ -30,6 +30,9 @@ export const schema = `type Artist {
 	ulan: String
 	urlan: String
 	wikidata: String
+	numvenues: BigInt
+	numcities: BigInt
+	numcountries: BigInt
 }
 
 interface CoExhibitedProperties @relationshipProperties {
