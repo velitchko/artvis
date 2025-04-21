@@ -14,7 +14,11 @@ query Artists {
         numcountries,
         exhibitedAtExhibitions {
             id
-        }       
+        }
+        coExhibitedTotalArtists {
+            id
+        }
+
     }
 }
 `;

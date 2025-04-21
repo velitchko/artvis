@@ -46,6 +46,8 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private xScale: d3.ScaleLinear<number, number, never> | undefined;
 	private loadingExternalData: boolean = false;
 	private artistColor: string;
+	private artistlist: Array<Artist>;
+	private coexhiblist: Map<string, Array<BigInt>>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -63,12 +65,13 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 			compareWith: null
 		};
 
-		console.log(this.state.artists[0]);
-		console.log(this.state.exhibitions[0]);
+
+		//console.log(this.state.exhibitions[0]);
 
 		this.links = new Array<Link>();
 		this.exhibStatistics = new Array<MetaExhibition>();
 		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
+		this.coexhiblist = new Map<string, Array<BigInt>>();
 		this.width = 500;
 		this.height = 200;
 
@@ -82,6 +85,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.xScale = undefined;
 		this.artistColor = "#1f77b4";
 
+		this.artistlist = this.state.artists;
 
 		this.margin = {
 			top: 30,
@@ -89,10 +93,32 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 			left: 30,
 			right: 30
 		};
+		this.init();
 	}
 
 	init() {
 		console.log("init");
+		//console.log(this.state.artists[0]);
+
+		this.artistlist.forEach((artist) => {
+			const artistId = artist.id;
+			let adjList = new Array(14001).fill(0);
+			//console.log(artistId);
+
+			artist.coExhibitedTotalArtists?.forEach((artist) => {
+
+				adjList[artist.id] = 1;
+			});
+
+			if (artistId) {
+				this.coexhiblist.set(artistId.toString(), adjList);
+			}
+		});
+
+		let one = '5'; //why is id nr 4 missing? 
+		//console.log(this.coexhiblist.get(one));
+
+
 	}
 
 	onResize = () => {
