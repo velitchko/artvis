@@ -49,6 +49,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private artistColor: string;
 	private artistlist: Array<Artist>;
 	private coexhiblist: Map<string, Array<BigInt>>;
+	private genderlist: Map<string, Array<BigInt>>;
 	private exhibitionlist: Array<Exhibition>;
 
 
@@ -74,6 +75,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.exhibStatistics = new Array<MetaExhibition>();
 		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		this.coexhiblist = new Map<string, Array<BigInt>>();
+		this.genderlist = new Map<string, Array<BigInt>>();
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -112,6 +114,8 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		this.computeAdjacencylist();
 
+		this.computeGenderVectors();
+
 		//this.loadExhibitions();
 
 		console.log
@@ -143,7 +147,31 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		//console.log(this.coexhiblist.get(one));
 	}
 
+	//one hot vector for gender
 	computeGenderVectors() {
+		//vector: [0, 1] = [M, F]
+
+		this.artistlist.forEach((artist) => {
+			const artistId = artist.id;
+			let genderVec = new Array(2).fill(0);
+			//console.log(artistId);
+
+			if (artist.sex) {
+				if (artist.sex == 'M') {
+					genderVec[0] = 1;
+				}
+				else if (artist.sex == 'F') {
+					genderVec[1] = 1;
+				}
+			}
+
+			if (artistId) {
+				this.genderlist.set(artistId.toString(), genderVec);
+			}
+		});
+
+		let one = '5';
+		console.log(this.genderlist.get(one));
 
 	}
 
