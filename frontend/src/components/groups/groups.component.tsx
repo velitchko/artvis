@@ -53,6 +53,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private countrylist: Map<string, Array<BigInt>>;
 	private exhibitionlist: Array<Exhibition>;
 	private countries: Array<string>;
+	private artworkExhibitionList: Map<string, number>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -79,6 +80,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.coexhiblist = new Map<string, Array<BigInt>>();
 		this.genderlist = new Map<string, Array<BigInt>>();
 		this.countrylist = new Map<string, Array<BigInt>>();
+		this.artworkExhibitionList = new Map<string, number>();
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -124,9 +126,9 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		this.computeCountryVector();
 
-		//this.loadExhibitions();
+		this.computeArtworkExhibitions();
 
-		console.log
+		//this.loadExhibitions();
 
 		//console.log(this.exhibitionlist[0]);
 
@@ -222,6 +224,39 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 			this.exhibitionlist = result.data;
 
 		});
+	}
+
+	//compute for each artist (# exhibited artworks/ # exhibitions)*100
+	computeArtworkExhibitions() {
+
+		this.artistlist.forEach((artist) => {
+			const artistId = artist.id;
+
+			let artworkExhibitions = 0;
+
+			if (artist.exhibitedAtExhibitions && artist.exhibitedAtExhibitions.length != 0) { //not supposed to be null or zero because of the division
+				const numberExhibitions = artist.exhibitedAtExhibitions?.length;
+
+				let numberOfArtworks = 0;
+
+				this.exhibitionlist.forEach((exhibition) => {
+					exhibition.exhibitsItems.forEach((i: Item) => {
+						numberOfArtworks += i.artistsCreated.filter((a: Artist) => a.id === (artistId)).length;
+					})
+				});
+
+				artworkExhibitions = numberOfArtworks / numberExhibitions * 100;
+
+				this.artworkExhibitionList.set(artistId.toString(), artworkExhibitions);
+			}
+
+
+		});
+
+		let one = '5';
+		//console.log("artworks + exhibitions");
+		//console.log(this.artworkExhibitionList.get(one));
+
 	}
 
 	onResize = () => {
