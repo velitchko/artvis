@@ -21,6 +21,7 @@ const GroupsPage = () => {
     const [exhibitions, setExhibitions] = useState({} as Array<Exhibition>);
     const [artistAndExhibitions, setArtistAndExhibitions] = useState({} as Artist);
     const [loading, setLoading] = useState(true);
+    const [loading2, setLoading2] = useState(true);
 
     /* const loadArtist = async () => {
         client.query({
@@ -57,20 +58,20 @@ const GroupsPage = () => {
 
     }, []);
 
-    /*  useEffect(() => {
-         client.query({
-             //query: GET_EXHIBITIONS_BY_ARTIST,
-             query: GET_EXHIBITIONS_FOR_GROUPS,
-             //variables: {
-             //    searchId: "1"
-             //}
-         })
-             .then(result => {
-                 setExhibitions(result.data.exhibitions);
-                 setLoading(false);
-             });
- 
-     }, []); */
+    useEffect(() => {
+        client.query({
+            //query: GET_EXHIBITIONS_BY_ARTIST,
+            query: GET_EXHIBITIONS_FOR_GROUPS,
+            //variables: {
+            //    searchId: "1"
+            //}
+        })
+            .then(result => {
+                setExhibitions(result.data.exhibitions);
+                setLoading2(false);
+            });
+
+    }, []);
 
     return (
         <>
@@ -79,7 +80,7 @@ const GroupsPage = () => {
                 {/* wait to load then render exhibition component  */}
                 <div className="h-[80px]">{/* distance between header + rest */}
                 </div>
-                {!loading && <GroupsComponent artists={artists} exhibitions={exhibitions} />}
+                {!loading && !loading2 && <GroupsComponent artists={artists} exhibitions={exhibitions} />}
             </React.StrictMode>
         </>
     );

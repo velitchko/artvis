@@ -21,6 +21,7 @@ import { Host } from '../../models/host.model';
 import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
+import GET_EXHIBITIONS_FOR_GROUPS from '../../queries/exhibitionsForGroups';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -48,6 +49,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private artistColor: string;
 	private artistlist: Array<Artist>;
 	private coexhiblist: Map<string, Array<BigInt>>;
+	private exhibitionlist: Array<Exhibition>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -72,6 +74,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.exhibStatistics = new Array<MetaExhibition>();
 		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		this.coexhiblist = new Map<string, Array<BigInt>>();
+		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
 
@@ -86,6 +89,13 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.artistColor = "#1f77b4";
 
 		this.artistlist = this.state.artists;
+		this.exhibitionlist = this.state.exhibitions;
+
+		console.log("artists");
+		console.log(this.artistlist[0]);
+
+		console.log("exhibitions");
+		console.log(this.exhibitionlist[0]);
 
 		this.margin = {
 			top: 30,
@@ -100,6 +110,20 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		console.log("init");
 		//console.log(this.state.artists[0]);
 
+		this.computeAdjacencylist();
+
+		//this.loadExhibitions();
+
+		console.log
+
+		//console.log(this.exhibitionlist[0]);
+
+		//this.computeGenderVectors();
+
+
+	}
+
+	computeAdjacencylist() {
 		this.artistlist.forEach((artist) => {
 			const artistId = artist.id;
 			let adjList = new Array(14001).fill(0);
@@ -115,10 +139,31 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 			}
 		});
 
-		let one = '5'; //why is id nr 4 missing? 
+		let one = '5'; //why is id nr 4 missing in co-exhibitors?
 		//console.log(this.coexhiblist.get(one));
+	}
 
+	computeGenderVectors() {
 
+	}
+
+	loadExhibitions() {
+		console.log("load exhibitions");
+
+		client.query({
+			//query: GET_ARTIST,
+			query: GET_EXHIBITIONS_FOR_GROUPS,
+
+		}).then(result => {
+
+			console.log("resuts");
+			console.log(result);
+			console.log(result.data);
+			console.log("resultdata");
+			console.log(result.data[0]);
+			this.exhibitionlist = result.data;
+
+		});
 	}
 
 	onResize = () => {
