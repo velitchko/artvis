@@ -50,7 +50,9 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private artistlist: Array<Artist>;
 	private coexhiblist: Map<string, Array<BigInt>>;
 	private genderlist: Map<string, Array<BigInt>>;
+	private countrylist: Map<string, Array<BigInt>>;
 	private exhibitionlist: Array<Exhibition>;
+	private countries: Array<string>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -76,6 +78,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
 		this.coexhiblist = new Map<string, Array<BigInt>>();
 		this.genderlist = new Map<string, Array<BigInt>>();
+		this.countrylist = new Map<string, Array<BigInt>>();
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -92,6 +95,9 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		this.artistlist = this.state.artists;
 		this.exhibitionlist = this.state.exhibitions;
+
+		this.countries = ["GB", "NL", "RU", "CH", "US", "FR", "IT", "UA", "DE", "CZ", "HU", "RO", "AU", "BE", "BY", "LT", "AT", "NO", "SE", "FI", "ES", "PL", "BG", "GE", "MX", "AM", "IL", "PT", "DK", "IE", "HR", "CL", "SK", "GR", "AR", "LV", "CA", "DO", "PE", "JP", "RS", "TR", "SI", "EE", "BR", "ZA", "LU", "NZ", "VE", "GT", "UY", "SV", "PY", "BA", "IN", "ME"];
+
 
 		console.log("artists");
 		console.log(this.artistlist[0]);
@@ -116,6 +122,8 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		this.computeGenderVectors();
 
+		this.computeCountryVector();
+
 		//this.loadExhibitions();
 
 		console.log
@@ -123,8 +131,6 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		//console.log(this.exhibitionlist[0]);
 
 		//this.computeGenderVectors();
-
-
 	}
 
 	computeAdjacencylist() {
@@ -171,7 +177,31 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		});
 
 		let one = '5';
-		console.log(this.genderlist.get(one));
+		//console.log(this.genderlist.get(one));
+
+	}
+
+	//one-hot vector for artist nationalities
+	computeCountryVector() {
+
+		this.artistlist.forEach((artist) => {
+			const artistId = artist.id;
+			let countryVec = new Array(this.countries.length).fill(0);
+			//console.log(artistId);
+
+			if (artist.country) {
+				let index = this.countries.indexOf(artist.country);
+				countryVec[index] = 1;
+			}
+
+			if (artistId) {
+				this.countrylist.set(artistId.toString(), countryVec);
+			}
+		});
+
+		let one = '5';
+		//console.log(this.countrylist.get(one));
+
 
 	}
 
