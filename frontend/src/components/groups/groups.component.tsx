@@ -54,6 +54,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private exhibitionlist: Array<Exhibition>;
 	private countries: Array<string>;
 	private artworkExhibitionList: Map<string, number>;
+	private normalizedMap: Map<string, Array<number>>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -81,6 +82,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.genderlist = new Map<string, Array<BigInt>>();
 		this.countrylist = new Map<string, Array<BigInt>>();
 		this.artworkExhibitionList = new Map<string, number>();
+		this.normalizedMap = new Map<string, Array<number>>();
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -127,6 +129,35 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.computeCountryVector();
 
 		this.computeArtworkExhibitions();
+
+
+		let birthyears = new Array<number>();
+
+		this.artistlist.forEach((artist) => {
+			birthyears.push(artist.birthyear);
+		});
+
+		//console.log(birthyears);
+
+		const meanyear = birthyears.reduce((sum, currentValue) => sum + currentValue, 0) / birthyears.length;
+		const stdDev = Math.sqrt(birthyears.reduce((sum, val) => sum + Math.pow(val - meanyear, 2), 0) / birthyears.length);
+
+		this.artistlist.forEach((artist) => {
+
+			const artistId = artist.id;
+
+			let normalized = new Array(4).fill(0);
+
+			if (artistId) {
+				normalized[0] = (this.normalizeBirthyear(artist.birthyear, meanyear, stdDev));
+
+				this.normalizedMap.set(artistId.toString(), normalized);
+			}
+
+		});
+
+		console.log("normalized");
+		console.log(this.normalizedMap);
 
 		//this.loadExhibitions();
 
@@ -271,6 +302,16 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		//console.log(this.artworkExhibitionList.get(one));
 
 	}
+
+
+	normalizeBirthyear(year: number, mean: number, stddev: number): number {
+		let normalized = 0;
+
+		normalized = (year - mean) / stddev;
+
+		return normalized;
+	}
+
 
 	onResize = () => {
 		// get artistinfo-container element width and height and set state

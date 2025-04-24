@@ -6,7 +6,7 @@ query Artists {
         firstname, 
         lastname,
         id,
-        birthdate,
+        birthyear,
         sex,
         country,
         numvenues,
