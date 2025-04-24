@@ -234,18 +234,31 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 			let artworkExhibitions = 0;
 
+
 			if (artist.exhibitedAtExhibitions && artist.exhibitedAtExhibitions.length != 0) { //not supposed to be null or zero because of the division
 				const numberExhibitions = artist.exhibitedAtExhibitions?.length;
 
 				let numberOfArtworks = 0;
+				let exhibitedItemsTotal = 0;
 
 				this.exhibitionlist.forEach((exhibition) => {
+					let exhibited = false;
+					let n = numberOfArtworks;
 					exhibition.exhibitsItems.forEach((i: Item) => {
 						numberOfArtworks += i.artistsCreated.filter((a: Artist) => a.id === (artistId)).length;
+
+						if (n != numberOfArtworks) {
+							exhibited = true;
+						}
 					})
+
+					if (exhibited) {
+						exhibitedItemsTotal += exhibition.exhibitsItems.length;
+					}
+
 				});
 
-				artworkExhibitions = numberOfArtworks / numberExhibitions * 100;
+				artworkExhibitions = numberOfArtworks / exhibitedItemsTotal * 100;
 
 				this.artworkExhibitionList.set(artistId.toString(), artworkExhibitions);
 			}
@@ -253,7 +266,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		});
 
-		let one = '5';
+		let one = '2';
 		//console.log("artworks + exhibitions");
 		//console.log(this.artworkExhibitionList.get(one));
 
