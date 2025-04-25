@@ -48,13 +48,14 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private loadingExternalData: boolean = false;
 	private artistColor: string;
 	private artistlist: Array<Artist>;
-	private coexhiblist: Map<string, Array<BigInt>>;
-	private genderlist: Map<string, Array<BigInt>>;
-	private countrylist: Map<string, Array<BigInt>>;
+	private coexhiblist: Map<string, Array<number>>;
+	private genderlist: Map<string, Array<number>>;
+	private countrylist: Map<string, Array<number>>;
 	private exhibitionlist: Array<Exhibition>;
 	private countries: Array<string>;
 	private artworkExhibitionList: Map<string, number>;
 	private normalizedMap: Map<string, Array<number>>;
+	private featureVectors: Map<string, Array<number>>;
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -78,11 +79,12 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.links = new Array<Link>();
 		this.exhibStatistics = new Array<MetaExhibition>();
 		this.exhibMap = new Map<string, Set<{ year: number, exhibition: Exhibition, artworksCount: number, baseLength: number, entries: number, percentage: number }>>();
-		this.coexhiblist = new Map<string, Array<BigInt>>();
-		this.genderlist = new Map<string, Array<BigInt>>();
-		this.countrylist = new Map<string, Array<BigInt>>();
+		this.coexhiblist = new Map<string, Array<number>>();
+		this.genderlist = new Map<string, Array<number>>();
+		this.countrylist = new Map<string, Array<number>>();
 		this.artworkExhibitionList = new Map<string, number>();
 		this.normalizedMap = new Map<string, Array<number>>();
+		this.featureVectors = new Map<string, Array<number>>();
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -213,10 +215,44 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		//this.computeGenderVectors();
 
+		//concatenate all vectors: gendervector, countryvector, normalized vector (birthyear, numcitites, numcountries, numvenues), artworks/exhibitions, co-exhibition adjacency vector
 
+		this.artistlist.forEach((artist) => {
+			const artistId = artist.id;
+			//let vector = new Array<number>();
+
+			if (artistId) {
+
+				let v1 = new Array<number>();
+				let v2 = new Array<number>();
+				let v3 = new Array<number>();
+				let v4: number;
+				let v5 = new Array<number>();
+
+				v1 = this.genderlist.get(artistId.toString())!;
+
+				v2 = this.countrylist.get(artistId.toString())!;
+				v3 = this.normalizedMap.get(artistId.toString())!;
+				v4 = this.artworkExhibitionList.get(artistId.toString())!;
+				v5 = this.coexhiblist.get(artistId.toString())!;
+
+				let vector = v1.concat(v2, v3, v4, v5);
+
+				this.featureVectors.set(artistId.toString(), vector);
+
+				/* if (artistId == 5) {
+					console.log("vector");
+					console.log(vector);
+				} */
+			}
+		});
+
+		//console.log("featurevector");
+		//console.log(this.featureVectors.get(one));
 
 	}
 
+	//fills coexhibition list with artists and their co-exhibition vectors
 	computeAdjacencylist() {
 		this.artistlist.forEach((artist) => {
 			const artistId = artist.id;
@@ -382,8 +418,6 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		//console.log("awex");
 		//console.log(this.artworkExhibitionList.get(one));
-
-
 	}
 
 
