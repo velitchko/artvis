@@ -143,12 +143,12 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 			numberVenues.push(Number(artist.numvenues));
 		});
 
-		console.log(birthyears);
+		/* console.log(birthyears);
 
 		console.log("length");
 		console.log(birthyears.length);
 		console.log("added");
-		console.log(birthyears[0] + birthyears[1]);
+		console.log(birthyears[0] + birthyears[1]); */
 
 		//get means and standarddeviations for birthyears, number of cities, countries, and venues
 		//TODO: maybe make functions for this
@@ -165,11 +165,11 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		const meanVenues = numberVenues.reduce((sum, currentValue) => sum + currentValue, 0) / numberVenues.length;
 		const stdDevVenues = Math.sqrt(numberVenues.reduce((sum, val) => sum + Math.pow(val - meanVenues, 2), 0) / numberVenues.length);
 
-		console.log("normalization");
+		/* console.log("normalization");
 		console.log("meanyear");
 		console.log(meanyear);
 		console.log("stdevyear");
-		console.log(stdDevYear);
+		console.log(stdDevYear); */
 
 
 		this.artistlist.forEach((artist) => {
@@ -193,9 +193,9 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 					normalized[3] = (this.normalizeZscore(Number(artist.numvenues), meanVenues, stdDevVenues));
 				}
 
-				if (artistId == 5) {
+				/* if (artistId == 5) {
 					console.log(this.normalizeZscore(artist.birthyear, meanyear, stdDevYear));
-				}
+				} */
 
 				this.normalizedMap.set(artistId.toString(), normalized);
 			}
@@ -204,14 +204,17 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 		let one = '5'
 
-		console.log("normalized");
-		console.log(this.normalizedMap.get(one));
+		//console.log("normalized");
+		//console.log(this.normalizedMap.get(one));
 
 		//this.loadExhibitions();
 
 		//console.log(this.exhibitionlist[0]);
 
 		//this.computeGenderVectors();
+
+
+
 	}
 
 	computeAdjacencylist() {
@@ -305,8 +308,11 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		});
 	}
 
-	//compute for each artist (# exhibited artworks/ # exhibitions)*100
+	//returns normalized vector of: compute for each artist ((# exhibited artworks/ # exhibitions)*100)
 	computeArtworkExhibitions() {
+
+		let awEx = new Array<number>();
+		let awExList = new Map<string, number>();
 
 		this.artistlist.forEach((artist) => {
 			const artistId = artist.id;
@@ -339,15 +345,44 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 				artworkExhibitions = numberOfArtworks / exhibitedItemsTotal * 100;
 
-				this.artworkExhibitionList.set(artistId.toString(), artworkExhibitions);
+				//this.artworkExhibitionList.set(artistId.toString(), artworkExhibitions);
+				awExList.set(artistId.toString(), artworkExhibitions);
+				awEx.push(Number(artworkExhibitions));
 			}
-
-
 		});
 
 		let one = '2';
 		//console.log("artworks + exhibitions");
 		//console.log(this.artworkExhibitionList.get(one));
+
+		const awExLength = awEx.length;
+		const meanAwEx = awEx.reduce((sum, currentValue) => sum + currentValue, 0) / awExLength;
+		const stdDevAwEx = Math.sqrt(awEx.reduce((sum, val) => sum + Math.pow(val - meanAwEx, 2), 0) / awExLength);
+
+		awExList.forEach((value, key) => {
+
+			let artistId = key;
+
+			//[birthyear, numcities, numcountries, numvenues]
+			let normalized = 0;
+
+
+
+			normalized = this.normalizeZscore(Number(value), meanAwEx, stdDevAwEx);
+
+
+			/* if (artistId == 5) {
+				console.log(this.normalizeZscore(artist.birthyear, meanyear, stdDevYear));
+			} */
+
+			this.artworkExhibitionList.set(artistId.toString(), normalized);
+
+
+		});
+
+		//console.log("awex");
+		//console.log(this.artworkExhibitionList.get(one));
+
 
 	}
 
