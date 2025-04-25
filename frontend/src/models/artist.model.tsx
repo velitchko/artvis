@@ -3,7 +3,7 @@ import { Exhibition } from './exhibition.model';
 import { Item } from './item.model';
 
 export type Artist = {
-    // FROM THE SCHEMA
+	// FROM THE SCHEMA
 	id: number;
 	firstname: string;
 	lastname: string;
@@ -26,10 +26,13 @@ export type Artist = {
 	profession: string;
 	sortname: string;
 	study: string;
-    artistsCoExhibited: Array<Artist>; // IN Direction
+	artistsCoExhibited: Array<Artist>; // IN Direction
 	artistsCoExhibitedTotal: Array<Artist>; // IN Direction
 	coExhibitedArtists?: Array<Artist>; // OUT Direction
 	coExhibitedTotalArtists?: Array<Artist>; // OUT Direction
 	createdItems?: Array<Item>;
 	exhibitedAtExhibitions?: Array<Exhibition>;
+	numvenues: number;
+	numcities: number;
+	numcountries: number;
 };

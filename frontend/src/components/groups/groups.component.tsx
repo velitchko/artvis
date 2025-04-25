@@ -132,32 +132,80 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 
 
 		let birthyears = new Array<number>();
+		let numberCities = new Array<number>();
+		let numberCountries = new Array<number>();
+		let numberVenues = new Array<number>();
 
 		this.artistlist.forEach((artist) => {
-			birthyears.push(artist.birthyear);
+			birthyears.push(Number(artist.birthyear));
+			numberCities.push(Number(artist.numcities));
+			numberCountries.push(Number(artist.numcountries));
+			numberVenues.push(Number(artist.numvenues));
 		});
 
-		//console.log(birthyears);
+		console.log(birthyears);
 
-		const meanyear = birthyears.reduce((sum, currentValue) => sum + currentValue, 0) / birthyears.length;
-		const stdDev = Math.sqrt(birthyears.reduce((sum, val) => sum + Math.pow(val - meanyear, 2), 0) / birthyears.length);
+		console.log("length");
+		console.log(birthyears.length);
+		console.log("added");
+		console.log(birthyears[0] + birthyears[1]);
+
+		//get means and standarddeviations for birthyears, number of cities, countries, and venues
+		//TODO: maybe make functions for this
+		const yearLength = birthyears.length;
+		const meanyear = birthyears.reduce((sum, currentValue) => sum + currentValue, 0) / yearLength;
+		const stdDevYear = Math.sqrt(birthyears.reduce((sum, val) => sum + Math.pow(val - meanyear, 2), 0) / yearLength);
+
+		const meanCities = numberCities.reduce((sum, currentValue) => sum + currentValue, 0) / numberCities.length;
+		const stdDevCities = Math.sqrt(numberCities.reduce((sum, val) => sum + Math.pow(val - meanCities, 2), 0) / numberCities.length);
+
+		const meanCountries = numberCountries.reduce((sum, currentValue) => sum + currentValue, 0) / numberCountries.length;
+		const stdDevCountries = Math.sqrt(numberCountries.reduce((sum, val) => sum + Math.pow(val - meanCountries, 2), 0) / numberCountries.length);
+
+		const meanVenues = numberVenues.reduce((sum, currentValue) => sum + currentValue, 0) / numberVenues.length;
+		const stdDevVenues = Math.sqrt(numberVenues.reduce((sum, val) => sum + Math.pow(val - meanVenues, 2), 0) / numberVenues.length);
+
+		console.log("normalization");
+		console.log("meanyear");
+		console.log(meanyear);
+		console.log("stdevyear");
+		console.log(stdDevYear);
+
 
 		this.artistlist.forEach((artist) => {
 
 			const artistId = artist.id;
 
+			//[birthyear, numcities, numcountries, numvenues]
 			let normalized = new Array(4).fill(0);
 
+
 			if (artistId) {
-				normalized[0] = (this.normalizeBirthyear(artist.birthyear, meanyear, stdDev));
+				normalized[0] = (this.normalizeZscore(Number(artist.birthyear), meanyear, stdDevYear));
+
+				if (artist.numcities != null) {
+					normalized[1] = (this.normalizeZscore(Number(artist.numcities), meanCities, stdDevCities));
+				}
+				if (artist.numcountries != null) {
+					normalized[2] = (this.normalizeZscore(Number(artist.numcountries), meanCountries, stdDevCountries));
+				}
+				if (artist.numvenues != null) {
+					normalized[3] = (this.normalizeZscore(Number(artist.numvenues), meanVenues, stdDevVenues));
+				}
+
+				if (artistId == 5) {
+					console.log(this.normalizeZscore(artist.birthyear, meanyear, stdDevYear));
+				}
 
 				this.normalizedMap.set(artistId.toString(), normalized);
 			}
 
 		});
 
+		let one = '5'
+
 		console.log("normalized");
-		console.log(this.normalizedMap);
+		console.log(this.normalizedMap.get(one));
 
 		//this.loadExhibitions();
 
@@ -304,10 +352,10 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	}
 
 
-	normalizeBirthyear(year: number, mean: number, stddev: number): number {
+	normalizeZscore(value: number, mean: number, stddev: number): number {
 		let normalized = 0;
 
-		normalized = (year - mean) / stddev;
+		normalized = (value - mean) / stddev;
 
 		return normalized;
 	}
