@@ -37,21 +37,24 @@ const LoadingComponent: React.FC<LoadingComponentProps> = ({
     // Size configurations
     const sizeConfig = {
         small: {
-            spinner: 'h-8 w-8',
+            spinner: 'h-20 w-20',
             text: 'text-sm',
-            logo: 'text-2xl',
+            logo: 'text-lg',
+            logoSpan: 'text-xl',
             container: 'gap-2'
         },
         medium: {
-            spinner: 'h-12 w-12',
+            spinner: 'h-28 w-28',
             text: 'text-lg',
-            logo: 'text-4xl',
+            logo: 'text-2xl',
+            logoSpan: 'text-3xl',
             container: 'gap-4'
         },
         large: {
-            spinner: 'h-16 w-16',
+            spinner: 'h-36 w-36',
             text: 'text-2xl',
-            logo: 'text-6xl',
+            logo: 'text-4xl',
+            logoSpan: 'text-5xl',
             container: 'gap-6'
         }
     };
@@ -60,21 +63,26 @@ const LoadingComponent: React.FC<LoadingComponentProps> = ({
 
     const content = (
         <div className={`flex flex-col items-center justify-center ${config.container}`}>
-            {showLogo && (
-                <div className={`font-face-kolker ${config.logo} font-bold text-black mb-2`}>
-                    ArtVis
-                </div>
-            )}
-            
-            <div className="flex items-center gap-3">
-                {/* Animated spinner */}
+            {/* Spinner with centered logo */}
+            <div className="relative flex items-center justify-center">
+                {/* Animated spinner ring */}
                 <div className={`animate-spin rounded-full border-4 border-gray-300 border-t-black ${config.spinner}`}></div>
                 
-                {/* Loading message */}
-                <p className={`${config.text} text-black font-medium max-w-md text-center`}>
-                    {displayMessage}
-                </p>
+                {/* Centered logo inside spinner */}
+                {showLogo && (
+                    <div className={`absolute inset-0 flex items-center justify-center font-bold text-black leading-none`}>
+                        <div className="flex items-baseline">
+                            <span className={`${config.logo}`}>Art</span>
+                            <span className={`font-face-kolker ${config.logoSpan}`}>Vis</span>
+                        </div>
+                    </div>
+                )}
             </div>
+            
+            {/* Loading message below spinner */}
+            <p className={`${config.text} text-black font-medium max-w-md text-center mt-4`}>
+                {displayMessage}
+            </p>
         </div>
     );
 
