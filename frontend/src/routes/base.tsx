@@ -7,7 +7,6 @@ import ErrorPage from "./not-found";
 import ExplorerPage from "../pages/explorer";
 import ArtistDetailPage from "../pages/artist.detail";
 import ArtistDetailTestPage from "../pages/artist.detail.test";
-import ComponentTestPage from "../pages/components.test";
 import ExhibitionsPage from "../pages/exhibitions";
 
 
@@ -22,7 +21,6 @@ export default function Base() {
                 <Route path="/artist/:id" element={<ArtistDetailPage />} />
                 <Route path="/artist/" element={<ArtistDetailPage />} />
                 <Route path="/artists-test/:id" element={<ArtistDetailTestPage />} />
-                <Route path="/components-test/:id" element={<ComponentTestPage />} />
                 <Route path="/exhibitions/:artist" element={<ExhibitionsPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>

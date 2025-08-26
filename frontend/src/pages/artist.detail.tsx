@@ -3,7 +3,7 @@ import client from '../components/apollo/client';
 import { Artist } from '../models/artist.model';
 import GET_ARTIST from '../queries/artist';
 import NavigationComponent from '../components/navigation/navigation';
-import ArtistDetailComponent from '../components/artists/artist.detail';
+import ArtistDetailComponent from '../components/artists/artist.detail.refactored';
 import LoadingComponent from '../components/loading/loading';
 import { useParams } from 'react-router-dom';
 

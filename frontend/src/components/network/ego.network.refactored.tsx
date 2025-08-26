@@ -19,7 +19,7 @@ interface EgoNetworkProps {
     requestNode?: (node?: number) => void;
     mouseOverCallBack?: (year: number) => void;
     groupByCallBack?: () => void;
-    arcClickCallback?: () => void;
+    arcClickCallback?: (group?: string) => void;
     filterCallback?: () => void;
     syncColors?: () => void;
 }
@@ -464,8 +464,8 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             groupData.push({ group, links: groupLinks });
         });
 
-        // CRITICAL: Sort groups to ensure consistent ordering
-        const sortedGroupData = _.orderBy(groupData, ['group'], ['asc']);
+        // CRITICAL: Sort groups by size (largest to smallest) for better visual hierarchy
+        const sortedGroupData = _.orderBy(groupData, ['links.length'], ['desc']);
         
         // CRITICAL: Flatten with groups staying together - this is key for arc calculations
         const sortedLinks: Link[] = [];
@@ -474,8 +474,8 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             sortedLinks.push(...groupLinksOrdered);
         });
 
-        console.log('Sorted links by group:', sortedLinks.length);
-        console.log('Group order:', sortedGroupData.map(g => g.group));
+        console.log('Sorted links by group size:', sortedLinks.length);
+        console.log('Group order (largest to smallest):', sortedGroupData.map(g => `${g.group}(${g.links.length})`));
 
         // Get unique target nodes from the sorted links (this determines the angular positions)
         const uniqueLinks = _.uniqBy(sortedLinks, (link: Link) => link.targetId);
@@ -684,10 +684,11 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
         const handleMouseOut = (event: PointerEvent) => {
             // Remove all tooltips
-            d3.selectAll('.label-tooltip, .outer-circle-tooltip').remove();
+            d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
             d3.selectAll('body > div').filter(function() {
                 return d3.select(this).style('position') === 'absolute' && 
-                       d3.select(this).style('background-color') === 'black';
+                       (d3.select(this).style('background-color') === 'black' || 
+                        d3.select(this).style('background-color') === 'rgba(0, 0, 0, 0.9)');
             }).remove();
 
             // Reset circle styles
@@ -904,7 +905,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 })
                 .on('click', (event: any, d: any) => {
                     // Remove any existing tooltips
-                    d3.selectAll('.label-tooltip, .outer-circle-tooltip').remove();
+                    d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
                     
                     // Set state.selection to true
                     setState(prev => ({ ...prev, selection: true }));
@@ -939,37 +940,22 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             .attr('id', (d: Link) => `artist-label-${d.target.id}`)
             .attr('x', (d: Link) => {
                 const angle = getAngle(d.props.originalIndex);
-                return getXCoordinates(YEAR_RANGE.max, angle, 60) + width / 2;
+                // Increase offset to move labels further from arcs
+                return getXCoordinates(YEAR_RANGE.max, angle, 80) + width / 2;
             })
             .attr('y', (d: Link) => {
                 const angle = getAngle(d.props.originalIndex);
-                return getYCoordinates(YEAR_RANGE.max, angle, 60) + height / 2;
+                return getYCoordinates(YEAR_RANGE.max, angle, 80) + height / 2;
             })
             .attr('transform', (d: Link) => {
-                const x1 = 0 + width / 2;
-                const y1 = 0 + height / 2;
                 const angle = getAngle(d.props.originalIndex);
-                const x2 = getXCoordinates(YEAR_RANGE.max, angle, 60) + width / 2;
-                const y2 = getYCoordinates(YEAR_RANGE.max, angle, 60) + height / 2;
+                const x2 = getXCoordinates(YEAR_RANGE.max, angle, 80) + width / 2;
+                const y2 = getYCoordinates(YEAR_RANGE.max, angle, 80) + height / 2;
 
-                const dx = x2 - x1;
-                const dy = y2 - y1;
+                // Convert angle to degrees for rotation
+                let rotationAngleDegrees = (angle * 180) / Math.PI;
 
-                // Calculate the rotation angle in radians
-                let rotationAngleRadians = Math.atan2(dy, dx);
-
-                // Ensure the angle is non-negative (between 0 and 2*pi)
-                if (rotationAngleRadians < 0) {
-                    rotationAngleRadians += 2 * Math.PI;
-                }
-
-                // Ensure the angle is between 0 and 2*pi
-                rotationAngleRadians %= 2 * Math.PI;
-
-                // Convert the rotation angle from radians to degrees
-                let rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
-
-                // if between 90 and 270 rotate by an additional 180 degrees
+                // Adjust for readability - if text would be upside down, rotate it 180 degrees
                 if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
                     rotationAngleDegrees += 180;
                 }
@@ -977,35 +963,33 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 return `rotate(${rotationAngleDegrees}, ${x2}, ${y2})`;
             })
             .attr('text-anchor', (d: Link) => {
-                const x1 = 0 + width / 2;
-                const y1 = 0 + height / 2;
                 const angle = getAngle(d.props.originalIndex);
-                const x2 = getXCoordinates(YEAR_RANGE.max, angle, 60) + width / 2;
-                const y2 = getYCoordinates(YEAR_RANGE.max, angle, 60) + height / 2;
-
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-
-                // Calculate the rotation angle in radians
-                let rotationAngleRadians = Math.atan2(dy, dx);
-
-                // Ensure the angle is non-negative (between 0 and 2*pi)
-                if (rotationAngleRadians < 0) {
-                    rotationAngleRadians += 2 * Math.PI;
+                let rotationAngleDegrees = (angle * 180) / Math.PI;
+                
+                // Normalize angle to 0-360
+                if (rotationAngleDegrees < 0) rotationAngleDegrees += 360;
+                
+                // Determine text anchor based on angle
+                if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
+                    return 'end'; // Text flows from right to left when rotated
+                } else {
+                    return 'start'; // Text flows from left to right
                 }
-
-                // Ensure the angle is between 0 and 2*pi
-                rotationAngleRadians %= 2 * Math.PI;
-
-                // Convert the rotation angle from radians to degrees
-                const rotationAngleDegrees = (rotationAngleRadians * 180) / Math.PI;
-
-                return (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) ? 'end' : 'start';
             })
-            .attr('font-size', '12px')
+            .attr('font-size', '11px')
             .attr('fill', 'black')
             .attr('dy', '0.35em')
-            .text((d: Link) => d.target.name)
+            .text((d: Link) => {
+                // Shorten long names for better readability
+                const name = d.target.name;
+                const parts = name.split(' ');
+                if (parts.length > 2) {
+                    return `${parts[0]} ${parts[1].charAt(0)}.`;
+                } else if (parts.length === 2) {
+                    return `${parts[0]} ${parts[1].charAt(0)}.`;
+                }
+                return name;
+            })
             .style('cursor', 'pointer');
 
         // Add click and hover events to labels
@@ -1074,7 +1058,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             })
             .on('click', (event: PointerEvent, d: Link) => {
                 // Remove any existing tooltips
-                d3.selectAll('.label-tooltip, .outer-circle-tooltip').remove();
+                d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
                 
                 // Set state.selection to true
                 setState(prev => ({ ...prev, selection: true }));
@@ -1220,38 +1204,89 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             })
             .style('cursor', 'pointer')
             .on('mouseover', (event: MouseEvent, d: Link) => {
-                const percentage = (linksRef.current.filter(link => link.props.group === d.props.group).length / linksRef.current.length) * 100;
+                const groupCount = linksRef.current.filter(link => link.props.group === d.props.group).length;
+                const percentage = (groupCount / linksRef.current.length) * 100;
+                
+                // Remove any existing arc tooltip
+                d3.selectAll('.arc-tooltip').remove();
+                
+                // Create improved tooltip
+                d3.select('body').append('div')
+                    .attr('class', 'arc-tooltip')
+                    .style('position', 'absolute')
+                    .style('background-color', 'rgba(0, 0, 0, 0.9)')
+                    .style('color', 'white')
+                    .style('padding', '10px')
+                    .style('border-radius', '5px')
+                    .style('font-size', '12px')
+                    .style('left', `${event.clientX + 10}px`)
+                    .style('top', `${event.clientY - 10}px`)
+                    .style('z-index', '1000')
+                    .style('pointer-events', 'none')
+                    .style('box-shadow', '0 2px 5px rgba(0,0,0,0.3)')
+                    .html(`
+                        <div><strong>${d.props.group}</strong></div>
+                        <div>Artists: ${groupCount}</div>
+                        <div>Percentage: ${percentage.toFixed(1)}%</div>
+                        <div style="margin-top: 5px; font-size: 10px; opacity: 0.8;">Click to filter by group</div>
+                    `);
+
                 console.log(`${d.props.group}: ${percentage.toFixed(1)}%`);
             })
+            .on('mouseout', (event: MouseEvent, d: Link) => {
+                // Remove arc tooltip
+                d3.selectAll('.arc-tooltip').remove();
+            })
             .on('click', (event: MouseEvent, d: Link) => {
+                // Remove any existing tooltips
+                d3.selectAll('.arc-tooltip, .label-tooltip, .outer-circle-tooltip').remove();
+                
                 console.log('Clicked group:', d.props.group);
-                arcClickCallback?.();
+                
+                // Toggle group selection
+                if (selectedGroup === d.props.group) {
+                    setSelectedGroup('');
+                    highlightGroup('');
+                    arcClickCallback?.('');
+                } else {
+                    setSelectedGroup(d.props.group);
+                    highlightGroup(d.props.group);
+                    arcClickCallback?.(d.props.group);
+                }
             });
 
-        // Draw group labels
+        // Draw group labels positioned on arc centroids (like original)
         donut.selectAll('.donut-label')
             .data(uniqueGroups)
             .join('text')
             .attr('class', 'donut-label')
             .attr('id', (d: Link) => `donut-label-${d.props.group}`)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '10px')
+            .attr('font-size', '12px')
+            .attr('dy', '0.35em')
             .attr('fill', 'black')
-            .attr('x', (d: Link) => {
-                const startAngle = arc.startAngle()(d);
-                const endAngle = arc.endAngle()(d);
-                const midAngle = (startAngle + endAngle) / 2;
-                const labelRadius = scales.r(YEAR_RANGE.max) + 35;
-                return Math.cos(midAngle - Math.PI / 2) * labelRadius;
+            .attr('x', (d: Link) => arc.centroid(d)[0])
+            .attr('y', (d: Link) => arc.centroid(d)[1])
+            .attr('transform', (d: Link) => {
+                const x2 = arc.centroid(d)[0];
+                const y2 = arc.centroid(d)[1];
+                return `rotate(-90, ${x2}, ${y2})`;
             })
-            .attr('y', (d: Link) => {
-                const startAngle = arc.startAngle()(d);
-                const endAngle = arc.endAngle()(d);
-                const midAngle = (startAngle + endAngle) / 2;
-                const labelRadius = scales.r(YEAR_RANGE.max) + 35;
-                return Math.sin(midAngle - Math.PI / 2) * labelRadius;
+            .text((d: Link) => {
+                // Format text based on group type
+                if (state.groupBy === 'ageGroup') {
+                    if (d.props.group.includes('gt')) {
+                        return `~${d.props.group.split('_')[1]} years older`;
+                    }
+                    if (d.props.group.includes('lt')) {
+                        return `~${d.props.group.split('_')[1]} years younger`;
+                    }
+                    return d.props.group;
+                }
+                return d.props.group;
             })
-            .text((d: Link) => d.props.group);
+            .style('cursor', 'pointer')
+            .style('pointer-events', 'none'); // Prevent interfering with arc clicks
             
         console.log('Donut chart drawn with', uniqueGroups.length, 'arcs');
     }, [state.dimensions, state.colors, arcClickCallback]);
