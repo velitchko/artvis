@@ -209,6 +209,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
                 this.drawTimeline();
                 this.addLegend();
                 this.drawNetwork();
+                // Turn off loading after initial drawing is complete
+                setTimeout(() => this.props.loadCallback(false), 100);
             });
         });
     }
@@ -1267,6 +1269,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
 
             this.table.current?.reset();
             this.props.loadCallback(true);
+            // Turn off loading after reset is complete
+            setTimeout(() => this.props.loadCallback(false), 50);
             return;
         }
 
@@ -1282,6 +1286,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
                 this.getNumberOfArtworks(false);
                 this.drawCompare();
                 this.egoNetwork.current?.highlightArtist(this.state.compareWith);
+                // Turn off loading after compare drawing is complete
+                setTimeout(() => this.props.loadCallback(false), 100);
             });
             // this.drawCompare();
         } else {
@@ -1301,6 +1307,8 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
                     this.getNumberOfArtworks(false);
                     this.drawCompare();
                     this.egoNetwork.current?.highlightArtist(this.state.compareWith);
+                    // Turn off loading after async compare drawing is complete
+                    setTimeout(() => this.props.loadCallback(false), 100);
                 });
             });
         }
