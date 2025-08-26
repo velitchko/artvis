@@ -18,11 +18,20 @@ const typeDefs = gql`${schema}`;
 // TODO: Load from secrets
 const driver = neo4j.driver(
 	'bolt://localhost:7687',
-	neo4j.auth.basic('neo4j', 'password')
+	neo4j.auth.basic('neo4j', 'admin123')
 );
 const app = express();
 
+// Configure CORS with specific options
+const corsOptions = {
+	origin: ['http://localhost:4200', 'http://localhost:3000', 'https://artvis.cvast.tuwien.ac.at'],
+	credentials: true,
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'token'],
+};
+
 app.use(compression());
+app.use(cors(corsOptions));
 
 const httpServer = http.createServer(app);
 
@@ -40,7 +49,6 @@ neoSchema.getSchema().then(async (schema) => {
 
 	app.use(
 		'/graphql',
-		cors(),
 		bodyParser.json(),
 		// expressMiddleware accepts the same arguments:
 		// an Apollo Server instance and optional configuration options
@@ -51,9 +59,14 @@ neoSchema.getSchema().then(async (schema) => {
 		}),
 	);
 
-	app.use('/cypher', cors(), bodyParser.json(), cypherRouter);
+	app.use('/cypher', bodyParser.json(), cypherRouter);
 
-	app.use('/api', (_, res) => res.redirect('/graphql'));
+	// Setup /api endpoint to serve GraphQL with proper CORS
+	app.use('/api', bodyParser.json(), expressMiddleware(server, {
+		context: async ({ req }) => ({
+			token: req.headers.token
+		}),
+	}));
 
 
 	// Modified server startup
