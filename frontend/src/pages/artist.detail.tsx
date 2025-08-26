@@ -32,14 +32,18 @@ const ArtistDetailPage = () => {
         client.query({
             query: GET_ARTIST,
             variables: {
-                searchId: `${resolvedId}`
+                searchId: resolvedId.toString()
             }
         })
         .then(result => {
             setArtist(result.data.artists[0] as Artist);
             setLoading(false);
+        })
+        .catch(error => {
+            console.error('Error loading artist:', error);
+            setLoading(false);
         });
-    }, []);
+    }, [resolvedId]);
 
     return (
         <>
