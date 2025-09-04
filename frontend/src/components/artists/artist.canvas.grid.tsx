@@ -55,6 +55,8 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         artists: Artist[];
     } | null>(null);
     const [totalContentHeight, setTotalContentHeight] = useState(0);
+    const [isAnimationMode, setIsAnimationMode] = useState(false);
+    const [animationProgress, setAnimationProgress] = useState(0);
     
     // Virtualization settings - Use dynamic height based on available space
     const HEADER_HEIGHT = 64; // Match pt-16 (64px) from parent component
@@ -97,6 +99,35 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         resizeObserver.observe(containerRef.current);
         return () => resizeObserver.disconnect();
     }, []);
+
+    // Animation toggle function
+    const toggleAnimationMode = () => {
+        const startTime = Date.now();
+        const duration = 300; // 0.3 seconds
+        const startProgress = animationProgress;
+        const targetProgress = isAnimationMode ? 0 : 1;
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Use easeInOutCubic for smooth animation
+            const eased = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            const currentProgress = startProgress + (targetProgress - startProgress) * eased;
+            setAnimationProgress(currentProgress);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                setIsAnimationMode(!isAnimationMode);
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    };
 
     // Debug logging
     useEffect(() => {
@@ -437,107 +468,117 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                 ctx.setLineDash([]); // Reset line dash for other drawing
             }
 
+            // --- ANIMATION LOGIC ---
+            // animationProgress: 0 = normal, 0.33 = fade text, 0.66 = morph to straight, 1 = shrink to circles
+            const textAlpha = animationProgress < 0.33 ? 1 - (animationProgress / 0.33) : 0;
+            const morphToStraight = animationProgress >= 0.33 && animationProgress < 0.66 ? (animationProgress - 0.33) / 0.33 : (animationProgress >= 0.66 ? 1 : 0);
+            const shrinkToCircle = animationProgress >= 0.66 ? (animationProgress - 0.66) / 0.34 : 0;
+
             // Draw timeline in the upper portion of the card, well above text
             if (timelineData.length > 1) {
-                const timelineY = y + 3; // Start timeline very close to top
-                
-                // Create y-scale based on scaling mode
+                const timelineY = y + 3;
                 let yScale: d3.ScaleLinear<number, number>;
                 if (timelineScaling === 'absolute') {
-                    // Use global scale for absolute scaling
                     yScale = globalYScale;
                 } else {
-                    // Create relative scale using this artist's data extent
                     const artistMaxCount = d3.max(timelineData, d => d.count) || 1;
                     yScale = d3.scaleLinear()
                         .domain([0, artistMaxCount])
                         .range([CHART_HEIGHT - CHART_MARGIN.bottom, CHART_MARGIN.top]);
                 }
-                
-                // Improve line rendering quality
+                ctx.save();
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
-                ctx.lineCap = 'round'; // Smoother line endings
-                ctx.lineJoin = 'round'; // Smoother line joins
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
                 ctx.beginPath();
-                
-                // Prepare valid points for rendering
-                const validPoints: Array<{ x: number; y: number }> = [];
-                timelineData.forEach((d, i) => {
+                const validPoints = timelineData.map((d, i) => {
                     const chartX = x + xScale(d.year);
                     const chartY = timelineY + yScale(d.count);
-                    
-                    // Round coordinates for crisp rendering
-                    const roundedX = Math.round(chartX) + 0.5;
-                    const roundedY = Math.round(chartY) + 0.5;
-                    
-                    // Check if the coordinates are valid
-                    if (!isNaN(roundedX) && !isNaN(roundedY) && isFinite(roundedX) && isFinite(roundedY)) {
-                        validPoints.push({ x: roundedX, y: roundedY });
-                    }
+                    return { x: Math.round(chartX) + 0.5, y: Math.round(chartY) + 0.5 };
                 });
-                
-                if (validPoints.length > 0) {
+                if (shrinkToCircle > 0) {
+                    // Step 3: Shrink lines to circles
+                    const first = validPoints[0];
+                    const compacted = validPoints.map(pt => ({
+                        x: first.x + (pt.x - first.x) * (1 - shrinkToCircle),
+                        y: first.y + (pt.y - first.y) * (1 - shrinkToCircle)
+                    }));
+                    ctx.fillStyle = '#000';
+                    compacted.forEach(pt => {
+                        ctx.beginPath();
+                        ctx.arc(pt.x, pt.y, 2, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                } else if (morphToStraight > 0) {
+                    // Step 2: Morph curves/polylines into straight lines
+                    const first = validPoints[0];
+                    const last = validPoints[validPoints.length - 1];
+                    const straightPoints = validPoints.map((pt, i) => {
+                        const t = i / (validPoints.length - 1);
+                        return {
+                            x: first.x + (last.x - first.x) * t,
+                            y: first.y + (last.y - first.y) * t
+                        };
+                    });
+                    const morphed = validPoints.map((pt, i) => ({
+                        x: pt.x + (straightPoints[i].x - pt.x) * morphToStraight,
+                        y: pt.y + (straightPoints[i].y - pt.y) * morphToStraight
+                    }));
+                    ctx.moveTo(morphed[0].x, morphed[0].y);
+                    for (let i = 1; i < morphed.length; i++) {
+                        ctx.lineTo(morphed[i].x, morphed[i].y);
+                    }
+                    ctx.stroke();
+                } else {
+                    // Step 1: Normal rendering (curves or polylines)
                     if (curveRendering === 'smooth' && validPoints.length > 2) {
-                        // Smooth curve using quadratic bezier curves
                         ctx.moveTo(validPoints[0].x, validPoints[0].y);
-                        
                         for (let i = 1; i < validPoints.length - 1; i++) {
                             const currentPoint = validPoints[i];
                             const nextPoint = validPoints[i + 1];
-                            
-                            // Calculate control point for smooth curves
                             const controlX = currentPoint.x;
                             const controlY = currentPoint.y;
                             const endX = (currentPoint.x + nextPoint.x) / 2;
                             const endY = (currentPoint.y + nextPoint.y) / 2;
-                            
                             ctx.quadraticCurveTo(controlX, controlY, endX, endY);
                         }
-                        
-                        // Draw line to the last point
                         if (validPoints.length > 1) {
                             const lastPoint = validPoints[validPoints.length - 1];
                             ctx.lineTo(lastPoint.x, lastPoint.y);
                         }
                     } else {
-                        // Jagged/sharp lines (original behavior)
                         ctx.moveTo(validPoints[0].x, validPoints[0].y);
                         for (let i = 1; i < validPoints.length; i++) {
                             ctx.lineTo(validPoints[i].x, validPoints[i].y);
                         }
                     }
-                    
                     ctx.stroke();
                 }
+                ctx.restore();
             }
-
             // Draw artist info below the timeline with adequate spacing to prevent overlap
-            const textStartY = y + CHART_HEIGHT + 10; // Increased spacing to clear timeline base
-            
-            // Calculate rank based on actual position in the sorted list
+            const textStartY = y + CHART_HEIGHT + 10;
             const originalIndex = gridItems.findIndex(gridItem => gridItem.artist.id === artist.id);
             const rank = originalIndex + 1;
-            
-            // Draw artist name with rank in bold
+            ctx.save();
+            ctx.globalAlpha = textAlpha;
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 9px Arial';
             ctx.textAlign = 'left';
-            
             const artistName = `${artist.firstname || ''} ${artist.lastname || ''}`.trim();
             const rankedName = `${rank}. ${artistName}`;
-            ctx.fillText(truncateText(ctx, rankedName, width - 30), x + 2, textStartY);
-            
-            // Draw country and life years in regular font - closer spacing
-            ctx.font = '8px Arial';
-            const lifeSpan = `(${artist.country || '?'}) ${artist.birthyear || '?'}-${artist.deathyear || '?'}`;
-            ctx.fillText(truncateText(ctx, lifeSpan, width - 30), x + 2, textStartY + 8);
-
-            // Note: Use Ctrl+Click to open artist detail page in new tab
+            if (textAlpha > 0) {
+                ctx.fillText(truncateText(ctx, rankedName, width - 30), x + 2, textStartY);
+                ctx.font = '8px Arial';
+                const lifeSpan = `(${artist.country || '?'}) ${artist.birthyear || '?'}-${artist.deathyear || '?'}`;
+                ctx.fillText(truncateText(ctx, lifeSpan, width - 30), x + 2, textStartY + 8);
+            }
+            ctx.restore();
         });
         
         console.log('Canvas render complete');
-    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling]);
+    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling, animationProgress]);
 
     // Helper function to truncate text
     const truncateText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string => {
@@ -566,7 +607,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         const hoveredItem = gridItems.find(item => {
             const itemScreenY = item.y - scrollTop;
             
-            // Stricter bounds checking with small margin to prevent edge cases
+             // Stricter bounds checking with small margin to prevent edge cases
             const margin = 1;
             const isInHorizontalBounds = mouseX >= (item.x + margin) && mouseX <= (item.x + item.width - margin);
             const isInVerticalBounds = mouseY >= (itemScreenY + margin) && mouseY <= (itemScreenY + item.height - margin);
@@ -641,7 +682,14 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     };
 
     return (
-        <div ref={containerRef} className="flex justify-center w-full px-2">
+        <div ref={containerRef} className="flex flex-col items-center w-full px-2">
+            <button
+                className="mb-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                onClick={toggleAnimationMode}
+                disabled={animationProgress !== 0 && animationProgress !== 1}
+            >
+                {isAnimationMode ? 'Restore Text & Lines' : 'Compound to Dots & Fade Text'}
+            </button>
             {!isReady || !gridItems.length ? (
                 <div className="p-8 text-gray-500">
                     <p>Loading artists... ({artists.length} artists received)</p>
