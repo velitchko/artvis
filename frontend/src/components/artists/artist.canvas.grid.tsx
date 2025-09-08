@@ -57,6 +57,8 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     const [totalContentHeight, setTotalContentHeight] = useState(0);
     const [isAnimationMode, setIsAnimationMode] = useState(false);
     const [animationProgress, setAnimationProgress] = useState(0);
+    const [dotPositions, setDotPositions] = useState<{[id: string]: {x: number, y: number}} | null>(null);
+    const [dotLayoutReady, setDotLayoutReady] = useState(false);
     
     // Virtualization settings - Use dynamic height based on available space
     const HEADER_HEIGHT = 64; // Match pt-16 (64px) from parent component
@@ -443,14 +445,23 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             const isHovered = hoveredArtist === uniqueId;
             const isSearchHighlighted = searchArtistId !== undefined && searchArtistId === artist.id;
 
+            // --- ANIMATION LOGIC ---
+            // animationProgress: 0 = normal, 0.33 = fade text, 0.66 = morph to straight, 1 = shrink to circles
+            const textAlpha = animationProgress < 0.33 ? 1 - (animationProgress / 0.33) : 0;
+            const morphToStraight = animationProgress >= 0.33 && animationProgress < 0.66 ? (animationProgress - 0.33) / 0.33 : (animationProgress >= 0.66 ? 1 : 0);
+            const shrinkToCircle = animationProgress >= 0.66 ? (animationProgress - 0.66) / 0.34 : 0;
+
+            // Only show highlight if not in dots view
+            const showHighlight = shrinkToCircle === 0;
+
             // Draw yellow highlight background for hover
-            if (isHovered && !isSearchHighlighted) {
+            if (showHighlight && isHovered && !isSearchHighlighted) {
                 ctx.fillStyle = '#fde047'; // Bright yellow background for hover
                 ctx.fillRect(x, y, width, height);
             }
 
             // Draw dashed yellow stroke for search highlight
-            if (isSearchHighlighted) {
+            if (showHighlight && isSearchHighlighted) {
                 ctx.strokeStyle = '#eab308'; // Darker yellow for better visibility
                 ctx.lineWidth = 3;
                 ctx.setLineDash([8, 4]); // Dashed pattern: 8px dash, 4px gap
@@ -460,7 +471,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
 
             // Draw dashed yellow stroke for similarity base artist highlight
             const isSimilarityBase = similarityBaseArtist?.id === artist.id;
-            if (isSimilarityBase && !isSearchHighlighted) {
+            if (showHighlight && isSimilarityBase && !isSearchHighlighted) {
                 ctx.strokeStyle = '#eab308'; // Same yellow as search
                 ctx.lineWidth = 3;
                 ctx.setLineDash([5, 3]); // Different dashing pattern to distinguish from search
@@ -469,10 +480,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             }
 
             // --- ANIMATION LOGIC ---
-            // animationProgress: 0 = normal, 0.33 = fade text, 0.66 = morph to straight, 1 = shrink to circles
-            const textAlpha = animationProgress < 0.33 ? 1 - (animationProgress / 0.33) : 0;
-            const morphToStraight = animationProgress >= 0.33 && animationProgress < 0.66 ? (animationProgress - 0.33) / 0.33 : (animationProgress >= 0.66 ? 1 : 0);
-            const shrinkToCircle = animationProgress >= 0.66 ? (animationProgress - 0.66) / 0.34 : 0;
+            // Remove duplicate declarations here, only declare once per loop iteration
 
             // Draw timeline in the upper portion of the card, well above text
             if (timelineData.length > 1) {
@@ -497,19 +505,23 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                     const chartY = timelineY + yScale(d.count);
                     return { x: Math.round(chartX) + 0.5, y: Math.round(chartY) + 0.5 };
                 });
-                if (shrinkToCircle > 0) {
-                    // Step 3: Shrink lines to circles
+                if (shrinkToCircle > 0 && dotPositions && dotPositions[uniqueId]) {
+                    // Animate dot movement to non-overlapping layout
                     const first = validPoints[0];
-                    const compacted = validPoints.map(pt => ({
-                        x: first.x + (pt.x - first.x) * (1 - shrinkToCircle),
-                        y: first.y + (pt.y - first.y) * (1 - shrinkToCircle)
-                    }));
+                    const target = dotPositions[uniqueId];
+                    const interpX = first.x + (target.x - first.x) * shrinkToCircle;
+                    const interpY = first.y + (target.y - first.y) * shrinkToCircle;
                     ctx.fillStyle = '#000';
-                    compacted.forEach(pt => {
-                        ctx.beginPath();
-                        ctx.arc(pt.x, pt.y, 2, 0, 2 * Math.PI);
-                        ctx.fill();
-                    });
+                    ctx.beginPath();
+                    ctx.arc(interpX, interpY, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else if (shrinkToCircle > 0) {
+                    // Fallback: shrink to original position
+                    const first = validPoints[0];
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(first.x, first.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
                 } else if (morphToStraight > 0) {
                     // Step 2: Morph curves/polylines into straight lines
                     const first = validPoints[0];
@@ -680,6 +692,45 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         console.log('Scroll event - new scrollTop:', newScrollTop);
         setScrollTop(newScrollTop);
     };
+
+    // Compute non-overlapping dot positions when entering dots mode
+    useEffect(() => {
+        if (animationProgress < 0.66 || dotLayoutReady) return;
+        // Only compute once per dots mode entry
+        const visible = gridItems.filter(item => {
+            // Only those in the current viewport
+            return item.y - scrollTop + item.height > 0 && item.y - scrollTop < canvasSize.height;
+        });
+        // Use d3.forceSimulation for a simple many-body layout
+        const nodes = visible.map(item => ({
+            id: item.uniqueId,
+            x: item.x + item.width / 2,
+            y: item.y + CHART_HEIGHT / 2,
+            fx: undefined,
+            fy: undefined
+        }));
+        const radius = 8;
+        const sim = d3.forceSimulation(nodes)
+            .force('charge', d3.forceManyBody().strength(-40))
+            .force('collision', d3.forceCollide(radius))
+            .force('center', d3.forceCenter(canvasSize.width / 2, canvasSize.height / 2))
+            .stop();
+        for (let i = 0; i < 120; ++i) sim.tick();
+        const pos: {[id: string]: {x: number, y: number}} = {};
+        nodes.forEach(n => {
+            pos[n.id] = {x: n.x, y: n.y};
+        });
+        setDotPositions(pos);
+        setDotLayoutReady(true);
+    }, [animationProgress, gridItems, canvasSize, scrollTop, dotLayoutReady]);
+
+    // Reset dot layout when leaving dots mode
+    useEffect(() => {
+        if (animationProgress < 0.66 && dotLayoutReady) {
+            setDotPositions(null);
+            setDotLayoutReady(false);
+        }
+    }, [animationProgress, dotLayoutReady]);
 
     return (
         <div ref={containerRef} className="flex flex-col items-center w-full px-2">
