@@ -7,11 +7,11 @@ query Artists {
         lastname,
         id,
         birthplace,
-        birthdate,
-        deathdate,
+        birthyear,
+        deathyear,
         deathplace,
         country,
-        exhibitedExhibitions {
+        exhibitedAtExhibitions {
             title,
             startdate,
             id
