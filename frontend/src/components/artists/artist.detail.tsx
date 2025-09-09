@@ -690,11 +690,12 @@ class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallba
         this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             const year = +exhibition.startyear;
             // iterate over items
+            const itemCount = exhibition.exhibitsItems?.length || 0;
             if (itemsPerYear.has(year)) {
                 const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + exhibition.exhibitsItemsAggregate.count);
+                itemsPerYear.set(year, count + itemCount);
             } else {
-                itemsPerYear.set(year, exhibition.exhibitsItemsAggregate.count);
+                itemsPerYear.set(year, itemCount);
             }
         });
 

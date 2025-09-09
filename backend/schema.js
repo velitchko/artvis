@@ -80,6 +80,8 @@ type Geoname {
 	name: String!
 	name_alternate: String
 	parent_path: String!
+	latitude: Float!
+	longitude: Float!
 	status: BigInt!
 	tgn: BigInt!
 	tgn_parent: BigInt

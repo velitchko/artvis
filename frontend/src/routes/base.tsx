@@ -8,6 +8,7 @@ import ExplorerPage from "../pages/explorer";
 import ArtistDetailPage from "../pages/artist.detail";
 import ArtistDetailTestPage from "../pages/artist.detail.test";
 import ExhibitionsPage from "../pages/exhibitions";
+import AboutPage from "../pages/about";
 
 
 export default function Base() {
@@ -15,6 +16,7 @@ export default function Base() {
         <React.StrictMode>
             <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/about" element={<AboutPage />} />
                 <Route path="/network" element={<NetworkPage />} />
                 <Route path="/explorer" element={<ExplorerPage />} />
                 <Route path="/artists" element={<ArtistPage />} />

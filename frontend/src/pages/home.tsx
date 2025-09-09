@@ -72,7 +72,7 @@ const HomePage = (props: any) => {
             <ParticlesComponent />
             
             {/* Google-inspired centered layout with footer in view */}
-            <div className="w-full h-screen flex flex-col px-6 py-8">
+            <div className="w-full h-screen flex flex-col px-6 py-8 relative z-10">
                 
                 {/* Spacer for top */}
                 <div className="flex-1"></div>
@@ -109,6 +109,7 @@ const HomePage = (props: any) => {
                             <a href="/artists" className="hover:text-gray-900 transition-colors">Browse Artists</a>
                             <a href="/exhibitions" className="hover:text-gray-900 transition-colors">Exhibitions</a>
                             <span className="hidden sm:inline text-gray-400">|</span>
+                            <a href="/publications" className="hover:text-gray-900 transition-colors">Publications</a>
                             <a href="/data" className="hover:text-gray-900 transition-colors">Data Sources</a>
                             <a href="/contact" className="hover:text-gray-900 transition-colors">Contact</a>
                             <a href="https://gitlab.cvast.tuwien.ac.at/vfilipov/artvis" target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 transition-colors flex items-center space-x-1">

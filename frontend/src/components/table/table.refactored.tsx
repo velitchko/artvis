@@ -45,7 +45,7 @@ const YEAR_RANGE = { min: 1905, max: 1915 };
 
 // Utility functions
 const isValidExhibition = (exhibition: Exhibition): boolean => {
-    return exhibition.startyear >= YEAR_RANGE.min && exhibition.endyear <= YEAR_RANGE.max;
+    return exhibition.startyear >= YEAR_RANGE.min && (exhibition.endyear || exhibition.startyear) <= YEAR_RANGE.max;
 };
 
 const calculatePercentage = (exhibition: MetaExhibition, artistId: number): number => {

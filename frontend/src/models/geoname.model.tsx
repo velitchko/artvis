@@ -8,6 +8,8 @@ export type Geoname = {
 	parent_path: string;
 	status: number;
 	tgn: number;
+	latitude: number;
+	longitude: number;
 	tgn_parent?: number;
 	type: string;
 	locationsLocatedAt: Array<Location>;
