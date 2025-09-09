@@ -59,6 +59,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     const [animationProgress, setAnimationProgress] = useState(0);
     const [dotPositions, setDotPositions] = useState<{[id: string]: {x: number, y: number}} | null>(null);
     const [dotLayoutReady, setDotLayoutReady] = useState(false);
+    const [dotColors, setDotColors] = useState<{[id: string]: string}>({});
     
     // Virtualization settings - Use dynamic height based on available space
     const HEADER_HEIGHT = 64; // Match pt-16 (64px) from parent component
@@ -418,6 +419,36 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Clear canvas with transparent background
         ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
 
+        // DOT MODE: render all dots in canvas view, skip per-item rendering
+        if (animationProgress >= 0.66 && dotPositions) {
+            Object.entries(dotPositions).forEach(([id, pos]) => {
+                if (
+                    pos.x >= 0 && pos.x <= canvasSize.width &&
+                    pos.y >= 0 && pos.y <= canvasSize.height
+                ) {
+                    // Color transition: interpolate from black to color
+                    const color = dotColors[id] || '#000';
+                    const t = (animationProgress - 0.66) / 0.34;
+                    // Interpolate color (simple linear RGB)
+                    function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+                    function hexToRgb(hex: string) {
+                        const m = hex.match(/^#([0-9a-f]{6})$/i);
+                        if (!m) return [0,0,0];
+                        const n = parseInt(m[1], 16);
+                        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+                    }
+                    const rgb0 = [0,0,0];
+                    const rgb1 = hexToRgb(color);
+                    const rgb = rgb0.map((c, i) => Math.round(lerp(c, rgb1[i], t)));
+                    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+            return; // Skip visibleItems.forEach in dot mode
+        }
+
         const { yearExtent, countExtent } = getExtents(artists);
         
         // Create scales for timeline
@@ -590,7 +621,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         });
         
         console.log('Canvas render complete');
-    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling, animationProgress]);
+    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling, animationProgress, dotPositions]);
 
     // Helper function to truncate text
     const truncateText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string => {
@@ -693,36 +724,21 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         setScrollTop(newScrollTop);
     };
 
-    // Compute non-overlapping dot positions when entering dots mode
+    // Compute random dot positions for all gridItems when entering dots mode
     useEffect(() => {
         if (animationProgress < 0.66 || dotLayoutReady) return;
-        // Only compute once per dots mode entry
-        const visible = gridItems.filter(item => {
-            // Only those in the current viewport
-            return item.y - scrollTop + item.height > 0 && item.y - scrollTop < canvasSize.height;
-        });
-        // Use d3.forceSimulation for a simple many-body layout
-        const nodes = visible.map(item => ({
-            id: item.uniqueId,
-            x: item.x + item.width / 2,
-            y: item.y + CHART_HEIGHT / 2,
-            fx: undefined,
-            fy: undefined
-        }));
-        const radius = 8;
-        const sim = d3.forceSimulation(nodes)
-            .force('charge', d3.forceManyBody().strength(-40))
-            .force('collision', d3.forceCollide(radius))
-            .force('center', d3.forceCenter(canvasSize.width / 2, canvasSize.height / 2))
-            .stop();
-        for (let i = 0; i < 120; ++i) sim.tick();
+        // Use all gridItems, not just visible
         const pos: {[id: string]: {x: number, y: number}} = {};
-        nodes.forEach(n => {
-            pos[n.id] = {x: n.x, y: n.y};
-        });
+        const margin = 12;
+        for (const item of gridItems) {
+            pos[item.uniqueId] = {
+                x: Math.random() * (canvasSize.width - 2 * margin) + margin,
+                y: Math.random() * (canvasSize.height - 2 * margin) + margin
+            };
+        }
         setDotPositions(pos);
         setDotLayoutReady(true);
-    }, [animationProgress, gridItems, canvasSize, scrollTop, dotLayoutReady]);
+    }, [animationProgress, gridItems, canvasSize, dotLayoutReady]);
 
     // Reset dot layout when leaving dots mode
     useEffect(() => {
@@ -731,6 +747,22 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             setDotLayoutReady(false);
         }
     }, [animationProgress, dotLayoutReady]);
+
+    // Assign random categorical color to each artist on mount or when gridItems change
+    useEffect(() => {
+        if (!gridItems.length) return;
+        const palette = [
+            '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+            '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5',
+            '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
+            '#e5c494', '#b3b3b3'
+        ];
+        const colors: {[id: string]: string} = {};
+        gridItems.forEach((item, i) => {
+            colors[item.uniqueId] = palette[Math.floor(Math.random() * palette.length)];
+        });
+        setDotColors(colors);
+    }, [gridItems]);
 
     return (
         <div ref={containerRef} className="flex flex-col items-center w-full px-2">
