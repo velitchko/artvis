@@ -22,6 +22,9 @@ import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITIONS_FOR_GROUPS from '../../queries/exhibitionsForGroups';
+import ClusteringComponent from './clustering.component';
+//import * as fs from "fs";
+import { UMAP } from 'umap-js';
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -56,6 +59,9 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	private artworkExhibitionList: Map<string, number>;
 	private normalizedMap: Map<string, Array<number>>;
 	private featureVectors: Map<string, Array<number>>;
+	private matrix: number[][];
+	private finished: boolean;
+
 
 
 	constructor(props: { artists: Array<Artist>, exhibitions: Array<Exhibition>, compareWith: Artist | null, baseNode: Node, links: Array<Link> }) {
@@ -85,6 +91,12 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		this.artworkExhibitionList = new Map<string, number>();
 		this.normalizedMap = new Map<string, Array<number>>();
 		this.featureVectors = new Map<string, Array<number>>();
+
+		let n = 14000;
+		this.matrix = Array.from({ length: n }, () => Array(n).fill(0));
+
+		this.finished = false;
+
 		//this.exhibitionlist = new Array<Exhibition>();
 		this.width = 500;
 		this.height = 200;
@@ -250,7 +262,61 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		//console.log("featurevector");
 		//console.log(this.featureVectors.get(one));
 
+
+
+
+		/* const jsonString = this.mapToJson(this.featureVectors);
+		//console.log(jsonString);
+		const FileSystem = require("fs-extra");
+		FileSystem.writeFile('featurevector.json', jsonString, (error: any) => {
+			if (error) throw error;
+		}); */
+
+
+		const umap = new UMAP();
+
+		const n = this.featureVectors.size;
+		this.matrix = Array.from({ length: n }, () => Array(n).fill(0));
+		let counter = 0;
+
+		this.featureVectors.forEach((value, key) => {
+
+			let vector = value;
+
+			this.matrix[counter] = value;
+
+			counter++;
+		});
+
+		let sum = 0;
+		for (let i = 0; i < n; i++) {
+			sum += this.matrix[13000][i];
+		}
+
+		if (sum > 0) {
+			this.finished = true;
+			console.log("finished");
+
+		}
+
+		console.log("features");
+		//console.log(this.featureVectors.get(one));
+		//console.log(matrix[4]);
+
+		//const embedding = umap.fit(this.matrix);
+
+		//console.log(embedding[0]);
+		//console.log(embedding.length);
+
+
+
 	}
+
+	readyToUpdate() {
+		this.forceUpdate();
+		console.log("update ready");
+	}
+
 
 	//fills coexhibition list with artists and their co-exhibition vectors
 	computeAdjacencylist() {
@@ -429,6 +495,10 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 		return normalized;
 	}
 
+	mapToJson = (map: any) => {
+		return JSON.stringify(Object.fromEntries(map));
+	};
+
 
 	onResize = () => {
 		// get artistinfo-container element width and height and set state
@@ -444,26 +514,7 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 	}
 
 	componentDidMount(): void {
-		//console.log("comp did mount");
-		// this.width = window.innerWidth * 0.6;
-
-		// get ego-net-container element width and height and set state
-		const width = document.getElementById('artistinfo-container')?.clientWidth;
-		const height = document.getElementById('artistinfo-container')?.clientHeight;
-
-		if (!width || !height) return;
-
-		//this.getNumberOfArtworks(true);
-
-		this.setState(prevState => ({ width: width, height: height }), () => {
-			//console.log("setState in did mount");
-			this.init();
-		});
-
-		// set resize handler to window
-		window.addEventListener('resize', this.onResize);
-
-		// this.init();
+		this.readyToUpdate();
 	}
 
 
@@ -525,6 +576,15 @@ class GroupsComponent extends React.Component<{ artists: Array<Artist>, exhibiti
 				<div className="fixed w-[94%] h-auto z-50">
 					<div className="w-10/12 h-auto flex-col justify-center mx-auto">
 						<SearchComponent query={GET_ARTIST_BY_NAME} ></SearchComponent>
+					</div>
+				</div>
+
+				<div className="fixed w-[94%] h-auto z-50">
+					<div className="w-10/12 h-auto flex-col justify-center mx-auto">
+						{this.finished &&
+							<ClusteringComponent matrix={this.matrix} numberVectors={this.featureVectors.size} />
+						}
+
 					</div>
 				</div>
 
