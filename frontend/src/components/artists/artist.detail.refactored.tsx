@@ -651,61 +651,14 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         setState(prev => ({ ...prev, colors }));
     }, []);
 
-    // Render method
-    const renderControls = () => (
-        <div className="controls-container mb-4">
-            <div className="flex gap-4 items-center">
-                <label className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Group By:</span>
-                    <select 
-                        className="border rounded px-2 py-1"
-                        value={state.colors.group}
-                        onChange={(e) => {
-                            // Handle group by change
-                            setState(prev => ({
-                                ...prev,
-                                colors: { ...prev.colors, group: e.target.value }
-                            }));
-                        }}
-                    >
-                        <option value="country">Country</option>
-                        <option value="sex">Gender</option>
-                        <option value="ageGroup">Age Group</option>
-                    </select>
-                </label>
-                
-                <label className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Min Co-exhibitions:</span>
-                    <input 
-                        type="range" 
-                        min="1" 
-                        max="10" 
-                        className="w-20"
-                        // Handle co-exhibition threshold change
-                    />
-                </label>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="artist-detail-container p-6">
-            <div className="artist-header mb-6">
-                <h1 className="text-3xl font-bold">{artist.sortname || 'Unknown Artist'}</h1>
-                <p className="text-gray-600">
-                    {artist.birthyear && `Born: ${artist.birthyear}`}
-                    {artist.deathyear && ` - Died: ${artist.deathyear}`}
-                    {artist.birthyear && ` (Age: ${calculateAge(artist.birthyear)})`}
-                </p>
-            </div>
-
-            {renderControls()}
-
-            <div className="visualization-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Timeline Section */}
-                <div className="timeline-section">
+        <div className="artist-detail-container p-6 h-screen flex flex-col">
+            {/* Top Row: Timeline + Area Chart */}
+            <div className="top-row grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 flex-shrink-0" style={{ height: '45vh' }}>
+                {/* Timeline Section - Top Left */}
+                <div className="timeline-section h-full">
                     <h2 className="text-xl font-semibold mb-4">Exhibition Timeline</h2>
-                    <div id="timeline-container" className="w-full h-80 border rounded">
+                    <div id="timeline-container" className="w-full border rounded" style={{ height: 'calc(100% - 2.5rem)' }}>
                         <ArtistTimeline 
                             artist={artist}
                             exhibitionsList={state.exhibitionsList}
@@ -721,19 +674,49 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     </div>
                 </div>
 
-                {/* Network Section */}
-                <div className="network-section">
+                {/* Area Chart Section - Top Right */}
+                <div className="area-chart-section h-full">
                     <h2 className="text-xl font-semibold mb-4">
+                        Co-exhibitor Analysis ({state.links.length} links)
+                    </h2>
+                    <div id="area-chart-container" className="w-full border rounded" style={{ height: 'calc(100% - 2.5rem)' }}>
+                        <AreaChartComponent
+                            links={state.links}
+                            colors={state.colors}
+                            groupBy={state.colors.group}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Row: Table + Network */}
+            <div className="bottom-row grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+                {/* Table Section - Bottom Left */}
+                <div className="table-section h-full flex flex-col">
+                    <h2 className="text-xl font-semibold mb-4 flex-shrink-0">Exhibition Details</h2>
+                    <div className="flex-1 overflow-auto border rounded min-h-0">
+                        <TableComponent
+                            baseId={Number(artist.id)}
+                            compareWith={state.compareWith}
+                            exhibitions={state.exhibitionsList}
+                            query={GET_EXHIBITION}
+                        />
+                    </div>
+                </div>
+
+                {/* Network Section - Bottom Right */}
+                <div className="network-section h-full flex flex-col">
+                    <h2 className="text-xl font-semibold mb-4 flex-shrink-0">
                         Co-exhibition Network ({state.links.length} connections)
                     </h2>
-                    <div className="text-sm text-gray-600 mb-2">
+                    <div className="text-sm text-gray-600 mb-2 flex-shrink-0">
                         Base artist: {state.baseNode.name} | 
                         Exhibitions: {state.exhibitionsList.length} | 
                         Links: {state.links.length}
                     </div>
-                    <div id="ego-net-container" className="w-full h-64 border rounded">
+                    <div id="ego-net-container" className="flex-1 border rounded min-h-0">
                         {state.baseNode.id ? (
-                            <div>
+                            <div className="h-full">
                                 <div className="text-xs text-gray-500 mb-2">
                                     Debug: baseNode.id={state.baseNode.id}, links={state.links.length}
                                 </div>
@@ -752,33 +735,6 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                 Loading network...
                             </div>
                         )}
-                    </div>
-                </div>
-
-                {/* Area Chart Section */}
-                <div className="area-chart-section lg:col-span-2">
-                    <h2 className="text-xl font-semibold mb-4">
-                        Co-exhibitor Analysis ({state.links.length} links)
-                    </h2>
-                    <div id="area-chart-container" className="w-full h-48 border rounded">
-                        <AreaChartComponent
-                            links={state.links}
-                            colors={state.colors}
-                            groupBy={state.colors.group}
-                        />
-                    </div>
-                </div>
-
-                {/* Table Section */}
-                <div className="table-section lg:col-span-2">
-                    <h2 className="text-xl font-semibold mb-4">Exhibition Details</h2>
-                    <div className="overflow-auto max-h-96 border rounded">
-                        <TableComponent
-                            baseId={Number(artist.id)}
-                            compareWith={state.compareWith}
-                            exhibitions={state.exhibitionsList}
-                            query={GET_EXHIBITION}
-                        />
                     </div>
                 </div>
             </div>
