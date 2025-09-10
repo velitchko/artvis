@@ -654,7 +654,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     return (
         <div className="artist-detail-container p-6 h-screen flex flex-col">
             {/* Top Row: Timeline + Area Chart */}
-            <div className="top-row grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 flex-shrink-0" style={{ height: '45vh' }}>
+            <div className="top-row grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 flex-shrink-0" style={{ height: '20vh' }}>
                 {/* Timeline Section - Top Left */}
                 <div className="timeline-section h-full">
                     <h2 className="text-xl font-semibold mb-4">Exhibition Timeline</h2>
@@ -664,7 +664,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                             exhibitionsList={state.exhibitionsList}
                             compareArtist={state.compareWith}
                             width={800}
-                            height={320}
+                            height={180}
                             onYearHover={(year: number, exhibitions: any[]) => {
                                 handleTimelineCallback(year);
                                 // Could add more year-specific handling here
