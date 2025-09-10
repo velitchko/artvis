@@ -9,6 +9,7 @@ import { Link } from '../../models/link';
 import EgoNetworkComponent from '../network/ego.network.refactored';
 import AreaChartComponent from '../linechart/area.chart.refactored';
 import TableComponent from '../table/table.refactored';
+import ArtistTimeline from './artist.timeline';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
 
@@ -441,18 +442,38 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     const fetchExhibitionData = useCallback(async () => {
         try {
+            console.log('=== FETCHING EXHIBITION DATA ===');
+            console.log('Artist ID:', artist.id);
+            console.log('Query:', GET_ARTIST_EXHIBITIONS_BY_ID);
+            
             loadCallback(true);
             const result = await client.query({
                 query: GET_ARTIST_EXHIBITIONS_BY_ID,
                 variables: { searchId: artist.id }
             });
 
+            console.log('Raw GraphQL result:', result);
+            console.log('Artists array:', result.data.artists);
+            
             const exhibitions = result.data.artists[0]?.exhibitedAtExhibitions || [];
+            console.log('Extracted exhibitions:', exhibitions);
+            console.log('Exhibition count:', exhibitions.length);
+            
+            // Log some sample exhibitions
+            if (exhibitions.length > 0) {
+                console.log('Sample exhibitions (first 3):');
+                exhibitions.slice(0, 3).forEach((ex: any, idx: number) => {
+                    console.log(`  ${idx + 1}. Title: "${ex.title}", Year: ${ex.startyear}, ID: ${ex.id}`);
+                    console.log(`     Items: ${ex.exhibitsItems?.length || 0}`);
+                });
+            }
             
             setState(prev => ({
                 ...prev,
                 exhibitionsList: exhibitions
             }));
+
+            console.log('=== EXHIBITION DATA FETCH COMPLETE ===');
 
         } catch (error) {
             console.error('Error fetching exhibition data:', error);
@@ -684,8 +705,19 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 {/* Timeline Section */}
                 <div className="timeline-section">
                     <h2 className="text-xl font-semibold mb-4">Exhibition Timeline</h2>
-                    <div id="timeline-container" className="w-full h-64 border rounded">
-                        <svg id="artist-detail-timeline" className="w-full h-full" />
+                    <div id="timeline-container" className="w-full h-80 border rounded">
+                        <ArtistTimeline 
+                            artist={artist}
+                            exhibitionsList={state.exhibitionsList}
+                            compareArtist={state.compareWith}
+                            width={800}
+                            height={320}
+                            onYearHover={(year: number, exhibitions: any[]) => {
+                                handleTimelineCallback(year);
+                                // Could add more year-specific handling here
+                            }}
+                            className="w-full h-full"
+                        />
                     </div>
                 </div>
 
