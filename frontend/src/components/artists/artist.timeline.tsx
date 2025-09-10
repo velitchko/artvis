@@ -57,7 +57,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
     const actualHeight = height;
 
     // Constants from original - adjust margins for responsive design
-    const margin = { top: 80, bottom: 50, left: 60, right: 60 };
+    const margin = { top: 80, bottom: 60, left: 60, right: 60 }; // Reduced bottom margin for cleaner legend
     const minYear = 1905;
     const maxYear = 1915;
     const innerWidth = actualWidth - margin.left - margin.right;
@@ -417,59 +417,138 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('font-family', 'Arial, sans-serif')
             .text('Exhibitions');
 
-        // X-axis label
+        // X-axis label - positioned just under the x-axis with more spacing
         svg.append('text')
             .attr('x', width / 2)
-            .attr('y', height - 5)
+            .attr('y', height - margin.bottom + 35)
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text('Year');
 
-        // Compare artist metadata (below timeline)
-        if (shouldShowCompareArtist) {
-            const centerX = width / 2;
-            const bottomY = height + 20; // Below the main SVG area
+        // Legend row - positioned under the Year label with proper spacing
+        const legendY = height - margin.bottom + 50;
+        const legendSpacing = width / 6; // Divide width into 6 sections for even spacing
+        
+        // 1. Base artist legend
+        const baseX = legendSpacing;
+        svg.append('line')
+            .attr('x1', baseX - 15)
+            .attr('x2', baseX)
+            .attr('y1', legendY)
+            .attr('y2', legendY)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 2);
             
-            svg.append('text')
-                .attr('x', centerX)
-                .attr('y', bottomY)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '14px')
-                .attr('font-weight', 'bold')
-                .attr('fill', 'black')
-                .attr('font-family', 'Arial, sans-serif')
-                .text(`${compareArtistToShow.sortname} (${compareArtistToShow.birthyear}, ${compareArtistToShow.country || 'Test Country'})`);
+        svg.append('text')
+            .attr('x', baseX + 5)
+            .attr('y', legendY + 4)
+            .attr('font-size', '10px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
+            .text(`${artist?.sortname || 'Artist'} (${exhibitionsList.length})`);
 
-            // Dashed underline for compare artist
+        // 2. Compare artist legend (if exists)
+        if (shouldShowCompareArtist) {
+            const compareX = legendSpacing * 2.5;
             svg.append('line')
-                .attr('x1', centerX - 100)
-                .attr('x2', centerX + 100)
-                .attr('y1', bottomY + 3)
-                .attr('y2', bottomY + 3)
+                .attr('x1', compareX - 15)
+                .attr('x2', compareX)
+                .attr('y1', legendY)
+                .attr('y2', legendY)
                 .attr('stroke', 'black')
-                .attr('stroke-width', 1)
-                .attr('stroke-dasharray', '3,3');
-
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '3,2');
+                
             svg.append('text')
-                .attr('x', centerX)
-                .attr('y', bottomY + 18)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '11px')
+                .attr('x', compareX + 5)
+                .attr('y', legendY + 4)
+                .attr('font-size', '10px')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
-                .text(`${compareArtistToShow.birthyear} (${compareArtistToShow.birthplace || 'Test City'}) - ${compareArtistToShow.deathyear || 1944} (${compareArtistToShow.deathplace || 'Test City 2'})`);
-
-            svg.append('text')
-                .attr('x', centerX)
-                .attr('y', bottomY + 32)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '11px')
-                .attr('fill', 'black')
-                .attr('font-family', 'Arial, sans-serif')
-                .text(`${mockCompareTimelineData.filter(d => d.exhibitions > 0).length} exhibitions | ${mockCompareTimelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
+                .text(`${compareArtistToShow.sortname} (5)`);
         }
+
+        // 3. Group shows indicator (black circle)
+        const groupX = legendSpacing * 4;
+        svg.append('circle')
+            .attr('cx', groupX - 5)
+            .attr('cy', legendY)
+            .attr('r', 4)
+            .attr('fill', 'black');
+            
+        svg.append('text')
+            .attr('x', groupX + 5)
+            .attr('y', legendY + 4)
+            .attr('font-size', '10px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
+            .text('Group shows');
+
+        // 4. Solo shows indicator (white circle with black border)
+        const soloX = legendSpacing * 5;
+        svg.append('circle')
+            .attr('cx', soloX - 5)
+            .attr('cy', legendY)
+            .attr('r', 4)
+            .attr('fill', 'white')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1);
+            
+        svg.append('text')
+            .attr('x', soloX + 5)
+            .attr('y', legendY + 4)
+            .attr('font-size', '10px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
+            .text('Solo shows');
+
+        // 5. Help icon with tooltip - positioned at the far right
+        const helpX = legendSpacing * 5.8;
+        svg.append('circle')
+            .attr('cx', helpX)
+            .attr('cy', legendY)
+            .attr('r', 8)
+            .attr('fill', 'white')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1)
+            .style('cursor', 'pointer')
+            .on('mouseenter', function() {
+                // Show tooltip on hover
+                const tooltip = svg.append('g').attr('class', 'help-tooltip');
+                
+                tooltip.append('rect')
+                    .attr('x', helpX - 100)
+                    .attr('y', legendY - 35)
+                    .attr('width', 200)
+                    .attr('height', 18)
+                    .attr('fill', 'black')
+                    .attr('rx', 2);
+                    
+                tooltip.append('text')
+                    .attr('x', helpX)
+                    .attr('y', legendY - 22)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10px')
+                    .attr('fill', 'white')
+                    .attr('font-family', 'Arial, sans-serif')
+                    .text('Timeline shows exhibitions over time');
+            })
+            .on('mouseleave', function() {
+                svg.selectAll('.help-tooltip').remove();
+            });
+            
+        svg.append('text')
+            .attr('x', helpX)
+            .attr('y', legendY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '11px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
+            .attr('font-weight', 'bold')
+            .style('cursor', 'pointer')
+            .text('?');
 
         // Top semi-circles (absolute items) - solid black like in screenshot
         svg.selectAll('.abs-half-circle')
@@ -592,124 +671,6 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 height={height}
                 style={{ width: '100%', height: '100%' }}
             />
-            
-            {/* Legend */}
-            <div style={{
-                fontSize: '11px',
-                color: 'black',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '20px',
-                width: '100%',
-                marginTop: '10px',
-                flexWrap: 'wrap'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div style={{
-                        width: '16px',
-                        height: '2px',
-                        backgroundColor: '#000',
-                        borderRadius: '1px'
-                    }}></div>
-                    <span>{artist?.sortname || 'Artist'} ({exhibitionsList.length} exhibitions)</span>
-                </div>
-                {(compareArtist || true) && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="16" height="2" style={{ overflow: 'visible' }}>
-                            <line 
-                                x1="0" 
-                                y1="1" 
-                                x2="16" 
-                                y2="1" 
-                                stroke="#000" 
-                                strokeWidth="2" 
-                                strokeDasharray="3,2"
-                            />
-                        </svg>
-                        <span>{(compareArtist || mockCompareArtist).sortname} (5 exhibitions)</span>
-                    </div>
-                )}
-                
-                {/* Visualization legend */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '10px', marginLeft: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50% 50% 0 0',
-                            backgroundColor: '#000'
-                        }}></div>
-                        <span>Group shows</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '0 0 50% 50%',
-                            backgroundColor: '#fff',
-                            border: '1px solid #000'
-                        }}></div>
-                        <span>Solo shows</span>
-                    </div>
-                </div>
-                
-                {/* Help tooltip */}
-                <div 
-                    style={{ 
-                        position: 'relative',
-                        marginLeft: '10px',
-                        cursor: 'pointer'
-                    }}
-                    onMouseEnter={() => setTooltipVisible(true)}
-                    onMouseLeave={() => setTooltipVisible(false)}
-                >
-                    <div style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        border: '1px solid black',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '10px',
-                        color: 'black',
-                        fontWeight: 'bold'
-                    }}>
-                        ?
-                    </div>
-                    
-                    {tooltipVisible && (
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '20px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            backgroundColor: 'black',
-                            color: 'white',
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '10px',
-                            whiteSpace: 'nowrap',
-                            zIndex: 1000,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                        }}>
-                            Timeline shows exhibitions over time. Circles above = group shows, below = solo shows.
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                width: 0,
-                                height: 0,
-                                borderLeft: '4px solid transparent',
-                                borderRight: '4px solid transparent',
-                                borderTop: '4px solid black'
-                            }}></div>
-                        </div>
-                    )}
-                </div>
-            </div>
         </div>
     );
 };
