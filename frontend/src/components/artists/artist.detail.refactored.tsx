@@ -36,7 +36,6 @@ interface ArtistDetailState {
     coExhibitionCount: number;
     groupBy: string;
     orderBy: string;
-    networkMode: 'circles' | 'pies';
     selectedGroup: string; // For cross-component group selection
     // Search functionality
     searchTerm: string;
@@ -284,8 +283,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         // Visualization controls
         coExhibitionCount: 3,
         groupBy: 'country',
-        orderBy: 'coexhibitions',
-        networkMode: 'circles',
+        orderBy: 'coexhibitions', 
         selectedGroup: '', // For cross-component group selection
         // Search functionality
         searchTerm: '',
@@ -797,10 +795,6 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         }
     }, [loadCallback]);
 
-    const handleNetworkModeChange = useCallback((networkMode: 'circles' | 'pies') => {
-        setState(prev => ({ ...prev, networkMode }));
-    }, []);
-
     const handleClearComparison = useCallback(() => {
         console.log('Clearing comparison');
         setState(prev => ({ 
@@ -830,8 +824,6 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     onArtistSelect={handleArtistSelect}
                     compareWith={state.compareWith}
                     onClearComparison={handleClearComparison}
-                    networkMode={state.networkMode}
-                    onNetworkModeChange={handleNetworkModeChange}
                     totalExhibitions={state.exhibitionsList.length}
                     totalLinks={state.links.length} // Total co-exhibition links
                     totalArtists={new Set(state.links.map(link => link.target.id)).size + 1} // Unique connected artists + base artist

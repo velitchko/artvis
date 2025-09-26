@@ -153,58 +153,44 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         return dataWithMissingYears;
     }, [exhibitionsList, artist.id, minYear, maxYear]);
 
-    // PLACEHOLDER: Create mock compare artist data for testing
-    const mockCompareTimelineData = useMemo(() => {
-        console.log('=== CREATING PLACEHOLDER COMPARE DATA ===');
-        
-        // Create simplified mock data directly without type issues
-        const years: Array<number> = Array.from(Array(maxYear - minYear + 1).keys()).map((i) => i + minYear);
-        const mockData = years.map((year: number) => {
-            // Add some mock exhibitions at specific years
-            if (year === 1906) return { year, exhibitions: 2, items: 3 };
-            if (year === 1908) return { year, exhibitions: 1, items: 1 };
-            if (year === 1910) return { year, exhibitions: 1, items: 3 };
-            if (year === 1912) return { year, exhibitions: 1, items: 2 };
-            if (year === 1913) return { year, exhibitions: 1, items: 1 };
-            return { year, exhibitions: 0, items: 0 };
-        });
-
-        console.log('Mock compare timeline data:', mockData);
-        console.log('=== END COMPARE PROCESSING ===');
-
-        return mockData;
-    }, [minYear, maxYear]);
-
-    // Process compare artist data using the same logic
+    // Process compare artist data using the same logic as main artist
     const compareTimelineData = useMemo(() => {
-        if (!compareArtist) return [];
+        if (!compareArtist || !compareArtist.exhibitedAtExhibitions) return [];
         
         console.log('=== PROCESSING COMPARE ARTIST DATA ===');
         console.log('Compare artist:', compareArtist.sortname);
+        console.log('Compare exhibitions:', compareArtist.exhibitedAtExhibitions.length);
         
-        // For now, let's create a temporary compare artist with some test data
-        // We'll use a modified version of the base artist's data to simulate comparison
-        const testCompareData = timelineData.map(d => ({
-            year: d.year,
-            exhibitions: Math.max(0, d.exhibitions - 1), // Slightly different exhibition count
-            items: Math.max(0, Math.floor(d.items * 0.7)) // Different item count
-        }));
+        // Process compare artist's exhibitions the same way as the main artist
+        const exhibitionsPerYear = new Map<number, Set<number>>();
+        const itemsPerYear = new Map<number, number>();
         
-        console.log('Compare timeline data:', testCompareData);
+        compareArtist.exhibitedAtExhibitions.forEach((exhibition: any) => {
+            const year = +exhibition.startyear;
+            if (year >= minYear && year <= maxYear) {
+                if (!exhibitionsPerYear.has(year)) {
+                    exhibitionsPerYear.set(year, new Set());
+                }
+                exhibitionsPerYear.get(year)?.add(exhibition.id);
+                
+                const itemCount = exhibition.exhibitsItems?.length || 0;
+                itemsPerYear.set(year, (itemsPerYear.get(year) || 0) + itemCount);
+            }
+        });
+
+        // Create data with missing years filled in
+        const dataWithMissingYears = [];
+        for (let year = minYear; year <= maxYear; year++) {
+            const exhibitions = exhibitionsPerYear.get(year)?.size || 0;
+            const items = itemsPerYear.get(year) || 0;
+            dataWithMissingYears.push({ year, exhibitions, items });
+        }
+        
+        console.log('Compare timeline data processed:', dataWithMissingYears.filter(d => d.exhibitions > 0));
         console.log('=== END COMPARE PROCESSING ===');
         
-        return testCompareData;
-    }, [compareArtist, timelineData]);
-
-    // Mock compare artist data for metadata display
-    const mockCompareArtist = {
-        sortname: "Test Artist",
-        birthyear: 1866,
-        deathyear: 1944,
-        birthplace: "Test City",
-        deathplace: "Test City 2",
-        country: "Test Country"
-    };
+        return dataWithMissingYears;
+    }, [compareArtist, minYear, maxYear]);
 
     // Scales
     const scales = useMemo(() => {
@@ -297,11 +283,8 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('font-family', 'Arial, sans-serif')
             .text(`${exhibitionsList.length} exhibitions | ${timelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
 
-        // Compare artist metadata (top right) - show mockCompareArtist for testing
-        const shouldShowCompareArtist = compareArtist || true; // Always show for testing
-        const compareArtistToShow = compareArtist || mockCompareArtist;
-        
-        if (shouldShowCompareArtist) {
+        // Compare artist metadata (top right) - only show when real compare artist exists
+        if (compareArtist) {
             const compareArtistX = containerWidth - margin.right; // Align with end of timeline
             
             const compareArtistText = svg.append('text')
@@ -312,7 +295,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
-                .text(`${compareArtistToShow.sortname} (${compareArtistToShow.birthyear}, ${compareArtistToShow.country || 'Test Country'})`);
+                .text(`${compareArtist.sortname} (${compareArtist.birthyear}, ${compareArtist.country})`);
 
             // Get text width for underline
             const compareTextWidth = (compareArtistText.node() as SVGTextElement)?.getBBox().width || 200;
@@ -334,7 +317,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
-                .text(`${compareArtistToShow.birthyear} (${compareArtistToShow.birthplace || 'Test City'}) - ${compareArtistToShow.deathyear || 1944} (${compareArtistToShow.deathplace || 'Test City 2'})`);
+                .text(`${compareArtist.birthyear} (${compareArtist.birthplace}) - ${compareArtist.deathyear} (${compareArtist.deathplace})`);
 
             svg.append('text')
                 .attr('x', compareArtistX)
@@ -343,7 +326,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
-                .text(`${mockCompareTimelineData.filter(d => d.exhibitions > 0).length} exhibitions | ${mockCompareTimelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
+                .text(`${compareTimelineData.filter(d => d.exhibitions > 0).length} exhibitions | ${compareTimelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
         }
 
         // Line path - clean black line
@@ -360,11 +343,11 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('fill', 'none');
 
         // Compare artist line path - dashed gray line
-        if (mockCompareTimelineData && mockCompareTimelineData.length > 0) {
-            console.log('Drawing compare line for', mockCompareTimelineData.length, 'points');
+        if (compareTimelineData && compareTimelineData.length > 0) {
+            console.log('Drawing compare line for', compareTimelineData.length, 'points');
             
             svg.append('path')
-                .datum(mockCompareTimelineData)
+                .datum(compareTimelineData)
                 .attr('d', lineGenerator)
                 .attr('stroke', 'black')
                 .attr('stroke-width', 1.5)
@@ -450,7 +433,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .text(`${artist?.sortname || 'Artist'} (${exhibitionsList.length})`);
 
         // 2. Compare artist legend (if exists)
-        if (shouldShowCompareArtist) {
+        if (compareArtist) {
             const compareX = legendSpacing * 2.5;
             svg.append('line')
                 .attr('x1', compareX - 15)
@@ -467,7 +450,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('font-size', '10px')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
-                .text(`${compareArtistToShow.sortname} (5)`);
+                .text(`${compareArtist.sortname} (${compareTimelineData.filter(d => d.exhibitions > 0).length})`);
         }
 
         // 3. Group shows indicator (black circle)
@@ -609,12 +592,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             });
 
         // Compare artist semi-circles if data exists
-        if (mockCompareTimelineData && mockCompareTimelineData.length > 0) {
-            console.log('Drawing compare semi-circles for', mockCompareTimelineData.length, 'points');
+        if (compareTimelineData && compareTimelineData.length > 0) {
+            console.log('Drawing compare semi-circles for', compareTimelineData.length, 'points');
             
             // Compare top semi-circles (absolute items) - gray with dashed outline
             svg.selectAll('.compare-abs-half-circle')
-                .data(mockCompareTimelineData)
+                .data(compareTimelineData)
                 .enter()
                 .append('path')
                 .attr('class', 'compare-abs-half-circle')
@@ -636,7 +619,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
 
             // Compare bottom semi-circles (average items) - light gray with dashed outline
             svg.selectAll('.compare-avg-half-circle')
-                .data(mockCompareTimelineData)
+                .data(compareTimelineData)
                 .enter()
                 .append('path')
                 .attr('class', 'compare-avg-half-circle')

@@ -289,24 +289,24 @@ const TableComponent: React.FC<TableProps> = ({
     const handleSort = useCallback((columnKey: string) => {
         if (!state.results.exhibitions) return;
 
-        const sortedExhibitions = [...state.results.exhibitions];
+        let sortedExhibitions: MetaExhibition[];
 
         if (columnKey.includes('.length')) {
             const [property] = columnKey.split('.');
-            _.sortBy(sortedExhibitions, exhibition => {
+            sortedExhibitions = _.sortBy(state.results.exhibitions, exhibition => {
                 const prop = exhibition[property as keyof MetaExhibition] as any[];
                 return _.uniqBy(prop || [], 'id').length;
             });
         } else if (columnKey === 'host') {
-            _.sortBy(sortedExhibitions, exhibition => 
+            sortedExhibitions = _.sortBy(state.results.exhibitions, exhibition => 
                 getHost(exhibition.tookPlaceAtLocations)
             );
         } else if (columnKey === 'location') {
-            _.sortBy(sortedExhibitions, exhibition => 
+            sortedExhibitions = _.sortBy(state.results.exhibitions, exhibition => 
                 getCountryAndCity(exhibition)
             );
         } else {
-            _.sortBy(sortedExhibitions, columnKey);
+            sortedExhibitions = _.sortBy(state.results.exhibitions, columnKey);
         }
 
         if (state.sortDirection === 'desc') {

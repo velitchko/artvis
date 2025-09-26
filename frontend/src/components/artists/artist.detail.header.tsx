@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Artist } from '../../models/artist.model';
+import { ArtistDetailOnboardingModal } from '../modal';
 
 interface ArtistDetailHeaderProps {
     artist: Artist;
@@ -21,9 +22,6 @@ interface ArtistDetailHeaderProps {
     // Comparison functionality
     compareWith?: Artist | null;
     onClearComparison?: () => void;
-    // Network visualization mode
-    networkMode?: 'circles' | 'pies';
-    onNetworkModeChange?: (mode: 'circles' | 'pies') => void;
     // Statistics
     totalExhibitions?: number;
     totalLinks?: number;
@@ -45,13 +43,12 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
     onArtistSelect,
     compareWith,
     onClearComparison,
-    networkMode,
-    onNetworkModeChange,
     totalExhibitions,
     totalLinks,
     totalArtists
 }) => {
     const [showSearchResults, setShowSearchResults] = useState(false);
+    const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
     const groupByOptions = [
         { value: 'country', label: 'Nationality/Country' },
@@ -152,21 +149,6 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
                         </select>
                     </div>
 
-                    {/* Network Mode Control */}
-                    {onNetworkModeChange && (
-                        <div className="flex items-center gap-2">
-                            <label className="text-black font-bold text-xs whitespace-nowrap">Network:</label>
-                            <select 
-                                className="bg-white border-2 border-black text-black font-bold px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black"
-                                value={networkMode || 'circles'}
-                                onChange={(e) => onNetworkModeChange(e.target.value as 'circles' | 'pies')}
-                            >
-                                <option value="circles">Circles</option>
-                                <option value="pies">Pies</option>
-                            </select>
-                        </div>
-                    )}
-
                     {/* Search Control */}
                     {onSearchChange && (
                         <div className="flex items-center gap-2 relative">
@@ -231,7 +213,14 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
                         </div>
                     )}
 
-
+                    {/* Help Button */}
+                    <button
+                        onClick={() => setShowOnboardingModal(true)}
+                        className="bg-white border-2 border-black text-black font-bold px-2 py-1 text-xs hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-black"
+                        title="Help & Feature Guide"
+                    >
+                        ?
+                    </button>
 
                     {/* Statistics */}
                     <div className="text-black font-bold text-xs whitespace-nowrap">
@@ -241,6 +230,12 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Onboarding Modal */}
+            <ArtistDetailOnboardingModal
+                isOpen={showOnboardingModal}
+                onClose={() => setShowOnboardingModal(false)}
+            />
         </nav>
     );
 };
