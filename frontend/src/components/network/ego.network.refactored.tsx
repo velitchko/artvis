@@ -421,11 +421,12 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     }, [baseNode, propGroupBy, state.groupBy]);
 
     // Function to update base circle color when groupBy changes
-    const updateBaseCircleColor = useCallback(() => {
+    const updateBaseCircleColor = useCallback((currentColors?: Map<string, string>) => {
         const baseCircle = d3.select('#base-circle');
         if (!baseCircle.empty()) {
             const baseNodeGroup = getBaseNodeGroup();
-            const baseNodeColor = state.colors.colors.get(baseNodeGroup) || 'black';
+            const colorsToUse = currentColors || state.colors.colors;
+            const baseNodeColor = colorsToUse.get(baseNodeGroup) || 'black';
             
             baseCircle.attr('stroke', baseNodeColor);
         }
@@ -485,15 +486,15 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
     const processAndRenderData = useCallback(() => {
         const currentCoEx = coExhibitionCount ?? state.coEx;
-        const targetNodes = filterData(currentCoEx);
+        const { sortedLinks, updatedColors } = filterData(currentCoEx);
         
-        linksRef.current = targetNodes;
+        linksRef.current = sortedLinks;
         const uniqueNodes = _.uniqBy(linksRef.current, (node: Link) => node.targetId);
         
         drawGridLines(uniqueNodes.length);
-        drawCircles();
-        drawDonutChart();
-        updateBaseCircleColor();
+        drawCircles(updatedColors);
+        drawDonutChart(updatedColors);
+        updateBaseCircleColor(updatedColors);
     }, [coExhibitionCount, state.coEx, state.groupBy, state.orderBy, propGroupBy, propOrderBy, links, updateBaseCircleColor]);
 
     // Handle re-render when flag is set and processAndRenderData is available
@@ -526,7 +527,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         }
     }, []);
 
-    const filterData = useCallback((numCoEx: number): Link[] => {
+    const filterData = useCallback((numCoEx: number): { sortedLinks: Link[], updatedColors: Map<string, string> } => {
         // Filter links based on co-exhibition threshold
         const filteredLinks = links.filter((link: Link) => {
             const sum = links
@@ -646,7 +647,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         // Update scales with the unique nodes
         updateScales(sortedLinks);
 
-        return sortedLinks;
+        return { sortedLinks, updatedColors };
     }, [links, propGroupBy, propOrderBy, state.groupBy, state.orderBy, baseNode, orderByProperty]);
 
     const groupByProperty = useCallback((prop: string, links: Link[]) => {
@@ -764,12 +765,15 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             .attr('opacity', 1);
     }, [state.dimensions]);
 
-    const drawCircles = useCallback(() => {
+    const drawCircles = useCallback((currentColors?: Map<string, string>) => {
         const { artist } = containersRef.current;
         const { width, height } = state.dimensions;
         const scales = scalesRef.current;
         
         if (!artist) return;
+
+        // Use fresh colors if provided, otherwise fallback to state
+        const colorsToUse = currentColors || state.colors.colors;
 
         // Helper functions
         const getAngle = (index: number): number => {
@@ -837,7 +841,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             // Reset circle styles
             artist.selectAll('circle')
                 .attr('opacity', 0.75)
-                .attr('stroke', (d: any) => state.colors.colors.get(d.props.group) || 'black')
+                .attr('stroke', (d: any) => colorsToUse.get(d.props.group) || 'black')
                 .attr('stroke-width', 2)
                 .attr('fill', 'transparent');
         };
@@ -857,11 +861,11 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     .attr('cy', height / 2)
                     .attr('r', 0)
                     .attr('opacity', 0)
-                    .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
+                    .attr('stroke', (d: Link) => colorsToUse.get(d.props.group) || 'black')
                     .attr('stroke-width', 2)
                     .attr('fill', 'transparent'),
                 update => update
-                    .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black'),
+                    .attr('stroke', (d: Link) => colorsToUse.get(d.props.group) || 'black'),
                 exit => exit.remove()
             );
 
@@ -903,7 +907,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 d.target.y = y;
                 return y;
             })
-            .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
+            .attr('stroke', (d: Link) => colorsToUse.get(d.props.group) || 'black')
             .attr('opacity', 0.75);
 
         // Add event listeners
@@ -923,7 +927,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     setState(prev => ({ ...prev, selection: false }));
 
                     // Unhighlight all nodes 
-                    artist.selectAll('circle').attr('stroke', (d: any) => state.colors.colors.get(d.props.group) || 'black');
+                    artist.selectAll('circle').attr('stroke', (d: any) => colorsToUse.get(d.props.group) || 'black');
                     artist.selectAll('circle').attr('stroke-width', 2);
 
                     // Reset all labels font weight to normal
@@ -986,7 +990,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     return getYCoordinates(YEAR_RANGE.max, angle, 40) + height / 2;
                 })
                 .attr('opacity', 0.75)
-                .attr('fill', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
+                .attr('fill', (d: Link) => colorsToUse.get(d.props.group) || 'black')
                 .style('cursor', 'pointer');
 
             // Add outer circle event handlers
@@ -1054,7 +1058,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
                         // Reset inner circle styles
                         artist.selectAll('circle')
-                            .attr('stroke', (circleData: any) => state.colors.colors.get(circleData.props.group) || 'black')
+                            .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
                             .attr('stroke-width', 2);
                     }
                 })
@@ -1071,7 +1075,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
                         // Reset all styles
                         outerCircle.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
-                        artist.selectAll('circle').attr('stroke', (circleData: any) => state.colors.colors.get(circleData.props.group) || 'black').attr('stroke-width', 2);
+                        artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black').attr('stroke-width', 2);
                         artist.selectAll('circle').attr('opacity', 0.75);
                         artist.selectAll('.artist-label').attr('opacity', 1);
 
@@ -1210,7 +1214,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 if (!state.selection) {
                     artist.selectAll('.artist-label').attr('font-weight', 'normal');
                     artist.selectAll('circle')
-                        .attr('stroke', (circleData: any) => state.colors.colors.get(circleData.props.group) || 'black')
+                        .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
                         .attr('stroke-width', 2)
                         .attr('stroke-opacity', 1);
                 }
@@ -1231,7 +1235,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     setState(prev => ({ ...prev, selection: false }));
 
                     // Unhighlight all nodes 
-                    artist.selectAll('circle').attr('stroke', (circleData: any) => state.colors.colors.get(circleData.props.group) || 'black');
+                    artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black');
                     artist.selectAll('circle').attr('stroke-width', 2);
 
                     // Reset all labels font weight to normal
@@ -1258,12 +1262,15 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             });
     }, [state.dimensions, state.colors]);
 
-    const drawDonutChart = useCallback(() => {
+    const drawDonutChart = useCallback((currentColors?: Map<string, string>) => {
         const { donut } = containersRef.current;
         const { width, height } = state.dimensions;
         const scales = scalesRef.current;
         
         if (!donut || !linksRef.current.length) return;
+
+        // Use fresh colors if provided, otherwise fallback to state
+        const colorsToUse = currentColors || state.colors.colors;
 
 
         
@@ -1340,7 +1347,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             .data(uniqueGroups)
             .join('path')
             .attr('class', 'donut')
-            .attr('fill', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
+            .attr('fill', (d: Link) => colorsToUse.get(d.props.group) || 'black')
             .attr('id', (d: Link) => `donut-${d.props.group}`)
             .attr('stroke', 'none')
             .attr('stroke-width', 1)

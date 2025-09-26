@@ -168,13 +168,20 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         compareArtist.exhibitedAtExhibitions.forEach((exhibition: any) => {
             const year = +exhibition.startyear;
             if (year >= minYear && year <= maxYear) {
-                if (!exhibitionsPerYear.has(year)) {
-                    exhibitionsPerYear.set(year, new Set());
-                }
-                exhibitionsPerYear.get(year)?.add(exhibition.id);
+                // Filter items to only include those created by the compare artist
+                const itemsByCompareArtist = exhibition.exhibitsItems?.filter((item: any) => 
+                    item.artistsCreated?.find((a: any) => a.id === compareArtist.id)
+                ).length || 0;
                 
-                const itemCount = exhibition.exhibitsItems?.length || 0;
-                itemsPerYear.set(year, (itemsPerYear.get(year) || 0) + itemCount);
+                // Only count exhibitions and items if the artist actually has items in this exhibition
+                if (itemsByCompareArtist > 0) {
+                    if (!exhibitionsPerYear.has(year)) {
+                        exhibitionsPerYear.set(year, new Set());
+                    }
+                    exhibitionsPerYear.get(year)?.add(exhibition.id);
+                    
+                    itemsPerYear.set(year, (itemsPerYear.get(year) || 0) + itemsByCompareArtist);
+                }
             }
         });
 

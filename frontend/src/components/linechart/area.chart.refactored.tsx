@@ -102,16 +102,15 @@ const getColorMapping = (groupType: string, uniqueGroups?: string[]): Map<string
 };
 
 // Custom hooks
-const useResizeObserver = (elementId: string) => {
+const useResizeObserver = (elementRef: React.RefObject<HTMLElement>) => {
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
         const updateDimensions = () => {
-            const element = document.getElementById(elementId);
-            if (element) {
+            if (elementRef.current) {
                 setDimensions({
-                    width: element.clientWidth,
-                    height: element.clientHeight
+                    width: elementRef.current.clientWidth,
+                    height: elementRef.current.clientHeight
                 });
             }
         };
@@ -119,7 +118,7 @@ const useResizeObserver = (elementId: string) => {
         updateDimensions();
         window.addEventListener('resize', updateDimensions);
         return () => window.removeEventListener('resize', updateDimensions);
-    }, [elementId]);
+    }, [elementRef]);
 
     return dimensions;
 };
@@ -228,6 +227,8 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
     onclick
 }) => {
     // Refs
+    const containerRef = useRef<HTMLDivElement>(null);
+    const svgRef = useRef<SVGSVGElement>(null);
     const d3ElementsRef = useRef<D3Elements>({});
     const selectedGroupRef = useRef('');
     const ageGroupMapRef = useRef<Map<string, string>>(new Map());
@@ -245,7 +246,7 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
     const [selectedGroup, setSelectedGroup] = useState<string>('');
 
     // Custom hooks
-    const dimensions = useResizeObserver('area-chart-container');
+    const dimensions = useResizeObserver(containerRef);
 
     // Update dimensions when container size changes
     useEffect(() => {
@@ -340,10 +341,12 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
     const initializeChart = useCallback(() => {
         const { width, height } = state.dimensions;
 
-        // Clear existing chart
-        d3.select('#area-chart').selectAll('*').remove();
+        if (!svgRef.current) return;
 
-        const svg = d3.select('#area-chart')
+        // Clear existing chart
+        d3.select(svgRef.current).selectAll('*').remove();
+
+        const svg = d3.select(svgRef.current)
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', `0 0 ${width} ${height}`)
@@ -674,8 +677,8 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
     }, []);
 
     return (
-        <div id="area-chart-container" className="area-chart-container w-full h-full">
-            <svg id="area-chart" className="w-full h-full" />
+        <div ref={containerRef} className="area-chart-container w-full h-full">
+            <svg ref={svgRef} className="w-full h-full" />
         </div>
     );
 };

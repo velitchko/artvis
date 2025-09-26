@@ -16,6 +16,9 @@ import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
 import GET_ARTIST_BY_NAME from '../../queries/artistByName';
 
+// Debug configuration
+const DEBUG = process.env.NODE_ENV !== 'production';
+
 // Types
 interface ArtistDetailProps {
     artist: Artist;
@@ -131,9 +134,11 @@ const processExhibitionData = (exhibitions: Exhibition[]): TimelineData[] => {
 };
 
 const generateNetworkData = (artist: Artist): Link[] => {
-    console.log('Generating network data for artist:', artist.sortname);
-    console.log('coExhibitedArtists:', artist.coExhibitedArtists?.length || 0);
-    console.log('artistsCoExhibited:', artist.artistsCoExhibited?.length || 0);
+    if (DEBUG) {
+        console.log('Generating network data for artist:', artist.sortname);
+        console.log('coExhibitedArtists:', artist.coExhibitedArtists?.length || 0);
+        console.log('artistsCoExhibited:', artist.artistsCoExhibited?.length || 0);
+    }
     
     const source: Node = {
         id: artist.id,
@@ -147,7 +152,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
 
     // Process coExhibitedArtists
     artist.coExhibitedArtists?.forEach((coArtist: Artist) => {
-        console.log('Processing coExhibitedArtist:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        if (DEBUG) {
+            console.log('Processing coExhibitedArtist:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
         coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             // Check if source artist also exhibited in this exhibition
             const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
@@ -174,7 +181,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
 
     // Process artistsCoExhibited
     artist.artistsCoExhibited?.forEach((coArtist: Artist) => {
-        console.log('Processing artistsCoExhibited:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        if (DEBUG) {
+            console.log('Processing artistsCoExhibited:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
         coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             // Check if source artist also exhibited in this exhibition
             const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
@@ -199,7 +208,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         });
     });
 
-    console.log('CoexhibMap size:', coexhibMap.size);
+    if (DEBUG) {
+        console.log('CoexhibMap size:', coexhibMap.size);
+    }
 
     // Generate links from coexhibition data
     coexhibMap.forEach((value, key) => {
@@ -210,7 +221,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         }
 
         if (!found) {
-            console.log(key + ' not found');
+            if (DEBUG) {
+                console.log(key + ' not found');
+            }
             return;
         }
 
@@ -240,7 +253,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         });
     });
 
-    console.log('Generated', links.length, 'links');
+    if (DEBUG) {
+        console.log('Generated', links.length, 'links');
+    }
     return links;
 };
 
@@ -283,7 +298,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         // Visualization controls
         coExhibitionCount: 3,
         groupBy: 'country',
-        orderBy: 'coexhibitions', 
+        orderBy: 'coex', 
         selectedGroup: '', // For cross-component group selection
         // Search functionality
         searchTerm: '',
@@ -319,15 +334,17 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Initialize baseNode from artist
     useEffect(() => {
         if (artist && artist.id) {
-            console.log('Artist data loaded:', {
-                id: artist.id,
-                sortname: artist.sortname,
-                country: artist.country,
-                sex: artist.sex,
-                coExhibitedArtists: artist.coExhibitedArtists?.length || 0,
-                artistsCoExhibited: artist.artistsCoExhibited?.length || 0,
-                exhibitedAtExhibitions: artist.exhibitedAtExhibitions?.length || 0
-            });
+            if (DEBUG) {
+                console.log('Artist data loaded:', {
+                    id: artist.id,
+                    sortname: artist.sortname,
+                    country: artist.country,
+                    sex: artist.sex,
+                    coExhibitedArtists: artist.coExhibitedArtists?.length || 0,
+                    artistsCoExhibited: artist.artistsCoExhibited?.length || 0,
+                    exhibitedAtExhibitions: artist.exhibitedAtExhibitions?.length || 0
+                });
+            }
 
             const baseNode: Node = {
                 id: artist.id,
@@ -343,7 +360,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 }
             };
 
-            console.log('Created baseNode:', baseNode);
+            if (DEBUG) {
+                console.log('Created baseNode:', baseNode);
+            }
 
             setState(prev => ({
                 ...prev,
@@ -465,9 +484,11 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     const fetchExhibitionData = useCallback(async () => {
         try {
-            console.log('=== FETCHING EXHIBITION DATA ===');
-            console.log('Artist ID:', artist.id);
-            console.log('Query:', GET_ARTIST_EXHIBITIONS_BY_ID);
+            if (DEBUG) {
+                console.log('=== FETCHING EXHIBITION DATA ===');
+                console.log('Artist ID:', artist.id);
+                console.log('Query:', GET_ARTIST_EXHIBITIONS_BY_ID);
+            }
             
             loadCallback(true);
             const result = await client.query({
@@ -475,20 +496,25 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 variables: { searchId: artist.id }
             });
 
-            console.log('Raw GraphQL result:', result);
-            console.log('Artists array:', result.data.artists);
+            if (DEBUG) {
+                console.log('Raw GraphQL result:', result);
+                console.log('Artists array:', result.data.artists);
+            }
             
             const exhibitions = result.data.artists[0]?.exhibitedAtExhibitions || [];
-            console.log('Extracted exhibitions:', exhibitions);
-            console.log('Exhibition count:', exhibitions.length);
             
-            // Log some sample exhibitions
-            if (exhibitions.length > 0) {
-                console.log('Sample exhibitions (first 3):');
-                exhibitions.slice(0, 3).forEach((ex: any, idx: number) => {
-                    console.log(`  ${idx + 1}. Title: "${ex.title}", Year: ${ex.startyear}, ID: ${ex.id}`);
-                    console.log(`     Items: ${ex.exhibitsItems?.length || 0}`);
-                });
+            if (DEBUG) {
+                console.log('Extracted exhibitions:', exhibitions);
+                console.log('Exhibition count:', exhibitions.length);
+                
+                // Log some sample exhibitions
+                if (exhibitions.length > 0) {
+                    console.log('Sample exhibitions (first 3):');
+                    exhibitions.slice(0, 3).forEach((ex: any, idx: number) => {
+                        console.log(`  ${idx + 1}. Title: "${ex.title}", Year: ${ex.startyear}, ID: ${ex.id}`);
+                        console.log(`     Items: ${ex.exhibitsItems?.length || 0}`);
+                    });
+                }
             }
             
             setState(prev => ({
@@ -496,7 +522,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 exhibitionsList: exhibitions
             }));
 
-            console.log('=== EXHIBITION DATA FETCH COMPLETE ===');
+            if (DEBUG) {
+                console.log('=== EXHIBITION DATA FETCH COMPLETE ===');
+            }
 
         } catch (error) {
             console.error('Error fetching exhibition data:', error);
@@ -507,35 +535,40 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Generate network data after exhibitions are loaded
     useEffect(() => {
         if (state.exhibitionsList.length > 0 && artist.coExhibitedArtists) {
-            console.log('=== GENERATING NETWORK DATA ===');
-            console.log('Artist exhibitions loaded:', state.exhibitionsList.length);
-            console.log('Co-exhibited artists available:', artist.coExhibitedArtists?.length || 0);
-            console.log('Artists co-exhibited available:', artist.artistsCoExhibited?.length || 0);
+            if (DEBUG) {
+                console.log('=== GENERATING NETWORK DATA ===');
+                console.log('Artist exhibitions loaded:', state.exhibitionsList.length);
+                console.log('Co-exhibited artists available:', artist.coExhibitedArtists?.length || 0);
+                console.log('Artists co-exhibited available:', artist.artistsCoExhibited?.length || 0);
+            }
             
             const links = generateNetworkData(artist);
-            console.log('Generated links total:', links.length);
             
-            // Print summary by target
-            const targetSummary = new Map();
-            links.forEach(link => {
-                const targetId = link.targetId;
-                const targetName = link.target?.name || 'Unknown';
-                if (!targetSummary.has(targetId)) {
-                    targetSummary.set(targetId, { name: targetName, count: 0 });
-                }
-                targetSummary.get(targetId).count++;
-            });
-            
-            console.log('Unique targets:', targetSummary.size);
-            console.log('Target summary (first 5):');
-            let count = 0;
-            targetSummary.forEach((summary, targetId) => {
-                if (count < 5) {
-                    console.log(`  ${summary.name} (ID: ${targetId}): ${summary.count} connections`);
-                    count++;
-                }
-            });
-            console.log('=== END GENERATION DEBUG ===');
+            if (DEBUG) {
+                console.log('Generated links total:', links.length);
+                
+                // Print summary by target
+                const targetSummary = new Map();
+                links.forEach(link => {
+                    const targetId = link.targetId;
+                    const targetName = link.target?.name || 'Unknown';
+                    if (!targetSummary.has(targetId)) {
+                        targetSummary.set(targetId, { name: targetName, count: 0 });
+                    }
+                    targetSummary.get(targetId).count++;
+                });
+                
+                console.log('Unique targets:', targetSummary.size);
+                console.log('Target summary (first 5):');
+                let count = 0;
+                targetSummary.forEach((summary, targetId) => {
+                    if (count < 5) {
+                        console.log(`  ${summary.name} (ID: ${targetId}): ${summary.count} connections`);
+                        count++;
+                    }
+                });
+                console.log('=== END GENERATION DEBUG ===');
+            }
             
             setState(prev => ({
                 ...prev,
@@ -662,7 +695,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     const handleTimelineCallback = useCallback((year: number) => {
         // Implementation for timeline interaction callbacks
-        console.log('Timeline callback for year:', year);
+        if (DEBUG) {
+            console.log('Timeline callback for year:', year);
+        }
     }, []);
 
     const handleNetworkReady = useCallback(() => {
@@ -675,7 +710,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     }, []);
 
     const handleGroupSelection = useCallback((selectedGroup?: string) => {
-        console.log('Group selection from area chart:', selectedGroup);
+        if (DEBUG) {
+            console.log('Group selection from area chart:', selectedGroup);
+        }
         const normalizedGroup = selectedGroup || '';
         setState(prev => ({ ...prev, selectedGroup: normalizedGroup }));
     }, []);
@@ -720,7 +757,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         
         // Debounced search with 250ms delay
         searchTimeoutRef.current = setTimeout(() => {
-            console.log('Searching for:', searchTerm);
+            if (DEBUG) {
+                console.log('Searching for:', searchTerm);
+            }
             searchArtists({
                 variables: { value: searchTerm }
             });
@@ -730,7 +769,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Handle search results
     useEffect(() => {
         if (searchData?.artists) {
-            console.log('Search results received:', searchData.artists);
+            if (DEBUG) {
+                console.log('Search results received:', searchData.artists);
+            }
             setState(prev => ({ 
                 ...prev, 
                 searchResults: searchData.artists 
@@ -749,7 +790,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     const handleArtistSelect = useCallback(async (selectedArtist: Artist) => {
         // Set selected artist as compare artist and load their data
-        console.log('Selected artist for comparison:', selectedArtist);
+        if (DEBUG) {
+            console.log('Selected artist for comparison:', selectedArtist);
+        }
         
         try {
             loadCallback(true);
@@ -761,18 +804,23 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
             });
 
             const fullArtistData = result.data.artists[0];
-            console.log('Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
-            console.log('Compare artist full data:', fullArtistData);
-            console.log('Compare artist ID:', fullArtistData?.id, 'Type:', typeof fullArtistData?.id);
+            
+            if (DEBUG) {
+                console.log('Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+                console.log('Compare artist full data:', fullArtistData);
+                console.log('Compare artist ID:', fullArtistData?.id, 'Type:', typeof fullArtistData?.id);
+            }
             
             // Merge the full exhibition data with the original artist data to preserve other fields
             const enhancedCompareArtist = {
                 ...selectedArtist,
-                ...fullArtistData,
+                ...(fullArtistData || {}),
                 exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
             };
             
-            console.log('Enhanced compare artist:', enhancedCompareArtist);
+            if (DEBUG) {
+                console.log('Enhanced compare artist:', enhancedCompareArtist);
+            }
             
             setState(prev => ({ 
                 ...prev, 
@@ -796,7 +844,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     }, [loadCallback]);
 
     const handleClearComparison = useCallback(() => {
-        console.log('Clearing comparison');
+        if (DEBUG) {
+            console.log('Clearing comparison');
+        }
         setState(prev => ({ 
             ...prev, 
             compareWith: null,
