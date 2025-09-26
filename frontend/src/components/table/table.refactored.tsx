@@ -49,14 +49,51 @@ const isValidExhibition = (exhibition: Exhibition): boolean => {
 };
 
 const calculatePercentage = (exhibition: MetaExhibition, artistId: number): number => {
-    if (!exhibition.exhibitsItems?.length) return 0;
+    if (!exhibition || !exhibition.exhibitsItems) {
+        console.log('No exhibition or exhibitsItems for:', exhibition?.title);
+        return 0;
+    }
 
-    const totalArtworks = exhibition.exhibitsItems.length;
-    const artistArtworks = exhibition.exhibitsItems.filter((item: Item) =>
-        item.artistsCreated.some((artist: Artist) => artist.id === artistId)
-    ).length;
+    const totalArtworksExhibited = exhibition.exhibitsItems.length;
+    if (totalArtworksExhibited === 0) {
+        console.log('No items in exhibition:', exhibition.title);
+        return 0;
+    }
 
-    return Number(((artistArtworks / totalArtworks) * 100).toFixed(2));
+    console.log(`\nCalculating for exhibition: "${exhibition.title}" (ID: ${exhibition.id})`);
+    console.log(`Total items: ${totalArtworksExhibited}`);
+    console.log(`Looking for artist ID: ${artistId}`);
+    
+    // Log first few items to understand the data structure
+    exhibition.exhibitsItems.slice(0, 2).forEach((item, index) => {
+        console.log(`Item ${index}:`, {
+            id: item.id,
+            title: item.title,
+            artistsCreated: item.artistsCreated?.map(a => ({ id: a.id, firstname: a.firstname, lastname: a.lastname }))
+        });
+    });
+
+    // Count items created by the specific artist - handle BigInt comparison
+    const artWorksByArtist = exhibition.exhibitsItems.filter((item: Item) => {
+        const hasArtist = item.artistsCreated?.some((artist: Artist) => {
+            // Handle both string and number comparison since IDs might be BigInt
+            const artistIdStr = String(artist.id);
+            const targetIdStr = String(artistId);
+            return artistIdStr === targetIdStr;
+        });
+        
+        if (hasArtist) {
+            console.log(`✓ Found item by artist: "${item.title}" (ID: ${item.id})`);
+        }
+        
+        return hasArtist;
+    }).length;
+
+    const percentage = (artWorksByArtist / totalArtworksExhibited) * 100;
+    
+    console.log(`Result: ${artWorksByArtist}/${totalArtworksExhibited} = ${percentage.toFixed(2)}%`);
+    
+    return Number(percentage.toFixed(2));
 };
 
 const getCountryAndCity = (exhibition: MetaExhibition): string => {
@@ -75,6 +112,8 @@ const getHost = (locations: Location[]): string => {
 
 // Custom hooks
 const useTableData = (query: DocumentNode, exhibitionIds: number[], baseId: number) => {
+    console.log('Fetching data for exhibition IDs:', exhibitionIds);
+    console.log('Query:', query);
     const [state, setState] = useState<TableState>({
         results: { exhibitions: [] },
         loaded: false,
@@ -91,6 +130,8 @@ const useTableData = (query: DocumentNode, exhibitionIds: number[], baseId: numb
                     where: { id_IN: exhibitionIds.map(id => id.toString()) }
                 }
             });
+
+            console.log('Fetched exhibitions:', result.data.exhibitions);
 
             const exhibitions = result.data.exhibitions
                 .map((e: Exhibition) => ({
@@ -128,6 +169,18 @@ const useTableData = (query: DocumentNode, exhibitionIds: number[], baseId: numb
 // Table columns configuration
 const createColumns = (): SortableColumn[] => [
     {
+        key: 'startyear',
+        label: 'Date',
+        sortable: true,
+        render: (exhibition) => <span>{exhibition.startyear}</span>
+    },
+    {
+        key: 'location',
+        label: 'City (Country)',
+        sortable: true,
+        render: (exhibition) => <span>{getCountryAndCity(exhibition)}</span>
+    },
+    {
         key: 'title',
         label: 'Exhibition Title',
         sortable: true,
@@ -138,40 +191,22 @@ const createColumns = (): SortableColumn[] => [
         )
     },
     {
-        key: 'startyear',
-        label: 'Start Year',
+        key: 'exhibitsItems.length',
+        label: 'Items',
         sortable: true,
-        render: (exhibition) => <span>{exhibition.startyear}</span>
+        render: (exhibition) => <span>{exhibition.exhibitsItems?.length || 0}</span>
     },
     {
-        key: 'endyear',
-        label: 'End Year',
+        key: 'percentBase',
+        label: 'Base %',
         sortable: true,
-        render: (exhibition) => <span>{exhibition.endyear}</span>
-    },
-    {
-        key: 'location',
-        label: 'Location',
-        sortable: true,
-        render: (exhibition) => <span>{getCountryAndCity(exhibition)}</span>
-    },
-    {
-        key: 'host',
-        label: 'Host',
-        sortable: true,
-        render: (exhibition) => <span>{getHost(exhibition.tookPlaceAtLocations)}</span>
+        render: (exhibition) => <span>{exhibition.percentBase || 0}%</span>
     },
     {
         key: 'artistsExhibitedAt.length',
         label: 'Artists',
         sortable: true,
         render: (exhibition) => <span>{_.uniqBy(exhibition.artistsExhibitedAt, 'id').length}</span>
-    },
-    {
-        key: 'percentBase',
-        label: 'Base %',
-        sortable: true,
-        render: (exhibition) => <span>{exhibition.percentBase}%</span>
     }
 ];
 
@@ -234,6 +269,10 @@ const TableComponent: React.FC<TableProps> = ({
             _.sortBy(sortedExhibitions, exhibition => 
                 getHost(exhibition.tookPlaceAtLocations)
             );
+        } else if (columnKey === 'location') {
+            _.sortBy(sortedExhibitions, exhibition => 
+                getCountryAndCity(exhibition)
+            );
         } else {
             _.sortBy(sortedExhibitions, columnKey);
         }
@@ -269,7 +308,7 @@ const TableComponent: React.FC<TableProps> = ({
 
     // Render table header
     const renderTableHeader = () => (
-        <thead className="text-xs bg-black text-white uppercase sticky top-0">
+        <thead className="text-xs bg-black text-white uppercase sticky top-0 z-10">
             <tr>
                 {columns.map((column) => (
                     <th
@@ -291,13 +330,10 @@ const TableComponent: React.FC<TableProps> = ({
                     </th>
                 ))}
                 {compareWith && (
-                    <th scope="col" className="px-2 py-2 border-r border-gray-300">
+                    <th scope="col" className="px-2 py-2">
                         Compare %
                     </th>
                 )}
-                <th scope="col" className="px-2 py-2">
-                    Actions
-                </th>
             </tr>
         </thead>
     );
@@ -316,28 +352,17 @@ const TableComponent: React.FC<TableProps> = ({
                 </td>
             ))}
             {compareWith && (
-                <td className="px-2 py-2 border-r border-gray-300 text-sm">
+                <td className="px-2 py-2 text-sm">
                     {exhibition.isCommon ? `${exhibition.percentCompare}%` : '-'}
                 </td>
             )}
-            <td className="px-2 py-2 text-sm">
-                <button
-                    className="text-blue-600 hover:text-blue-800 text-xs underline"
-                    onClick={() => {
-                        // Handle view details action
-                        console.log('View details for exhibition:', exhibition.id);
-                    }}
-                >
-                    Details
-                </button>
-            </td>
         </tr>
     );
 
     // Loading state
     if (!state.loaded) {
         return (
-            <div className="flex items-center justify-center h-32">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-gray-500">Loading exhibitions...</div>
             </div>
         );
@@ -346,37 +371,34 @@ const TableComponent: React.FC<TableProps> = ({
     // Empty state
     if (!state.results.exhibitions?.length) {
         return (
-            <div className="flex items-center justify-center h-32">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-gray-500">No exhibitions found</div>
             </div>
         );
     }
 
     return (
-        <div className="table-container">
+        <div className="table-container h-full flex flex-col">
             {/* Table controls */}
-            <div className="table-controls mb-4 flex justify-between items-center">
-                <div className="text-sm text-gray-600">
-                    Showing {state.results.exhibitions.length} exhibitions
-                    {compareWith && (
-                        <span className="ml-2">
-                            (Common: {state.results.exhibitions.filter(e => e.isCommon).length})
-                        </span>
-                    )}
-                </div>
-                
-                {compareWith && (
+            {compareWith && (
+                <div className="table-controls mb-2 flex justify-end flex-shrink-0">
                     <button
                         onClick={handleReset}
                         className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
                     >
                         Reset Comparison
                     </button>
-                )}
-            </div>
-
+                </div>
+            )}
+            
             {/* Table */}
-            <div className="overflow-auto max-h-96 border border-gray-300 rounded">
+            <div 
+                className="flex-1 overflow-y-scroll border border-gray-300 rounded"
+                style={{
+                    minHeight: 0,
+                    maxHeight: '100%'
+                }}
+            >
                 <table className="w-full text-left text-black">
                     {renderTableHeader()}
                     <tbody>
@@ -385,20 +407,6 @@ const TableComponent: React.FC<TableProps> = ({
                         )}
                     </tbody>
                 </table>
-            </div>
-
-            {/* Table footer */}
-            <div className="table-footer mt-2 text-xs text-gray-500">
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-yellow-50 border border-yellow-200"></div>
-                        <span>Common exhibitions</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-gray-50 border border-gray-200"></div>
-                        <span>Base artist only</span>
-                    </div>
-                </div>
             </div>
         </div>
     );

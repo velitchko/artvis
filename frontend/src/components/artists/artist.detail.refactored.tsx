@@ -10,6 +10,7 @@ import EgoNetworkComponent from '../network/ego.network.refactored';
 import AreaChartComponent from '../linechart/area.chart.refactored';
 import TableComponent from '../table/table.refactored';
 import ArtistTimeline from './artist.timeline';
+import ArtistDetailHeader from './artist.detail.header';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
 
@@ -29,6 +30,14 @@ interface ArtistDetailState {
     compareNumberOfArtworks: number;
     colors: { group: string; colors: Map<string, string> };
     dimensions: { width: number; height: number };
+    // Visualization controls
+    coExhibitionCount: number;
+    groupBy: string;
+    orderBy: string;
+    networkMode: 'circles' | 'pies';
+    // Search functionality
+    searchTerm: string;
+    searchResults: Artist[];
 }
 
 interface TimelineData {
@@ -268,7 +277,15 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         baseNumberOfArtworks: 0,
         compareNumberOfArtworks: 0,
         colors: { group: 'country', colors: new Map<string, string>() },
-        dimensions: DEFAULT_DIMENSIONS
+        dimensions: DEFAULT_DIMENSIONS,
+        // Visualization controls
+        coExhibitionCount: 3,
+        groupBy: 'country',
+        orderBy: 'coexhibitions',
+        networkMode: 'circles',
+        // Search functionality
+        searchTerm: '',
+        searchResults: []
     });
 
     // Custom hooks
@@ -651,90 +668,207 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         setState(prev => ({ ...prev, colors }));
     }, []);
 
+    // Visualization control handlers
+    const handleCoExhibitionCountChange = useCallback((coExhibitionCount: number) => {
+        setState(prev => ({ ...prev, coExhibitionCount }));
+    }, []);
+
+    const handleGroupByChange = useCallback((groupBy: string) => {
+        setState(prev => ({ ...prev, groupBy }));
+    }, []);
+
+    const handleOrderByChange = useCallback((orderBy: string) => {
+        setState(prev => ({ ...prev, orderBy }));
+    }, []);
+
+    const handleSearchChange = useCallback((searchTerm: string) => {
+        setState(prev => ({ ...prev, searchTerm }));
+        
+        // Perform search logic here
+        if (searchTerm.length >= 2) {
+            // This would typically involve searching through a list of all artists
+            // For now, we'll use a placeholder empty array
+            setState(prev => ({ ...prev, searchResults: [] }));
+        } else {
+            setState(prev => ({ ...prev, searchResults: [] }));
+        }
+    }, []);
+
+    const handleArtistSelect = useCallback((selectedArtist: Artist) => {
+        // Handle artist selection - could navigate to different artist or add to comparison
+        console.log('Selected artist:', selectedArtist);
+        setState(prev => ({ 
+            ...prev, 
+            searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+            searchResults: []
+        }));
+    }, []);
+
+    const handleNetworkModeChange = useCallback((networkMode: 'circles' | 'pies') => {
+        setState(prev => ({ ...prev, networkMode }));
+    }, []);
+
     return (
-        <div className="artist-detail-container p-6 h-screen flex flex-col">
-            {/* Top Row: Timeline + Area Chart */}
-            <div className="top-row grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 flex-shrink-0" style={{ height: '20vh' }}>
-                {/* Timeline Section - Top Left */}
-                <div className="timeline-section h-full">
-                    <h2 className="text-xl font-semibold mb-4">Exhibition Timeline</h2>
-                    <div id="timeline-container" className="w-full border rounded" style={{ height: 'calc(100% - 2.5rem)' }}>
-                        <ArtistTimeline 
-                            artist={artist}
-                            exhibitionsList={state.exhibitionsList}
-                            compareArtist={state.compareWith}
-                            width={800}
-                            height={180}
-                            onYearHover={(year: number, exhibitions: any[]) => {
-                                handleTimelineCallback(year);
-                                // Could add more year-specific handling here
-                            }}
-                            className="w-full h-full"
-                        />
-                    </div>
-                </div>
-
-                {/* Area Chart Section - Top Right */}
-                <div className="area-chart-section h-full">
-                    <h2 className="text-xl font-semibold mb-4">
-                        Co-exhibitor Analysis ({state.links.length} links)
-                    </h2>
-                    <div id="area-chart-container" className="w-full border rounded" style={{ height: 'calc(100% - 2.5rem)' }}>
-                        <AreaChartComponent
-                            links={state.links}
-                            colors={state.colors}
-                            groupBy={state.colors.group}
-                        />
-                    </div>
-                </div>
+        <div className="artist-detail-container h-screen flex flex-col overflow-hidden">
+            {/* Artist Detail Integrated Header */}
+            <div className="flex-shrink-0">
+                <ArtistDetailHeader
+                    artist={artist}
+                    coExhibitionCount={state.coExhibitionCount}
+                    onCoExhibitionCountChange={handleCoExhibitionCountChange}
+                    minCoExhibitions={1}
+                    maxCoExhibitions={20}
+                    groupBy={state.groupBy}
+                    onGroupByChange={handleGroupByChange}
+                    orderBy={state.orderBy}
+                    onOrderByChange={handleOrderByChange}
+                    searchTerm={state.searchTerm}
+                    onSearchChange={handleSearchChange}
+                    searchResults={state.searchResults}
+                    onArtistSelect={handleArtistSelect}
+                    networkMode={state.networkMode}
+                    onNetworkModeChange={handleNetworkModeChange}
+                    totalExhibitions={state.exhibitionsList.length}
+                    totalLinks={state.links.length} // Total co-exhibition links
+                    totalArtists={new Set(state.links.map(link => link.target.id)).size + 1} // Unique connected artists + base artist
+                />
             </div>
-
-            {/* Bottom Row: Table + Network */}
-            <div className="bottom-row grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-                {/* Table Section - Bottom Left */}
-                <div className="table-section h-full flex flex-col">
-                    <h2 className="text-xl font-semibold mb-4 flex-shrink-0">Exhibition Details</h2>
-                    <div className="flex-1 overflow-auto border rounded min-h-0">
-                        <TableComponent
-                            baseId={Number(artist.id)}
-                            compareWith={state.compareWith}
-                            exhibitions={state.exhibitionsList}
-                            query={GET_EXHIBITION}
-                        />
-                    </div>
-                </div>
-
-                {/* Network Section - Bottom Right */}
-                <div className="network-section h-full flex flex-col">
-                    <h2 className="text-xl font-semibold mb-4 flex-shrink-0">
-                        Co-exhibition Network ({state.links.length} connections)
-                    </h2>
-                    <div className="text-sm text-gray-600 mb-2 flex-shrink-0">
-                        Base artist: {state.baseNode.name} | 
-                        Exhibitions: {state.exhibitionsList.length} | 
-                        Links: {state.links.length}
-                    </div>
-                    <div id="ego-net-container" className="flex-1 border rounded min-h-0">
-                        {state.baseNode.id ? (
-                            <div className="h-full">
-                                <div className="text-xs text-gray-500 mb-2">
-                                    Debug: baseNode.id={state.baseNode.id}, links={state.links.length}
-                                </div>
-                                <EgoNetworkComponent
-                                    baseNode={state.baseNode}
-                                    links={state.links}
-                                    colors={state.colors}
-                                    initCallBack={handleNetworkReady}
-                                    requestNode={(node?: number) => handleArtistChange(node || null)}
-                                    mouseOverCallBack={handleTimelineCallback}
-                                    syncColors={() => handleColorSync(state.colors)}
+            
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Desktop: 2x2 Grid Layout */}
+                <div className="hidden lg:flex lg:flex-col lg:h-full lg:gap-1">
+                    {/* Top Row: Timeline + Area Chart - 1/3 height */}
+                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 35%' }}>
+                        {/* Timeline Section - Top Left */}
+                        <div className="timeline-section h-full">
+                            <div id="timeline-container" className="w-full h-full">
+                                <ArtistTimeline 
+                                    artist={artist}
+                                    exhibitionsList={state.exhibitionsList}
+                                    compareArtist={state.compareWith}
+                                    width={800}
+                                    height={280}
+                                    onYearHover={(year: number, exhibitions: any[]) => {
+                                        handleTimelineCallback(year);
+                                        // Could add more year-specific handling here
+                                    }}
+                                    className="w-full h-full"
                                 />
                             </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                Loading network...
+                        </div>
+
+                        {/* Area Chart Section - Top Right */}
+                        <div className="area-chart-section h-full">
+                            <div id="area-chart-container" className="w-full h-full">
+                                <AreaChartComponent
+                                    links={state.links}
+                                    colors={state.colors}
+                                    groupBy={state.colors.group}
+                                />
                             </div>
-                        )}
+                        </div>
+                    </div>
+
+                    {/* Bottom Row: Table + Network - 2/3 height */}
+                    <div className="bottom-row grid grid-cols-2 gap-2 flex-1 min-h-0">
+                        {/* Table Section - Bottom Left */}
+                        <div className="table-section h-full overflow-hidden">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+
+                        {/* Network Section - Bottom Right */}
+                        <div className="network-section h-full flex flex-col">
+                            <div id="ego-net-container" className="flex-1 min-h-0">
+                                {state.baseNode.id ? (
+                                    <div className="h-full">
+                                        <EgoNetworkComponent
+                                            baseNode={state.baseNode}
+                                            links={state.links}
+                                            colors={state.colors}
+                                            initCallBack={handleNetworkReady}
+                                            requestNode={(node?: number) => handleArtistChange(node || null)}
+                                            mouseOverCallBack={handleTimelineCallback}
+                                            syncColors={() => handleColorSync(state.colors)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        Loading network...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile: Linear Stacked Layout with Scroll */}
+                <div className="lg:hidden flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4">
+                    {/* Timeline Section */}
+                    <div className="timeline-section flex-shrink-0" style={{ height: '300px' }}>
+                        <div id="timeline-container-mobile" className="w-full h-full">
+                            <ArtistTimeline 
+                                artist={artist}
+                                exhibitionsList={state.exhibitionsList}
+                                compareArtist={state.compareWith}
+                                width={800}
+                                height={280}
+                                onYearHover={(year: number, exhibitions: any[]) => {
+                                    handleTimelineCallback(year);
+                                }}
+                                className="w-full h-full"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Area Chart Section */}
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '300px' }}>
+                        <div id="area-chart-container-mobile" className="w-full h-full">
+                            <AreaChartComponent
+                                links={state.links}
+                                colors={state.colors}
+                                groupBy={state.colors.group}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="table-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div className="h-full">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Network Section */}
+                    <div className="network-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div id="ego-net-container-mobile" className="h-full">
+                            {state.baseNode.id ? (
+                                <div className="h-full">
+                                    <EgoNetworkComponent
+                                        baseNode={state.baseNode}
+                                        links={state.links}
+                                        colors={state.colors}
+                                        initCallBack={handleNetworkReady}
+                                        requestNode={(node?: number) => handleArtistChange(node || null)}
+                                        mouseOverCallBack={handleTimelineCallback}
+                                        syncColors={() => handleColorSync(state.colors)}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-gray-500">
+                                    Loading network...
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
