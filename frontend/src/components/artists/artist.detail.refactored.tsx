@@ -671,14 +671,25 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Visualization control handlers
     const handleCoExhibitionCountChange = useCallback((coExhibitionCount: number) => {
         setState(prev => ({ ...prev, coExhibitionCount }));
+        // This filtering affects both ego network and area chart
+        // The components will react to the updated state
     }, []);
 
     const handleGroupByChange = useCallback((groupBy: string) => {
         setState(prev => ({ ...prev, groupBy }));
+        // GroupBy affects both ego network (coloring) and area chart (grouping)
+        // The color generation will be handled by the individual components
+        // but we update the colors structure to reflect the new grouping
+        setState(prevState => ({ 
+            ...prevState, 
+            groupBy,
+            colors: { ...prevState.colors, group: groupBy }
+        }));
     }, []);
 
     const handleOrderByChange = useCallback((orderBy: string) => {
         setState(prev => ({ ...prev, orderBy }));
+        // OrderBy only affects the ego network layout
     }, []);
 
     const handleSearchChange = useCallback((searchTerm: string) => {
@@ -763,7 +774,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                 <AreaChartComponent
                                     links={state.links}
                                     colors={state.colors}
-                                    groupBy={state.colors.group}
+                                    stacked={true}
+                                    groupBy={state.groupBy}
+                                    coExhibitionCount={state.coExhibitionCount}
                                 />
                             </div>
                         </div>
@@ -790,6 +803,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                             baseNode={state.baseNode}
                                             links={state.links}
                                             colors={state.colors}
+                                            coExhibitionCount={state.coExhibitionCount}
+                                            groupBy={state.groupBy}
+                                            orderBy={state.orderBy}
                                             initCallBack={handleNetworkReady}
                                             requestNode={(node?: number) => handleArtistChange(node || null)}
                                             mouseOverCallBack={handleTimelineCallback}
@@ -826,12 +842,14 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     </div>
 
                     {/* Area Chart Section */}
-                    <div className="area-chart-section flex-shrink-0" style={{ height: '300px' }}>
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '280px' }}>
                         <div id="area-chart-container-mobile" className="w-full h-full">
                             <AreaChartComponent
                                 links={state.links}
                                 colors={state.colors}
-                                groupBy={state.colors.group}
+                                stacked={true}
+                                groupBy={state.groupBy}
+                                coExhibitionCount={state.coExhibitionCount}
                             />
                         </div>
                     </div>
@@ -857,6 +875,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                         baseNode={state.baseNode}
                                         links={state.links}
                                         colors={state.colors}
+                                        coExhibitionCount={state.coExhibitionCount}
+                                        groupBy={state.groupBy}
+                                        orderBy={state.orderBy}
                                         initCallBack={handleNetworkReady}
                                         requestNode={(node?: number) => handleArtistChange(node || null)}
                                         mouseOverCallBack={handleTimelineCallback}

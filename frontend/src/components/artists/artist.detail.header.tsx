@@ -51,13 +51,14 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
 
     const groupByOptions = [
         { value: 'country', label: 'Nationality/Country' },
-        { value: 'agegroup', label: 'Age Group' },
-        { value: 'gender', label: 'Gender' }
+        { value: 'ageGroup', label: 'Age Group' },
+        { value: 'sex', label: 'Sex' }
     ];
 
     const orderByOptions = [
-        { value: 'coexhibitions', label: 'Co-exhibitions' },
-        { value: 'age1915', label: 'Age up to 1915' }
+        { value: 'default', label: 'Alphabetical' },
+        { value: 'coex', label: 'Co-exhibitions' },
+        { value: 'age', label: 'Age up to 1915' }
     ];
 
     const handleSearchInputChange = (term: string) => {

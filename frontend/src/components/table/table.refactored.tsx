@@ -49,50 +49,22 @@ const isValidExhibition = (exhibition: Exhibition): boolean => {
 };
 
 const calculatePercentage = (exhibition: MetaExhibition, artistId: number): number => {
-    if (!exhibition || !exhibition.exhibitsItems) {
-        console.log('No exhibition or exhibitsItems for:', exhibition?.title);
-        return 0;
-    }
+    if (!exhibition || !exhibition.exhibitsItems) return 0;
 
     const totalArtworksExhibited = exhibition.exhibitsItems.length;
-    if (totalArtworksExhibited === 0) {
-        console.log('No items in exhibition:', exhibition.title);
-        return 0;
-    }
-
-    console.log(`\nCalculating for exhibition: "${exhibition.title}" (ID: ${exhibition.id})`);
-    console.log(`Total items: ${totalArtworksExhibited}`);
-    console.log(`Looking for artist ID: ${artistId}`);
-    
-    // Log first few items to understand the data structure
-    exhibition.exhibitsItems.slice(0, 2).forEach((item, index) => {
-        console.log(`Item ${index}:`, {
-            id: item.id,
-            title: item.title,
-            artistsCreated: item.artistsCreated?.map(a => ({ id: a.id, firstname: a.firstname, lastname: a.lastname }))
-        });
-    });
+    if (totalArtworksExhibited === 0) return 0;
 
     // Count items created by the specific artist - handle BigInt comparison
-    const artWorksByArtist = exhibition.exhibitsItems.filter((item: Item) => {
-        const hasArtist = item.artistsCreated?.some((artist: Artist) => {
+    const artWorksByArtist = exhibition.exhibitsItems.filter((item: Item) => 
+        item.artistsCreated?.some((artist: Artist) => {
             // Handle both string and number comparison since IDs might be BigInt
             const artistIdStr = String(artist.id);
             const targetIdStr = String(artistId);
             return artistIdStr === targetIdStr;
-        });
-        
-        if (hasArtist) {
-            console.log(`✓ Found item by artist: "${item.title}" (ID: ${item.id})`);
-        }
-        
-        return hasArtist;
-    }).length;
+        })
+    ).length;
 
     const percentage = (artWorksByArtist / totalArtworksExhibited) * 100;
-    
-    console.log(`Result: ${artWorksByArtist}/${totalArtworksExhibited} = ${percentage.toFixed(2)}%`);
-    
     return Number(percentage.toFixed(2));
 };
 

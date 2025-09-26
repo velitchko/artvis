@@ -15,6 +15,9 @@ interface EgoNetworkProps {
     colors?: { group: string; colors: Map<string, string> };
     width?: number;
     height?: number;
+    coExhibitionCount?: number;
+    groupBy?: string;
+    orderBy?: string;
     initCallBack?: () => void;
     requestNode?: (node?: number) => void;
     mouseOverCallBack?: (year: number) => void;
@@ -121,8 +124,30 @@ const getColorMapping = (groupType: string, uniqueGroups?: string[]): Map<string
             
             return countryColorMap;
         case 'ageGroup':
-            // ageGroupColors is a function, need to handle differently
-            return new Map(); // Will be populated dynamically
+            // ageGroupColors is a function, will be populated dynamically based on unique groups
+            const ageGroupMap = new Map<string, string>();
+            if (uniqueGroups) {
+                const sortedAgeGroups = [...uniqueGroups].sort((a: string, b: string) => {
+                    if (a === 'unknown') return 1;
+                    if (b === 'unknown') return -1;
+                    if (a === 'same') return -1;
+                    if (b === 'same') return 1;
+                    if (a === 'similar') return -1;
+                    if (b === 'similar') return 1;
+                    return a.localeCompare(b);
+                });
+                
+                sortedAgeGroups.forEach((ageGroup: string, index: number) => {
+                    let color = '#333333'; // default
+                    if (ageGroup === 'unknown') color = '#333333';
+                    else if (ageGroup === 'similar') color = ageGroupColors(0.5);
+                    else if (ageGroup === 'same') color = '#d3d3d3';
+                    else color = ageGroupColors(index / Math.max(sortedAgeGroups.length, 1));
+                    
+                    ageGroupMap.set(ageGroup, color);
+                });
+            }
+            return ageGroupMap;
         default:
             return new Map();
     }
@@ -133,6 +158,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     baseNode,
     links,
     colors: initialColors,
+    coExhibitionCount,
+    groupBy: propGroupBy,
+    orderBy: propOrderBy,
     initCallBack,
     requestNode,
     mouseOverCallBack,
@@ -141,21 +169,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     filterCallback,
     syncColors
 }) => {
-    // Debug logging
-    console.log('EgoNetworkComponent received props:', {
-        baseNode: baseNode?.name || 'none',
-        linksCount: links?.length || 0,
-        colors: initialColors?.group || 'none'
-    });
-
-    // Debug links structure
+    // Group links by target artist for analysis
+    const linksByTarget = new Map();
     if (links && links.length > 0) {
-        console.log('=== CO-EXHIBITOR LINKS DEBUG ===');
-        console.log('Source (Ego):', baseNode?.name);
-        console.log('Total links:', links.length);
-        
-        // Group links by target artist
-        const linksByTarget = new Map();
         links.forEach(link => {
             const targetId = link.targetId;
             if (!linksByTarget.has(targetId)) {
@@ -163,34 +179,6 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             }
             linksByTarget.get(targetId).push(link);
         });
-
-        console.log('Unique co-exhibitors:', linksByTarget.size);
-        
-        // Print first 5 co-exhibitors with their connection details
-        let count = 0;
-        linksByTarget.forEach((targetLinks, targetId) => {
-            if (count < 5) {
-                const firstLink = targetLinks[0];
-                console.log(`\nCo-exhibitor ${count + 1}:`);
-                console.log('  Target ID:', targetId);
-                console.log('  Target Name:', firstLink.target?.name || 'Unknown');
-                console.log('  Target Country:', firstLink.target?.props?.data?.country || 'Unknown');
-                console.log('  Target Sex:', firstLink.target?.props?.data?.sex || 'Unknown');
-                console.log('  Connections:', targetLinks.length);
-                
-                // Show first few exhibition years
-                const years = targetLinks.map((l: Link) => l.props?.data?.year).slice(0, 3);
-                console.log('  Exhibition years (first 3):', years);
-                
-                // Show connection counts
-                const counts = targetLinks.map((l: Link) => l.props?.data?.count).slice(0, 3);
-                console.log('  Connection counts:', counts);
-                
-                count++;
-            }
-        });
-        
-        console.log('\n=== END LINKS DEBUG ===');
     }
 
     // Refs
@@ -205,12 +193,12 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     // State
     const [state, setState] = useState<EgoNetworkState>({
         compareNode: undefined,
-        coEx: DEFAULT_CO_EX,
-        groupBy: DEFAULT_GROUP_BY,
-        orderBy: 'default',
+        coEx: coExhibitionCount ?? DEFAULT_CO_EX,
+        groupBy: propGroupBy ?? DEFAULT_GROUP_BY,
+        orderBy: propOrderBy ?? 'default',
         selection: false,
         loading: false,
-        colors: initialColors || { group: DEFAULT_GROUP_BY, colors: getColorMapping(DEFAULT_GROUP_BY) },
+        colors: initialColors || { group: propGroupBy ?? DEFAULT_GROUP_BY, colors: getColorMapping(propGroupBy ?? DEFAULT_GROUP_BY) },
         dimensions: { width: 0, height: 0 }
     });
 
@@ -237,6 +225,33 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             colors: { group: DEFAULT_GROUP_BY, colors }
         }));
     }, []);
+
+    // Update state when props change (controlled by parent)
+    useEffect(() => {
+        setState(prev => ({
+            ...prev,
+            coEx: coExhibitionCount ?? prev.coEx,
+            groupBy: propGroupBy ?? prev.groupBy,
+            orderBy: propOrderBy ?? prev.orderBy,
+            colors: initialColors || prev.colors
+        }));
+    }, [coExhibitionCount, propGroupBy, propOrderBy, initialColors]);
+
+    // Track if we need to trigger a re-render due to prop changes
+    const shouldReRender = useRef(false);
+    
+    // Set re-render flag when relevant props change
+    useEffect(() => {
+        if (isInitializedRef.current) {
+            const coExChanged = coExhibitionCount !== undefined && coExhibitionCount !== state.coEx;
+            const groupByChanged = propGroupBy !== undefined && propGroupBy !== state.groupBy;
+            const orderByChanged = propOrderBy !== undefined && propOrderBy !== state.orderBy;
+            
+            if (coExChanged || groupByChanged || orderByChanged) {
+                shouldReRender.current = true;
+            }
+        }
+    }, [coExhibitionCount, propGroupBy, propOrderBy, state.coEx, state.groupBy, state.orderBy]);
 
     // Initialize D3 visualization when dimensions are available
     useEffect(() => {
@@ -350,15 +365,47 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         processAndRenderData();
     }, [state.dimensions, handleZoom]);
 
+    // Helper function to get base node's group based on current groupBy setting
+    const getBaseNodeGroup = useCallback(() => {
+        const currentGroupBy = propGroupBy || state.groupBy;
+        
+        switch (currentGroupBy) {
+            case 'ageGroup':
+                // For base node, ageGroup is always 'same' (0 age difference with itself)
+                return 'same';
+            case 'sex':
+                return baseNode.props.data.sex || 'unknown';
+            case 'coex':
+                // For co-exhibitions, we could use the number of connections
+                // but for consistency with other nodes, let's use 'high' as default for base node
+                return 'high';
+            default:
+                return baseNode.props.data.country || 'unknown';
+        }
+    }, [baseNode, propGroupBy, state.groupBy]);
+
+    // Function to update base circle color when groupBy changes
+    const updateBaseCircleColor = useCallback(() => {
+        const baseCircle = d3.select('#base-circle');
+        if (!baseCircle.empty()) {
+            const baseNodeGroup = getBaseNodeGroup();
+            const baseNodeColor = state.colors.colors.get(baseNodeGroup) || 'black';
+            
+            baseCircle.attr('stroke', baseNodeColor);
+        }
+    }, [getBaseNodeGroup, state.colors]);
+
     const createBaseCircle = useCallback((container: d3.Selection<any, any, any, any>, width: number, height: number) => {
         const baseCircle = container.append('g').attr('id', 'base-circle-wrapper');
+        const baseNodeGroup = getBaseNodeGroup();
+        const baseNodeColor = state.colors.colors.get(baseNodeGroup) || 'black';
 
         baseCircle.append('circle')
             .attr('id', 'base-circle')
             .attr('cx', width / 2)
             .attr('cy', height / 2)
             .attr('r', 40)
-            .attr('stroke', state.colors.colors.get(baseNode.props.data.country) || 'black')
+            .attr('stroke', baseNodeColor)
             .attr('stroke-width', 4)
             .attr('fill', 'transparent');
 
@@ -387,7 +434,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('font-weight', 'bold')
                 .text(nameParts[1]);
         }
-    }, [baseNode, state.colors]);
+    }, [baseNode, state.colors, getBaseNodeGroup]);
 
     const setupScales = useCallback(() => {
         const scales = scalesRef.current;
@@ -401,29 +448,49 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     }, []);
 
     const processAndRenderData = useCallback(() => {
-        console.log('=== PROCESS AND RENDER DATA CALLED ===');
-        console.log('Input links prop:', links?.length || 0);
-        console.log('State coEx threshold:', state.coEx);
-        
-        const targetNodes = filterData(state.coEx);
-        console.log('Filtered target nodes:', targetNodes?.length || 0);
+        const currentCoEx = coExhibitionCount ?? state.coEx;
+        const targetNodes = filterData(currentCoEx);
         
         linksRef.current = targetNodes;
-        console.log('Updated linksRef.current to:', linksRef.current?.length || 0);
-
         const uniqueNodes = _.uniqBy(linksRef.current, (node: Link) => node.targetId);
-        console.log('Unique nodes for rendering:', uniqueNodes?.length || 0);
         
         drawGridLines(uniqueNodes.length);
         drawCircles();
         drawDonutChart();
-    }, [state.coEx, links]);
+        updateBaseCircleColor();
+    }, [coExhibitionCount, state.coEx, state.groupBy, state.orderBy, propGroupBy, propOrderBy, links, updateBaseCircleColor]);
+
+    // Handle re-render when flag is set and processAndRenderData is available
+    useEffect(() => {
+        if (shouldReRender.current && isInitializedRef.current) {
+            shouldReRender.current = false;
+            processAndRenderData();
+        }
+    }, [state.coEx, state.groupBy, state.orderBy, processAndRenderData]);
+
+    // Helper function for ordering links
+    const orderByProperty = useCallback((prop: string, links: Link[]): Link[] => {
+        switch (prop) {
+            case 'default':
+                return _.orderBy(links, ['target.name'], ['asc']);
+            case 'alpha':
+                return _.orderBy(links, ['target.name'], ['asc']);
+            case 'coex':
+                return _.orderBy(links, (link: Link) => {
+                    // Sum all co-exhibitions for this target artist
+                    const sum = links
+                        .filter((l: Link) => l.targetId === link.targetId)
+                        .reduce((acc, cur) => acc + cur.props.data.count, 0);
+                    return sum;
+                }, ['desc']);
+            case 'age':
+                return _.orderBy(links, ['target.props.age'], ['desc']);
+            default:
+                return _.orderBy(links, ['target.name'], ['asc']);
+        }
+    }, []);
 
     const filterData = useCallback((numCoEx: number): Link[] => {
-        console.log('=== FILTER DATA START ===');
-        console.log('Input links:', links?.length || 0);
-        console.log('numCoEx threshold:', numCoEx);
-        
         // Filter links based on co-exhibition threshold
         const filteredLinks = links.filter((link: Link) => {
             const sum = links
@@ -432,11 +499,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             return sum >= numCoEx && (link.props.data.year >= YEAR_RANGE.min && link.props.data.year <= YEAR_RANGE.max);
         });
 
-        console.log('Filtered links:', filteredLinks.length);
-
         // Group links by the specified property (e.g., country)
-        const groupedLinks = groupByProperty(state.groupBy, filteredLinks);
-        console.log('Grouped by', state.groupBy, ':', Object.keys(groupedLinks).length, 'groups');
+        const currentGroupBy = propGroupBy || state.groupBy;
+        const groupedLinks = groupByProperty(currentGroupBy, filteredLinks);
 
         // Convert to array format and process each group
         const groupData: Array<{ group: string, links: Link[] }> = [];
@@ -445,10 +510,12 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             groupLinks.forEach((link: Link) => {
                 link.props.group = group;
                 
-                // Set additional properties (simplified version of original logic)
+                // Set additional properties (matching original logic)
                 const birthYear = +link.target.props.data.birthyear;
                 const deathYear = +link.target.props.data.deathyear;
+                const baseBirthYear = +baseNode.props.data.birthyear;
 
+                // Living status
                 if (birthYear <= 1915 && (deathYear >= 1905 || isNaN(deathYear))) {
                     link.target.props.living = 'alive';
                 } else if (deathYear < 1905 || birthYear > 1915) {
@@ -457,29 +524,63 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     link.target.props.living = '?';
                 }
 
+                // Basic properties
                 link.target.props.country = link.target.props.data.country;
                 link.target.props.sex = link.target.props.data.sex;
+                
+                // Age at death calculation
+                const age = deathYear - birthYear;
+                link.target.props.age = isNaN(age) ? 'unknown' : `${age}`;
+
+                // Age group calculation (birth year difference from base artist)
+                const ageDiff = birthYear - baseBirthYear;
+                
+                // Create age ranges (matching original logic)
+                const ageRanges: string[] = [];
+                for (let i = -50; i <= 50; i += 5) {
+                    ageRanges.push(`${i}`);
+                }
+                
+                // Find closest age range
+                const ageGroup = ageRanges.reduce((closest: string | null, age: string) => {
+                    if (closest === null) return age;
+
+                    const diffToAge = Math.abs(ageDiff - parseInt(age));
+                    const closestDiff = Math.abs(ageDiff - parseInt(closest));
+                    if (diffToAge < closestDiff) {
+                        return age;
+                    }
+                    return closest;
+                }, null);
+
+                if (!ageGroup || Math.abs(ageDiff) > 100) {
+                    link.target.props.ageGroup = 'unknown';
+                } else if (ageDiff === 0) {
+                    link.target.props.ageGroup = 'same';
+                } else if (Math.abs(ageDiff) <= 5) {
+                    link.target.props.ageGroup = 'similar';
+                } else {
+                    const groupVal = +ageGroup;
+                    link.target.props.ageGroup = `${groupVal > 0 ? 'gt_' + groupVal : 'lt_' + Math.abs(groupVal)}`;
+                }
             });
 
             groupData.push({ group, links: groupLinks });
         });
 
-        // CRITICAL: Sort groups by size (largest to smallest) for better visual hierarchy
+        // Sort groups by size (largest to smallest) for better visual hierarchy
         const sortedGroupData = _.orderBy(groupData, ['links.length'], ['desc']);
         
-        // CRITICAL: Flatten with groups staying together - this is key for arc calculations
-        const sortedLinks: Link[] = [];
-        sortedGroupData.forEach(groupItem => {
-            const groupLinksOrdered = _.orderBy(groupItem.links, ['props.data.year'], ['asc']);
-            sortedLinks.push(...groupLinksOrdered);
-        });
-
-        console.log('Sorted links by group size:', sortedLinks.length);
-        console.log('Group order (largest to smallest):', sortedGroupData.map(g => `${g.group}(${g.links.length})`));
+        // Apply orderBy to each group and flatten - this matches original logic
+        const currentOrderBy = propOrderBy || state.orderBy;
+        const sortedLinks = sortedGroupData
+            .map((groupItem) => {
+                return orderByProperty(currentOrderBy, groupItem.links);
+            })
+            .flat();
 
         // Get unique target nodes from the sorted links (this determines the angular positions)
         const uniqueLinks = _.uniqBy(sortedLinks, (link: Link) => link.targetId);
-        console.log('Unique target nodes:', uniqueLinks.length);
 
         // CRITICAL: Assign originalIndex based on position in unique array FROM SORTED LINKS
         uniqueLinks.forEach((uniqueLink: Link, index: number) => {
@@ -491,35 +592,26 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 }
             });
         });
-
-        console.log('Assigned originalIndex to all links');
         
         // Update colors based on actual groups found
-        if (state.groupBy === 'country') {
-            const uniqueCountries = Array.from(new Set(sortedLinks.map(link => link.props.group)));
-            console.log('Unique countries found:', uniqueCountries);
-            
-            const updatedColors = getColorMapping('country', uniqueCountries);
-            setState(prev => ({
-                ...prev,
-                colors: { group: 'country', colors: updatedColors }
-            }));
-        }
+        const uniqueGroups = Array.from(new Set(sortedLinks.map(link => {
+            if (currentGroupBy === 'ageGroup') {
+                return link.target.props.ageGroup || 'unknown';
+            }
+            return link.props.group;
+        })));
         
-        // Debug originalIndex assignment
-        const indexCheck = uniqueLinks.map(link => ({
-            targetId: link.targetId,
-            name: link.target.name,
-            originalIndex: link.props.originalIndex,
-            group: link.props.group
+        const updatedColors = getColorMapping(currentGroupBy, uniqueGroups);
+        setState(prev => ({
+            ...prev,
+            colors: { group: currentGroupBy, colors: updatedColors }
         }));
-        console.log('OriginalIndex assignment:', indexCheck.slice(0, 10));
 
         // Update scales with the unique nodes
         updateScales(sortedLinks);
 
         return sortedLinks;
-    }, [links, state.groupBy]);
+    }, [links, propGroupBy, propOrderBy, state.groupBy, state.orderBy, baseNode, orderByProperty]);
 
     const groupByProperty = useCallback((prop: string, links: Link[]) => {
         return _.groupBy(links, (link: Link) => {
@@ -538,13 +630,6 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     return 'Unknown';
             }
         });
-    }, []);
-
-    const calculateAgeGroup = useCallback((targetBirthYear: number, baseBirthYear: number): string => {
-        const ageDiff = targetBirthYear - baseBirthYear;
-        const groupSize = 5;
-        const groupIndex = Math.floor(ageDiff / groupSize) * groupSize;
-        return `${groupIndex >= 0 ? '+' : ''}${groupIndex}`;
     }, []);
 
     const processGroupData = useCallback((groupedLinks: _.Dictionary<Link[]>) => {
@@ -589,14 +674,15 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             return Math.sin(angle) * (scales.r(date) + offset);
         };
 
-        // Draw radial grid lines
-        grid.selectAll('.grid-line')
+        // Draw radial grid lines - fade in after nodes are positioned
+        const radialLines = grid.selectAll('.grid-line')
             .data(d3.range(0, numTargets))
             .join('line')
             .attr('class', 'grid-line')
             .attr('stroke', '#e3e3e3')
             .attr('stroke-width', 1)
-            .transition().duration(250)
+            .attr('opacity', 0)
+            // Set final positions immediately (no movement)
             .attr('x1', (d: any, i: number) => {
                 return getXCoordinates(YEAR_RANGE.min, getAngle(i)) + width / 2;
             })
@@ -610,8 +696,16 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 return getYCoordinates(YEAR_RANGE.max, getAngle(i)) + height / 2;
             });
 
-        // Draw circular grid lines for years
-        circle.selectAll('.circle-line')
+        // Fade in grid lines after nodes have moved (delayed start)
+        radialLines
+            .transition()
+            .delay(350) // Wait for nodes to finish spreading
+            .duration(300)
+            .ease(d3.easeLinear)
+            .attr('opacity', 1);
+
+        // Draw circular grid lines for years - fade in after nodes
+        const circularLines = circle.selectAll('.circle-line')
             .data(d3.range(YEAR_RANGE.min, YEAR_RANGE.max + 1))
             .join('circle')
             .attr('id', (d: any) => `circle-${d}`)
@@ -619,10 +713,19 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             .attr('stroke', '#e3e3e3')
             .attr('fill', 'none')
             .attr('stroke-width', 1)
-            .transition().duration(250)
+            .attr('opacity', 0)
             .attr('cx', width / 2)
             .attr('cy', height / 2)
+            // Set final radius immediately (no expansion animation)
             .attr('r', (d: any) => scales.r(d));
+
+        // Fade in circular grid lines after nodes have moved
+        circularLines
+            .transition()
+            .delay(350) // Wait for nodes to finish spreading
+            .duration(300)
+            .ease(d3.easeLinear)
+            .attr('opacity', 1);
     }, [state.dimensions]);
 
     const drawCircles = useCallback(() => {
@@ -703,42 +806,34 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         const uniqueLinks = _.uniqBy(linksRef.current, (node: Link) => node.targetId);
         thetaRef.current = 2 * Math.PI / uniqueLinks.length;
 
-        // Draw artist circles
-        console.log('=== DRAWING ARTIST CIRCLES ===');
-        console.log('Links to draw:', linksRef.current.length);
-        
-        // Debug first few links for originalIndex
-        linksRef.current.slice(0, 5).forEach((link, i) => {
-            console.log(`Link ${i}:`, {
-                targetId: link.targetId,
-                targetName: link.target?.name,
-                originalIndex: link.props?.originalIndex,
-                year: link.props?.data?.year,
-                count: link.props?.data?.count
-            });
-        });
-
-        artist.selectAll('circle')
+        // Draw artist circles with blooming flower animation
+        const circles = artist.selectAll('circle')
             .data(linksRef.current)
-            .join('circle')
-            .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
-            .transition().duration(250)
+            .join(
+                enter => enter.append('circle')
+                    .attr('id', (d: Link) => `node-${d.target.id}-${d.props.data.year}`)
+                    // Start all nodes at center (base node position)
+                    .attr('cx', width / 2)
+                    .attr('cy', height / 2)
+                    .attr('r', 0)
+                    .attr('opacity', 0)
+                    .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
+                    .attr('stroke-width', 2)
+                    .attr('fill', 'transparent'),
+                update => update
+                    .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black'),
+                exit => exit.remove()
+            );
+
+        // Animate new nodes with hyperjump effect - all shoot out simultaneously
+        circles.filter(function() { return d3.select(this).attr('r') === '0'; })
+            .transition()
+            .duration(300) // Balanced speed
+            .ease(d3.easeCubicOut) // Sharp acceleration out from center
             .attr('r', (d: Link) => scales.nodeR(d.props.data.count))
             .attr('cx', (d: Link) => {
                 const angle = getAngle(d.props.originalIndex);
                 const x = getXCoordinates(d.props.data.year, angle) + width / 2;
-                
-                // Debug positioning
-                if (Math.random() < 0.1) { // Log 10% of calculations
-                    console.log(`Position calc for ${d.target.name}:`, {
-                        originalIndex: d.props.originalIndex,
-                        angle: angle,
-                        year: d.props.data.year,
-                        x: x,
-                        width: width
-                    });
-                }
-                
                 d.target.x = x;
                 return x;
             })
@@ -748,13 +843,31 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 d.target.y = y;
                 return y;
             })
-            .attr('opacity', 0.75)
+            .attr('opacity', 0.75);
+
+        // Update existing nodes with quick repositioning
+        circles.filter(function() { return d3.select(this).attr('r') !== '0'; })
+            .transition()
+            .duration(200) // Faster updates
+            .ease(d3.easeCubicInOut) // Smooth but quick
+            .attr('r', (d: Link) => scales.nodeR(d.props.data.count))
+            .attr('cx', (d: Link) => {
+                const angle = getAngle(d.props.originalIndex);
+                const x = getXCoordinates(d.props.data.year, angle) + width / 2;
+                d.target.x = x;
+                return x;
+            })
+            .attr('cy', (d: Link) => {
+                const angle = getAngle(d.props.originalIndex);
+                const y = getYCoordinates(d.props.data.year, angle) + height / 2;
+                d.target.y = y;
+                return y;
+            })
             .attr('stroke', (d: Link) => state.colors.colors.get(d.props.group) || 'black')
-            .attr('stroke-width', 2)
-            .attr('fill', 'transparent');
+            .attr('opacity', 0.75);
 
         // Add event listeners
-        artist.selectAll('circle')
+        circles
             .on('mouseover', handleMouseOver)
             .on('mouseout', handleMouseOut)
             .on('click', (event: PointerEvent) => {
@@ -788,8 +901,6 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
                 const id = (event.target as SVGCircleElement).id;
                 const data = d3.select(`#${id}`).datum() as Link;
-
-                console.log('Clicked circle:', data);
 
                 if (!data) return;
 
@@ -1106,16 +1217,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         
         if (!donut || !linksRef.current.length) return;
 
-        console.log('=== DRAWING DONUT CHART ===');
-        console.log('Total links for donut:', linksRef.current.length);
-        
-        // Debug: Show how links are grouped in order
-        const groupSequence = linksRef.current.map(link => ({
-            targetId: link.targetId,
-            group: link.props.group,
-            originalIndex: link.props.originalIndex
-        }));
-        console.log('Link sequence by group:', groupSequence.slice(0, 20));
+
         
         // Show which groups exist and their first/last positions
         const groupPositions = new Map();
@@ -1136,9 +1238,6 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         // Calculate theta (angle between nodes)
         const uniqueNodes = _.uniqBy(linksRef.current, 'targetId');
         const theta = 2 * Math.PI / uniqueNodes.length;
-        
-        console.log('Theta (angle per node):', theta);
-        console.log('Total unique nodes:', uniqueNodes.length);
         
         // Calculate group ranges more simply
         const groupRanges = new Map();
