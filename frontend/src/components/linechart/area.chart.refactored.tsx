@@ -241,6 +241,9 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
         coEx: coExhibitionCount ?? DEFAULT_CO_EX
     });
 
+    // Selection state
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
+
     // Custom hooks
     const dimensions = useResizeObserver('area-chart-container');
 
@@ -276,6 +279,9 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
             stacked: stacked ?? true, // Default to stacked
             coEx: coExhibitionCount ?? DEFAULT_CO_EX
         }));
+
+        // Reset selection when grouping changes
+        setSelectedGroup('');
     }, [groupBy, stacked, coExhibitionCount, links, colors]);
 
     // Update chart when data or settings change
@@ -582,38 +588,77 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
         console.log('Area mouseout');
     }, []);
 
-    const handleAreaClick = useCallback((event: MouseEvent, d: any) => {
-        const group = d.key || d.group;
-        onclick?.(group);
-    }, [onclick]);
-
-    const handleLegendMouseOver = useCallback((event: MouseEvent, d: string) => {
-        highlightGroup(d);
-    }, []);
-
-    const handleLegendMouseOut = useCallback(() => {
-        highlightGroup('');
-    }, []);
-
-    const handleLegendClick = useCallback((event: MouseEvent, d: string) => {
-        onclick?.(d);
-    }, [onclick]);
-
     // Public methods
-    const highlightGroup = useCallback((group: string) => {
-        selectedGroupRef.current = group;
+    const highlightGroup = useCallback((group: string, isTemporary: boolean = true) => {
+        const { svg } = d3ElementsRef.current;
+        if (!svg) return;
         
-        const areas = d3.selectAll('.area');
+        // Scope selections to this chart instance
+        const areas = svg.selectAll('.area');
+        const legendItems = svg.selectAll('.legend-item circle');
+        
+        console.log('Highlighting group:', group, 'isTemporary:', isTemporary, 'areas found:', areas.size(), 'legend items:', legendItems.size());
         
         if (group === '') {
-            areas.attr('fill-opacity', state.stacked ? 1 : 0.25);
+            // Reset to default state
+            areas.attr('fill-opacity', state.stacked ? 0.8 : 0.25);
+            legendItems.attr('opacity', 1);
         } else {
+            // Highlight specific group
             areas.attr('fill-opacity', (d: any) => {
                 const dataGroup = d.key || d.group;
-                return dataGroup === group ? (state.stacked ? 1 : 0.75) : 0.1;
+                const isSelected = dataGroup === group;
+                console.log('Area group:', dataGroup, 'selected group:', group, 'match:', isSelected);
+                return isSelected ? 1.0 : 0.1; // Full opacity for selected, very low for others
+            });
+            
+            // Highlight corresponding legend item
+            legendItems.attr('opacity', (d: any) => {
+                const isSelected = d === group;
+                console.log('Legend item:', d, 'selected group:', group, 'match:', isSelected);
+                return isSelected ? 1.0 : 0.3;
             });
         }
+        
+        if (!isTemporary) {
+            selectedGroupRef.current = group;
+        }
     }, [state.stacked]);
+
+    const selectGroup = useCallback((group: string) => {
+        const newSelection = selectedGroup === group ? '' : group; // Toggle selection
+        setSelectedGroup(newSelection);
+        highlightGroup(newSelection, false);
+        
+        // Communicate selection to ego network
+        onclick?.(newSelection);
+        
+        console.log('Area chart selected group:', newSelection);
+    }, [selectedGroup, highlightGroup, onclick]);
+
+    // Click and interaction handlers
+    const handleAreaClick = useCallback((event: MouseEvent, d: any) => {
+        const group = d.key || d.group;
+        selectGroup(group);
+    }, [selectGroup]);
+
+    const handleLegendMouseOver = useCallback((event: MouseEvent, d: string) => {
+        if (selectedGroup === '') {
+            highlightGroup(d, true); // Temporary highlighting only if no selection
+        }
+    }, [selectedGroup, highlightGroup]);
+
+    const handleLegendMouseOut = useCallback(() => {
+        if (selectedGroup === '') {
+            highlightGroup('', true); // Reset temporary highlighting only if no selection
+        } else {
+            highlightGroup(selectedGroup, false); // Maintain selection highlighting
+        }
+    }, [selectedGroup, highlightGroup]);
+
+    const handleLegendClick = useCallback((event: MouseEvent, d: string) => {
+        selectGroup(d);
+    }, [selectGroup]);
 
     const updateColors = useCallback((newColors: { group: string; colors: Map<string, string> }) => {
         setState(prev => ({ ...prev, groupBy: newColors.group }));

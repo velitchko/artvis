@@ -18,6 +18,7 @@ interface EgoNetworkProps {
     coExhibitionCount?: number;
     groupBy?: string;
     orderBy?: string;
+    selectedGroup?: string; // External group selection for highlighting
     initCallBack?: () => void;
     requestNode?: (node?: number) => void;
     mouseOverCallBack?: (year: number) => void;
@@ -153,6 +154,39 @@ const getColorMapping = (groupType: string, uniqueGroups?: string[]): Map<string
     }
 };
 
+// Utility function to position tooltips within viewport bounds
+const getTooltipPosition = (mouseX: number, mouseY: number, tooltipWidth: number = 200, tooltipHeight: number = 100, offsetX: number = 15, offsetY: number = -15) => {
+    const padding = 10;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Start with offset from cursor to avoid overlap
+    let left = mouseX + offsetX;
+    let top = mouseY + offsetY;
+    
+    // Check right boundary
+    if (left + tooltipWidth > viewportWidth - padding) {
+        left = mouseX - tooltipWidth - Math.abs(offsetX);
+    }
+    
+    // Check left boundary
+    if (left < padding) {
+        left = padding;
+    }
+    
+    // Check bottom boundary
+    if (top + tooltipHeight > viewportHeight - padding) {
+        top = mouseY - tooltipHeight - Math.abs(offsetY);
+    }
+    
+    // Check top boundary
+    if (top < padding) {
+        top = padding;
+    }
+    
+    return { left, top };
+};
+
 // Main component
 const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     baseNode,
@@ -161,6 +195,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     coExhibitionCount,
     groupBy: propGroupBy,
     orderBy: propOrderBy,
+    selectedGroup: externalSelectedGroup,
     initCallBack,
     requestNode,
     mouseOverCallBack,
@@ -188,6 +223,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     const linksRef = useRef<Link[]>([]);
     const isInitializedRef = useRef(false);
     const selectedGroupRef = useRef('');
+    const isInternalSelectionRef = useRef(false);
     const thetaRef = useRef(0);
 
     // State
@@ -757,6 +793,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             const x = event.clientX;
             const y = event.clientY;
 
+            // Calculate smart tooltip position with extra offset to avoid cursor overlap
+            const tooltipPos = getTooltipPosition(x, y, 180, 80, 20, -25);
+            
             // Create tooltip
             const tooltip = d3.select('body').append('div')
                 .style('position', 'absolute')
@@ -765,9 +804,10 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .style('padding', '5px')
                 .style('border-radius', '5px')
                 .style('font-size', '12px')
-                .style('left', `${x}px`)
-                .style('top', `${y}px`)
+                .style('left', `${tooltipPos.left}px`)
+                .style('top', `${tooltipPos.top}px`)
                 .style('z-index', '1000')
+                .style('max-width', '180px')
                 .html(`
                     <p><b>${data.target.name} (${data.props.data.year - data.target.props.data.birthyear})</b></p>
                     <p>Group: ${data.props.group}</p>
@@ -974,6 +1014,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                         const birthYear = d.target.props?.data?.birthyear || 'Unknown';
                         const country = d.target.props?.data?.country || 'Unknown';
                         
+                        // Calculate smart tooltip position
+                        const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 220, 160, 15, -10);
+                        
                         d3.select('body').append('div')
                             .attr('class', 'outer-circle-tooltip')
                             .style('position', 'absolute')
@@ -982,11 +1025,12 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                             .style('padding', '10px')
                             .style('border-radius', '5px')
                             .style('font-size', '12px')
-                            .style('left', `${event.clientX + 10}px`)
-                            .style('top', `${event.clientY - 10}px`)
+                            .style('left', `${tooltipPos.left}px`)
+                            .style('top', `${tooltipPos.top}px`)
                             .style('z-index', '1000')
                             .style('pointer-events', 'none')
                             .style('box-shadow', '0 2px 5px rgba(0,0,0,0.3)')
+                            .style('max-width', '220px')
                             .html(`
                                 <div><strong>${d.target.name}</strong></div>
                                 <div>Born: ${birthYear}</div>
@@ -1134,6 +1178,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 const birthYear = d.target.props?.data?.birthyear || 'Unknown';
                 const country = d.target.props?.data?.country || 'Unknown';
                 
+                // Calculate smart tooltip position
+                const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 200, 130, 15, -10);
+                
                 d3.select('body').append('div')
                     .attr('class', 'label-tooltip')
                     .style('position', 'absolute')
@@ -1142,10 +1189,11 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     .style('padding', '8px')
                     .style('border-radius', '5px')
                     .style('font-size', '12px')
-                    .style('left', `${event.clientX + 10}px`)
-                    .style('top', `${event.clientY - 10}px`)
+                    .style('left', `${tooltipPos.left}px`)
+                    .style('top', `${tooltipPos.top}px`)
                     .style('z-index', '1000')
                     .style('pointer-events', 'none')
+                    .style('max-width', '200px')
                     .html(`
                         <div><strong>${d.target.name}</strong></div>
                         <div>Born: ${birthYear}</div>
@@ -1309,6 +1357,9 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 // Remove any existing arc tooltip
                 d3.selectAll('.arc-tooltip').remove();
                 
+                // Calculate smart tooltip position
+                const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 200, 120, 15, -10);
+                
                 // Create improved tooltip
                 d3.select('body').append('div')
                     .attr('class', 'arc-tooltip')
@@ -1318,11 +1369,12 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     .style('padding', '10px')
                     .style('border-radius', '5px')
                     .style('font-size', '12px')
-                    .style('left', `${event.clientX + 10}px`)
-                    .style('top', `${event.clientY - 10}px`)
+                    .style('left', `${tooltipPos.left}px`)
+                    .style('top', `${tooltipPos.top}px`)
                     .style('z-index', '1000')
                     .style('pointer-events', 'none')
                     .style('box-shadow', '0 2px 5px rgba(0,0,0,0.3)')
+                    .style('max-width', '200px')
                     .html(`
                         <div><strong>${d.props.group}</strong></div>
                         <div>Artists: ${groupCount}</div>
@@ -1340,18 +1392,82 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 // Remove any existing tooltips
                 d3.selectAll('.arc-tooltip, .label-tooltip, .outer-circle-tooltip').remove();
                 
-                console.log('Clicked group:', d.props.group);
+                console.log('Clicked arc with group:', d.props.group);
+                console.log('Arc ID:', `donut-${d.props.group}`);
                 
-                // Toggle group selection
-                if (selectedGroup === d.props.group) {
-                    setSelectedGroup('');
-                    highlightGroup('');
-                    arcClickCallback?.('');
+                // Get the current arc that was clicked
+                const clickedArcId = `donut-${d.props.group}`;
+                const currentlySelected = donut.select(`#${clickedArcId}`).attr('data-selected');
+                const { artist, outerCircle } = containersRef.current;
+                const prop = state.groupBy;
+                
+                if (currentlySelected === 'true') {
+                    // Reset all arcs and dots to full opacity
+                    console.log('Deselecting arc:', clickedArcId);
+                    donut.selectAll('path')
+                        .attr('opacity', 1)
+                        .attr('data-selected', 'false');
+                    
+                    // Reset all artist dots to full opacity
+                    if (artist) {
+                        const allCircles = artist.selectAll('circle');
+                        const allOuterCircles = outerCircle?.selectAll('circle');
+                        const allLabels = artist.selectAll('.artist-label');
+                        
+
+                        
+                        allCircles.attr('opacity', 0.75);
+                        allOuterCircles?.attr('opacity', 0.75);
+                        allLabels.attr('opacity', 1);
+                    }
+                    
+                    selectedGroupRef.current = '';
                 } else {
-                    setSelectedGroup(d.props.group);
-                    highlightGroup(d.props.group);
-                    arcClickCallback?.(d.props.group);
+                    // Set all arcs to reduced opacity first
+                    console.log('Selecting arc:', clickedArcId, 'for group:', d.props.group);
+                    donut.selectAll('path')
+                        .attr('opacity', 0.25)
+                        .attr('data-selected', 'false');
+                    
+                    // Set clicked arc to full opacity
+                    donut.select(`#${clickedArcId}`)
+                        .attr('opacity', 1)
+                        .attr('data-selected', 'true');
+                    
+                    // Highlight dots belonging to this group
+                    if (artist) {
+                        const allCircles = artist.selectAll('circle');
+                        const allOuterCircles = outerCircle?.selectAll('circle');
+                        const allLabels = artist.selectAll('.artist-label');
+                        
+                        // Set all dots to reduced opacity first
+                        allCircles.attr('opacity', 0.25);
+                        allOuterCircles?.attr('opacity', 0.25);
+                        allLabels.attr('opacity', 0.25);
+                        
+                        // Highlight dots matching the selected group
+                        const matchingCircles = allCircles.filter((dotData: any) => {
+                            return dotData?.target?.props?.[prop] === d.props.group;
+                        });
+                        
+                        const matchingOuterCircles = allOuterCircles?.filter((dotData: any) => {
+                            return dotData?.target?.props?.[prop] === d.props.group;
+                        });
+                        
+                        const matchingLabels = allLabels.filter((dotData: any) => {
+                            return dotData?.target?.props?.[prop] === d.props.group;
+                        });
+                        
+                        matchingCircles.attr('opacity', 1);
+                        matchingOuterCircles?.attr('opacity', 1);
+                        matchingLabels.attr('opacity', 1);
+                    }
+                    
+                    selectedGroupRef.current = d.props.group;
                 }
+                
+                // Notify parent component if needed
+                arcClickCallback?.(selectedGroupRef.current);
             });
 
         // Draw group labels positioned on arc centroids (like original)
@@ -1402,17 +1518,14 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         }
     }, [processAndRenderData]);
 
-    // Update visualization when links change
+    // Update visualization when links change - only run once for initialization
+    const hasRenderedRef = useRef(false);
+    
     useEffect(() => {
-        console.log('=== LINKS CHANGE EFFECT ===');
-        console.log('Links:', links?.length || 0);
-        console.log('Is initialized:', isInitializedRef.current);
-        
-        if (links && links.length > 0 && isInitializedRef.current) {
-            console.log('Updating network visualization with', links.length, 'links');
+        if (links && links.length > 0 && isInitializedRef.current && !hasRenderedRef.current) {
+            console.log('Initial rendering of network with', links.length, 'links');
             updateVisualization();
-        } else {
-            console.log('Skipping visualization update - conditions not met');
+            hasRenderedRef.current = true;
         }
     }, [links, updateVisualization]);
 
@@ -1443,57 +1556,69 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         if (!artist) return;
 
         if (group === '') {
-            // Reset all elements to default opacity
+            // Reset all elements to default state
             artist.selectAll('circle')
-                .attr('opacity', 1)
+                .attr('opacity', 0.75)
                 .attr('stroke-opacity', 1)
-                .attr('fill-opacity', 1);
+                .attr('fill-opacity', 1)
+                .attr('stroke-width', 2);
 
             outerCircle?.selectAll('circle')
-                .attr('opacity', 1)
+                .attr('opacity', 0.75)
                 .attr('stroke-opacity', 1)
-                .attr('fill-opacity', 1);
+                .attr('fill-opacity', 1)
+                .attr('stroke-width', 1);
 
             donut?.selectAll('path')
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
-                .attr('fill-opacity', 1);
+                .attr('fill-opacity', 1)
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1);
 
             artist.selectAll('.artist-label')
-                .attr('opacity', 1);
+                .attr('opacity', 1)
+                .attr('font-weight', 'normal');
         } else {
             const prop = state.groupBy;
 
-            // Dim all elements first
+            // Dim all elements first (more faded than before)
             artist.selectAll('circle')
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
+                .attr('opacity', 0.2)
+                .attr('stroke-opacity', 0.3)
+                .attr('fill-opacity', 0.2)
+                .attr('stroke-width', 1);
 
             outerCircle?.selectAll('circle')
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
+                .attr('opacity', 0.2)
+                .attr('stroke-opacity', 0.3)
+                .attr('fill-opacity', 0.2)
+                .attr('stroke-width', 1);
 
             donut?.selectAll('path')
-                .attr('opacity', 0.5)
-                .attr('stroke-opacity', 0.5)
-                .attr('fill-opacity', 0.5);
+                .attr('opacity', 0.3)
+                .attr('stroke-opacity', 0.3)
+                .attr('fill-opacity', 0.3)
+                .attr('stroke', '#333')
+                .attr('stroke-width', 1);
 
             artist.selectAll('.artist-label')
-                .attr('opacity', 0.25);
+                .attr('opacity', 0.15)
+                .attr('font-weight', 'normal');
 
-            // Highlight elements matching the group
+            // Highlight elements matching the group with full visibility and enhanced styling
             artist.selectAll('circle')
                 .filter((d: any) => d.target.props[prop] === group)
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
+                .attr('stroke-width', 3)
                 .raise();
 
             artist.selectAll('.artist-label')
                 .filter((d: any) => d.target.props[prop] === group)
                 .attr('opacity', 1)
+                .attr('font-weight', 'bold')
                 .raise();
 
             outerCircle?.selectAll('circle')
@@ -1501,13 +1626,20 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('opacity', 1)
                 .attr('stroke-opacity', 1)
                 .attr('fill-opacity', 1)
+                .attr('stroke-width', 2)
                 .raise();
 
-            donut?.select(`#donut-${group}`)
-                .attr('opacity', 1)
-                .attr('stroke-opacity', 1)
-                .attr('fill-opacity', 1)
-                .raise();
+            // Highlight the selected arc with enhanced styling
+            const selectedArc = donut?.select(`#donut-${group}`);
+            if (selectedArc && !selectedArc.empty()) {
+                selectedArc
+                    .attr('opacity', 1)
+                    .attr('stroke-opacity', 1)
+                    .attr('fill-opacity', 1)
+                    .attr('stroke', '#000')
+                    .attr('stroke-width', 3)
+                    .raise();
+            }
         }
     }, [state.groupBy]);
 
@@ -1663,6 +1795,17 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             }
         });
     }, [state.colors, getSecondaryLinks, drawSecondaryLinks]);
+
+    // Handle external group selection for highlighting
+    useEffect(() => {
+        if (externalSelectedGroup !== undefined && 
+            externalSelectedGroup !== selectedGroupRef.current && 
+            !isInternalSelectionRef.current) {
+            console.log('Ego network received external group selection:', externalSelectedGroup, 'current:', selectedGroupRef.current);
+            setSelectedGroup(externalSelectedGroup);
+            highlightGroup(externalSelectedGroup);
+        }
+    }, [externalSelectedGroup, highlightGroup]);
 
     // Public API methods
     const publicAPI = useMemo(() => ({

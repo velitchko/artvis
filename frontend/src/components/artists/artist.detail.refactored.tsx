@@ -35,6 +35,7 @@ interface ArtistDetailState {
     groupBy: string;
     orderBy: string;
     networkMode: 'circles' | 'pies';
+    selectedGroup: string; // For cross-component group selection
     // Search functionality
     searchTerm: string;
     searchResults: Artist[];
@@ -283,6 +284,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         groupBy: 'country',
         orderBy: 'coexhibitions',
         networkMode: 'circles',
+        selectedGroup: '', // For cross-component group selection
         // Search functionality
         searchTerm: '',
         searchResults: []
@@ -668,6 +670,12 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         setState(prev => ({ ...prev, colors }));
     }, []);
 
+    const handleGroupSelection = useCallback((selectedGroup?: string) => {
+        console.log('Group selection from area chart:', selectedGroup);
+        const normalizedGroup = selectedGroup || '';
+        setState(prev => ({ ...prev, selectedGroup: normalizedGroup }));
+    }, []);
+
     // Visualization control handlers
     const handleCoExhibitionCountChange = useCallback((coExhibitionCount: number) => {
         setState(prev => ({ ...prev, coExhibitionCount }));
@@ -777,6 +785,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                     stacked={true}
                                     groupBy={state.groupBy}
                                     coExhibitionCount={state.coExhibitionCount}
+                                    onclick={handleGroupSelection}
                                 />
                             </div>
                         </div>
@@ -806,9 +815,11 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                             coExhibitionCount={state.coExhibitionCount}
                                             groupBy={state.groupBy}
                                             orderBy={state.orderBy}
+                                            selectedGroup={state.selectedGroup}
                                             initCallBack={handleNetworkReady}
                                             requestNode={(node?: number) => handleArtistChange(node || null)}
                                             mouseOverCallBack={handleTimelineCallback}
+                                            arcClickCallback={handleGroupSelection}
                                             syncColors={() => handleColorSync(state.colors)}
                                         />
                                     </div>
@@ -850,6 +861,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                 stacked={true}
                                 groupBy={state.groupBy}
                                 coExhibitionCount={state.coExhibitionCount}
+                                onclick={handleGroupSelection}
                             />
                         </div>
                     </div>
@@ -878,9 +890,11 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                         coExhibitionCount={state.coExhibitionCount}
                                         groupBy={state.groupBy}
                                         orderBy={state.orderBy}
+                                        selectedGroup={state.selectedGroup}
                                         initCallBack={handleNetworkReady}
                                         requestNode={(node?: number) => handleArtistChange(node || null)}
                                         mouseOverCallBack={handleTimelineCallback}
+                                        arcClickCallback={handleGroupSelection}
                                         syncColors={() => handleColorSync(state.colors)}
                                     />
                                 </div>
