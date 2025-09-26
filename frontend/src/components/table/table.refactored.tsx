@@ -49,10 +49,16 @@ const isValidExhibition = (exhibition: Exhibition): boolean => {
 };
 
 const calculatePercentage = (exhibition: MetaExhibition, artistId: number): number => {
-    if (!exhibition || !exhibition.exhibitsItems) return 0;
+    if (!exhibition || !exhibition.exhibitsItems) {
+        console.log('calculatePercentage: No exhibition or exhibitsItems');
+        return 0;
+    }
 
     const totalArtworksExhibited = exhibition.exhibitsItems.length;
-    if (totalArtworksExhibited === 0) return 0;
+    if (totalArtworksExhibited === 0) {
+        console.log('calculatePercentage: No artworks in exhibition');
+        return 0;
+    }
 
     // Count items created by the specific artist - handle BigInt comparison
     const artWorksByArtist = exhibition.exhibitsItems.filter((item: Item) => 
@@ -60,11 +66,16 @@ const calculatePercentage = (exhibition: MetaExhibition, artistId: number): numb
             // Handle both string and number comparison since IDs might be BigInt
             const artistIdStr = String(artist.id);
             const targetIdStr = String(artistId);
-            return artistIdStr === targetIdStr;
+            const matches = artistIdStr === targetIdStr;
+            if (matches) {
+                console.log(`Found match: item artist ID ${artistIdStr} === target ${targetIdStr}`);
+            }
+            return matches;
         })
     ).length;
 
     const percentage = (artWorksByArtist / totalArtworksExhibited) * 100;
+    console.log(`calculatePercentage for artist ${artistId}: ${artWorksByArtist}/${totalArtworksExhibited} = ${percentage.toFixed(2)}%`);
     return Number(percentage.toFixed(2));
 };
 
@@ -138,8 +149,8 @@ const useTableData = (query: DocumentNode, exhibitionIds: number[], baseId: numb
     return { state, setState };
 };
 
-// Table columns configuration
-const createColumns = (): SortableColumn[] => [
+// Table columns configuration - create base columns that can be enhanced with compare column
+const createBaseColumns = (): SortableColumn[] => [
     {
         key: 'startyear',
         label: 'Date',
@@ -173,14 +184,35 @@ const createColumns = (): SortableColumn[] => [
         label: 'Base %',
         sortable: true,
         render: (exhibition) => <span>{exhibition.percentBase || 0}%</span>
-    },
-    {
+    }
+];
+
+// Create columns with optional compare column inserted after Base %
+const createColumns = (includeCompare: boolean = false): SortableColumn[] => {
+    const baseColumns = createBaseColumns();
+    
+    if (includeCompare) {
+        // Insert compare column after Base % (index 4)
+        baseColumns.splice(5, 0, {
+            key: 'percentCompare',
+            label: 'Compare %',
+            sortable: true,
+            render: (exhibition) => (
+                <span>{exhibition.isCommon ? `${exhibition.percentCompare}%` : '-'}</span>
+            )
+        });
+    }
+    
+    // Add Artists column at the end
+    baseColumns.push({
         key: 'artistsExhibitedAt.length',
         label: 'Artists',
         sortable: true,
         render: (exhibition) => <span>{_.uniqBy(exhibition.artistsExhibitedAt, 'id').length}</span>
-    }
-];
+    });
+    
+    return baseColumns;
+};
 
 // Main component
 const TableComponent: React.FC<TableProps> = ({
@@ -195,21 +227,49 @@ const TableComponent: React.FC<TableProps> = ({
     );
 
     const { state, setState } = useTableData(query, exhibitionIds, baseId);
-    const columns = useMemo(() => createColumns(), []);
+    const columns = useMemo(() => createColumns(!!compareWith), [compareWith]);
 
     // Update comparison data when compareWith changes
     useEffect(() => {
-        if (!compareWith || !state.results.exhibitions) return;
+        if (!state.results.exhibitions) return;
+
+        // If compareWith is null, reset all comparison data
+        if (!compareWith) {
+            console.log('Resetting table comparison data');
+            const resetExhibitions = state.results.exhibitions.map((exhibition) => ({
+                ...exhibition,
+                isCommon: false,
+                percentCompare: 0
+            }));
+
+            setState(prev => ({
+                ...prev,
+                results: { ...prev.results, exhibitions: resetExhibitions }
+            }));
+            return;
+        }
+
+        console.log('Updating table comparison data for artist:', compareWith.firstname, compareWith.lastname);
+        console.log('Compare artist ID:', compareWith.id, 'Type:', typeof compareWith.id);
+        console.log('Compare artist exhibitions:', compareWith.exhibitedAtExhibitions?.length || 0);
 
         const updatedExhibitions = state.results.exhibitions.map((exhibition) => {
             const isCommon = compareWith.exhibitedAtExhibitions?.some(
-                (exh: Exhibition) => Number(exh.id) === exhibition.id
+                (exh: Exhibition) => String(exh.id) === String(exhibition.id)
             ) || false;
+
+            const percentCompare = isCommon ? calculatePercentage(exhibition, Number(compareWith.id)) : 0;
+            
+            if (isCommon) {
+                console.log(`Exhibition ${exhibition.id} is common. Calculating percentage for artist ${compareWith.id}:`, percentCompare);
+                console.log('Exhibition items:', exhibition.exhibitsItems?.length || 0);
+                console.log('Exhibition title:', exhibition.title);
+            }
 
             return {
                 ...exhibition,
                 isCommon,
-                percentCompare: isCommon ? calculatePercentage(exhibition, compareWith.id) : 0
+                percentCompare
             };
         });
 
@@ -260,23 +320,7 @@ const TableComponent: React.FC<TableProps> = ({
         }));
     }, [state.results.exhibitions, state.sortDirection, setState]);
 
-    // Reset comparison
-    const handleReset = useCallback(() => {
-        if (!state.results.exhibitions) return;
 
-        const resetExhibitions = state.results.exhibitions
-            .map(exhibition => ({
-                ...exhibition,
-                isCommon: false,
-                percentCompare: 0
-            }))
-            .sort((a, b) => a.startyear - b.startyear);
-
-        setState(prev => ({
-            ...prev,
-            results: { ...prev.results, exhibitions: resetExhibitions }
-        }));
-    }, [state.results.exhibitions, setState]);
 
     // Render table header
     const renderTableHeader = () => (
@@ -301,11 +345,6 @@ const TableComponent: React.FC<TableProps> = ({
                         </div>
                     </th>
                 ))}
-                {compareWith && (
-                    <th scope="col" className="px-2 py-2">
-                        Compare %
-                    </th>
-                )}
             </tr>
         </thead>
     );
@@ -323,11 +362,6 @@ const TableComponent: React.FC<TableProps> = ({
                     {column.render(exhibition)}
                 </td>
             ))}
-            {compareWith && (
-                <td className="px-2 py-2 text-sm">
-                    {exhibition.isCommon ? `${exhibition.percentCompare}%` : '-'}
-                </td>
-            )}
         </tr>
     );
 
@@ -351,18 +385,6 @@ const TableComponent: React.FC<TableProps> = ({
 
     return (
         <div className="table-container h-full flex flex-col">
-            {/* Table controls */}
-            {compareWith && (
-                <div className="table-controls mb-2 flex justify-end flex-shrink-0">
-                    <button
-                        onClick={handleReset}
-                        className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-                    >
-                        Reset Comparison
-                    </button>
-                </div>
-            )}
-            
             {/* Table */}
             <div 
                 className="flex-1 overflow-y-scroll border border-gray-300 rounded"

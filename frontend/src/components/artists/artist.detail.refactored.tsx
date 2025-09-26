@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
 import _ from 'lodash';
+import { useLazyQuery } from '@apollo/client';
 import client from '../apollo/client';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
@@ -13,6 +14,7 @@ import ArtistTimeline from './artist.timeline';
 import ArtistDetailHeader from './artist.detail.header';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
+import GET_ARTIST_BY_NAME from '../../queries/artistByName';
 
 // Types
 interface ArtistDetailProps {
@@ -292,6 +294,10 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     // Custom hooks
     const timelineDimensions = useResizeObserver('timeline-container');
+    
+    // Search functionality
+    const [searchArtists, { data: searchData, loading: searchLoading }] = useLazyQuery(GET_ARTIST_BY_NAME);
+    const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Memoized calculations
     const timelineData = useMemo(() => {
@@ -703,28 +709,105 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     const handleSearchChange = useCallback((searchTerm: string) => {
         setState(prev => ({ ...prev, searchTerm }));
         
-        // Perform search logic here
-        if (searchTerm.length >= 2) {
-            // This would typically involve searching through a list of all artists
-            // For now, we'll use a placeholder empty array
-            setState(prev => ({ ...prev, searchResults: [] }));
-        } else {
-            setState(prev => ({ ...prev, searchResults: [] }));
+        // Clear existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
         }
+        
+        // Clear results if search term is too short
+        if (searchTerm.length < 2) {
+            setState(prev => ({ ...prev, searchResults: [] }));
+            return;
+        }
+        
+        // Debounced search with 250ms delay
+        searchTimeoutRef.current = setTimeout(() => {
+            console.log('Searching for:', searchTerm);
+            searchArtists({
+                variables: { value: searchTerm }
+            });
+        }, 250);
+    }, [searchArtists]);
+
+    // Handle search results
+    useEffect(() => {
+        if (searchData?.artists) {
+            console.log('Search results received:', searchData.artists);
+            setState(prev => ({ 
+                ...prev, 
+                searchResults: searchData.artists 
+            }));
+        }
+    }, [searchData]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
     }, []);
 
-    const handleArtistSelect = useCallback((selectedArtist: Artist) => {
-        // Handle artist selection - could navigate to different artist or add to comparison
-        console.log('Selected artist:', selectedArtist);
-        setState(prev => ({ 
-            ...prev, 
-            searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
-            searchResults: []
-        }));
-    }, []);
+    const handleArtistSelect = useCallback(async (selectedArtist: Artist) => {
+        // Set selected artist as compare artist and load their data
+        console.log('Selected artist for comparison:', selectedArtist);
+        
+        try {
+            loadCallback(true);
+            
+            // Fetch the selected artist's full exhibition data
+            const result = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: selectedArtist.id }
+            });
+
+            const fullArtistData = result.data.artists[0];
+            console.log('Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+            console.log('Compare artist full data:', fullArtistData);
+            console.log('Compare artist ID:', fullArtistData?.id, 'Type:', typeof fullArtistData?.id);
+            
+            // Merge the full exhibition data with the original artist data to preserve other fields
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...fullArtistData,
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            console.log('Enhanced compare artist:', enhancedCompareArtist);
+            
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            
+            loadCallback(false);
+        } catch (error) {
+            console.error('Error loading compare artist data:', error);
+            // Fallback: just set the artist without full exhibition data
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: selectedArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            loadCallback(false);
+        }
+    }, [loadCallback]);
 
     const handleNetworkModeChange = useCallback((networkMode: 'circles' | 'pies') => {
         setState(prev => ({ ...prev, networkMode }));
+    }, []);
+
+    const handleClearComparison = useCallback(() => {
+        console.log('Clearing comparison');
+        setState(prev => ({ 
+            ...prev, 
+            compareWith: null,
+            searchTerm: '' // Also clear search term for clean state
+        }));
     }, []);
 
     return (
@@ -745,6 +828,8 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     onSearchChange={handleSearchChange}
                     searchResults={state.searchResults}
                     onArtistSelect={handleArtistSelect}
+                    compareWith={state.compareWith}
+                    onClearComparison={handleClearComparison}
                     networkMode={state.networkMode}
                     onNetworkModeChange={handleNetworkModeChange}
                     totalExhibitions={state.exhibitionsList.length}

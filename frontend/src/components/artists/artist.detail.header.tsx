@@ -18,6 +18,9 @@ interface ArtistDetailHeaderProps {
     onSearchChange?: (term: string) => void;
     searchResults?: Artist[];
     onArtistSelect?: (artist: Artist) => void;
+    // Comparison functionality
+    compareWith?: Artist | null;
+    onClearComparison?: () => void;
     // Network visualization mode
     networkMode?: 'circles' | 'pies';
     onNetworkModeChange?: (mode: 'circles' | 'pies') => void;
@@ -28,7 +31,6 @@ interface ArtistDetailHeaderProps {
 }
 
 const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
-    artist,
     coExhibitionCount,
     onCoExhibitionCountChange,
     minCoExhibitions = 1,
@@ -41,6 +43,8 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
     onSearchChange,
     searchResults = [],
     onArtistSelect,
+    compareWith,
+    onClearComparison,
     networkMode,
     onNetworkModeChange,
     totalExhibitions,
@@ -204,6 +208,25 @@ const ArtistDetailHeader: React.FC<ArtistDetailHeaderProps> = ({
                                         ))}
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Comparison Status */}
+                    {compareWith && onClearComparison && (
+                        <div className="flex items-center gap-2">
+                            <label className="text-black font-bold text-xs whitespace-nowrap">Comparing:</label>
+                            <div className="flex items-center gap-1 bg-yellow-100 border-2 border-yellow-400 px-2 py-1 rounded">
+                                <span className="text-black font-bold text-xs">
+                                    {`${compareWith.firstname || ''} ${compareWith.lastname || ''}`.trim()}
+                                </span>
+                                <button
+                                    onClick={onClearComparison}
+                                    className="text-black font-bold hover:bg-yellow-200 px-1 rounded"
+                                    title="Clear comparison"
+                                >
+                                    ×
+                                </button>
                             </div>
                         </div>
                     )}
