@@ -627,14 +627,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     onEgoNetworkHover(d.year);
                 }
                 
-                // Remove any existing tooltips first
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                }).remove();
+                // Remove any existing timeline tooltips first
+                d3.selectAll('.timeline-tooltip').remove();
                 
                 // Create tooltip with ego network styling
                 const tooltip = d3.select('body').append('div')
+                    .attr('class', 'timeline-tooltip')
                     .style('position', 'absolute')
                     .style('background-color', 'black')
                     .style('color', 'white')
@@ -657,10 +655,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 const x = event.clientX;
                 const y = event.clientY;
                 
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                })
+                d3.selectAll('.timeline-tooltip')
                 .style('left', `${x + 15}px`)
                 .style('top', `${y - 10}px`);
             })
@@ -674,10 +669,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }
                 
                 // Remove tooltip
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                }).remove();
+                d3.selectAll('.timeline-tooltip').remove();
             });
 
         // Bottom semi-circles (average items) - white with black outline like in screenshot
@@ -727,14 +719,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     onEgoNetworkHover(d.year);
                 }
                 
-                // Remove any existing tooltips first
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                }).remove();
+                // Remove any existing timeline tooltips first
+                d3.selectAll('.timeline-tooltip').remove();
                 
                 // Create tooltip with ego network styling
                 const tooltip = d3.select('body').append('div')
+                    .attr('class', 'timeline-tooltip')
                     .style('position', 'absolute')
                     .style('background-color', 'black')
                     .style('color', 'white')
@@ -757,10 +747,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 const x = event.clientX;
                 const y = event.clientY;
                 
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                })
+                d3.selectAll('.timeline-tooltip')
                 .style('left', `${x + 15}px`)
                 .style('top', `${y - 10}px`);
             })
@@ -774,10 +761,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }
                 
                 // Remove tooltip
-                d3.selectAll('body > div').filter(function() {
-                    return d3.select(this).style('position') === 'absolute' && 
-                           d3.select(this).style('background-color') === 'black';
-                }).remove();
+                d3.selectAll('.timeline-tooltip').remove();
             });
 
         // Compare artist semi-circles if data exists
@@ -830,14 +814,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                         onEgoNetworkHover(d.year);
                     }
                     
-                    // Remove any existing tooltips first
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    }).remove();
+                    // Remove any existing timeline tooltips first
+                    d3.selectAll('.timeline-tooltip').remove();
                     
                     // Create tooltip with ego network styling
                     const tooltip = d3.select('body').append('div')
+                        .attr('class', 'timeline-tooltip')
                         .style('position', 'absolute')
                         .style('background-color', 'black')
                         .style('color', 'white')
@@ -860,10 +842,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     const x = event.clientX;
                     const y = event.clientY;
                     
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    })
+                    d3.selectAll('.timeline-tooltip')
                     .style('left', `${x + 15}px`)
                     .style('top', `${y - 10}px`);
                 })
@@ -877,10 +856,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     }
                     
                     // Remove tooltip
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    }).remove();
+                    d3.selectAll('.timeline-tooltip').remove();
                 });
 
             // Compare bottom semi-circles (average items) - light gray with dashed outline
@@ -931,14 +907,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                         onEgoNetworkHover(d.year);
                     }
                     
-                    // Remove any existing tooltips first
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    }).remove();
+                    // Remove any existing timeline tooltips first
+                    d3.selectAll('.timeline-tooltip').remove();
                     
                     // Create tooltip with ego network styling
                     const tooltip = d3.select('body').append('div')
+                        .attr('class', 'timeline-tooltip')
                         .style('position', 'absolute')
                         .style('background-color', 'black')
                         .style('color', 'white')
@@ -961,10 +935,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     const x = event.clientX;
                     const y = event.clientY;
                     
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    })
+                    d3.selectAll('.timeline-tooltip')
                     .style('left', `${x + 15}px`)
                     .style('top', `${y - 10}px`);
                 })
@@ -978,10 +949,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     }
                     
                     // Remove tooltip
-                    d3.selectAll('body > div').filter(function() {
-                        return d3.select(this).style('position') === 'absolute' && 
-                               d3.select(this).style('background-color') === 'black';
-                    }).remove();
+                    d3.selectAll('.timeline-tooltip').remove();
                 });
         }
 
