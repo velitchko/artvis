@@ -11,6 +11,9 @@ interface ArtistTimelineProps {
     width?: number;
     height?: number;
     onYearHover?: (year: number, exhibitions: Exhibition[]) => void;
+    highlightedYear?: number | null;
+    onEgoNetworkYearHighlight?: number | null; // Match parent component's prop name
+    onEgoNetworkHover?: (year: number | null) => void;
     className?: string;
 }
 
@@ -19,8 +22,11 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
     exhibitionsList,
     compareArtist,
     width = 800,
-    height: propHeight = 300,
+    height: propHeight = 150,
     onYearHover,
+    highlightedYear,
+    onEgoNetworkYearHighlight,
+    onEgoNetworkHover,
     className = "w-full h-full"
 }) => {
     console.log('=== ARTIST TIMELINE RENDER ===');
@@ -35,7 +41,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
     const [containerWidth, setContainerWidth] = useState(width);
 
     // Dynamic height based on whether we have a compare artist
-    const compareArtistHeight = compareArtist ? 60 : 0;
+    const compareArtistHeight = compareArtist ? 30 : 0;
     const height = propHeight + compareArtistHeight;
 
     // Update width based on container size
@@ -57,7 +63,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
     const actualHeight = height;
 
     // Constants from original - adjust margins for responsive design
-    const margin = { top: 80, bottom: 60, left: 60, right: 60 }; // Reduced bottom margin for cleaner legend
+    const margin = { top: 40, bottom: 30, left: 60, right: 60 }; // Reduced margins for more compact display
     const minYear = 1905;
     const maxYear = 1915;
     const innerWidth = actualWidth - margin.left - margin.right;
@@ -558,17 +564,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }) as string;
             })
             .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-            .style('cursor', 'pointer')
-            .on('mouseover', function(event, d) {
-                d3.select(this).attr('fill-opacity', 0.7);
-                if (onYearHover) {
-                    const yearExhibitions = exhibitionsList.filter(ex => ex.startyear === d.year);
-                    onYearHover(d.year, yearExhibitions);
-                }
-            })
-            .on('mouseout', function() {
-                d3.select(this).attr('fill-opacity', 1);
-            });
+            .style('cursor', 'pointer');
 
         // Bottom semi-circles (average items) - white with black outline like in screenshot
         svg.selectAll('.avg-half-circle')
@@ -590,13 +586,52 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }) as string;
             })
             .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-            .style('cursor', 'pointer')
-            .on('mouseover', function(event, d) {
-                d3.select(this).attr('fill', 'white');
-            })
-            .on('mouseout', function() {
-                d3.select(this).attr('fill', 'white');
-            });
+            .style('cursor', 'pointer');
+
+        // SIMPLE HOVER SYSTEM - START FROM SCRATCH
+        console.log('=== CREATING SIMPLE HOVER SYSTEM ===');
+        
+        timelineData.forEach(d => {
+            const yearX = xScale(d.year);
+            console.log(`Year ${d.year}: x=${yearX}`);
+            
+            svg.append('rect')
+                .attr('x', yearX - 20)
+                .attr('y', 0)
+                .attr('width', 40)
+                .attr('height', height)
+                .attr('fill', 'transparent')
+                .style('cursor', 'pointer')
+                .on('mouseenter', function() {
+                    console.log(`TIMELINE HOVER: ${d.year}`);
+                    
+                    // Show timeline line
+                    svg.append('line')
+                        .attr('class', 'hover-line')
+                        .attr('x1', yearX)
+                        .attr('x2', yearX)
+                        .attr('y1', margin.top)
+                        .attr('y2', height - margin.bottom)
+                        .attr('stroke', '#ff6b35')
+                        .attr('stroke-width', 3)
+                        .attr('stroke-dasharray', '8,4')
+                        .attr('opacity', 0.8);
+                    
+                    // Notify ego network to highlight corresponding year ring
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(d.year);
+                    }
+                })
+                .on('mouseleave', function() {
+                    console.log(`TIMELINE LEAVE: ${d.year}`);
+                    svg.selectAll('.hover-line').remove();
+                    
+                    // Notify ego network to remove highlight
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(null);
+                    }
+                });
+        });
 
         // Compare artist semi-circles if data exists
         if (compareTimelineData && compareTimelineData.length > 0) {
@@ -647,11 +682,39 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
                 .style('cursor', 'pointer');
         }
+
     }, [timelineData, scales, width, height, margin, onYearHover, exhibitionsList]);
 
     useEffect(() => {
         drawTimeline();
     }, [drawTimeline]);
+
+    // Handle ego network hover - show timeline line for specific year
+    useEffect(() => {
+        if (!svgRef.current || !scales.xScale) return;
+
+        const svg = d3.select(svgRef.current);
+        
+        // Remove any existing ego network highlight line
+        svg.selectAll('.ego-network-line').remove();
+
+        // Show line if ego network is hovering a year
+        if (onEgoNetworkYearHighlight !== null && onEgoNetworkYearHighlight !== undefined) {
+            const yearX = scales.xScale(onEgoNetworkYearHighlight);
+            
+            svg.append('line')
+                .attr('class', 'ego-network-line')
+                .attr('x1', yearX)
+                .attr('x2', yearX)
+                .attr('y1', margin.top)
+                .attr('y2', height - margin.bottom)
+                .attr('stroke', '#ff6b35')
+                .attr('stroke-width', 3)
+                .attr('stroke-dasharray', '8,4')
+                .attr('opacity', 0.8)
+                .style('pointer-events', 'none');
+        }
+    }, [onEgoNetworkYearHighlight, scales, height, margin]);
 
     return (
         <div ref={containerRef} className={className} style={{ minHeight: height }}>

@@ -40,6 +40,8 @@ interface ArtistDetailState {
     groupBy: string;
     orderBy: string;
     selectedGroup: string; // For cross-component group selection
+    // Timeline highlighting
+    highlightedYear: number | null;
     // Search functionality
     searchTerm: string;
     searchResults: Artist[];
@@ -300,6 +302,8 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         groupBy: 'country',
         orderBy: 'coex', 
         selectedGroup: '', // For cross-component group selection
+        // Timeline highlighting
+        highlightedYear: null,
         // Search functionality
         searchTerm: '',
         searchResults: []
@@ -694,9 +698,18 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     }, [loadCallback]);
 
     const handleTimelineCallback = useCallback((year: number) => {
-        // Implementation for timeline interaction callbacks
+        // Set the highlighted year for timeline visualization
+        setState(prev => ({ ...prev, highlightedYear: year }));
         if (DEBUG) {
             console.log('Timeline callback for year:', year);
+        }
+    }, []);
+
+    const handleTimelineMouseOut = useCallback(() => {
+        // Clear the highlighted year when mouse leaves
+        setState(prev => ({ ...prev, highlightedYear: null }));
+        if (DEBUG) {
+            console.log('Timeline callback cleared');
         }
     }, []);
 
@@ -883,8 +896,8 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {/* Desktop: 2x2 Grid Layout */}
                 <div className="hidden lg:flex lg:flex-col lg:h-full lg:gap-1">
-                    {/* Top Row: Timeline + Area Chart - 1/3 height */}
-                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 35%' }}>
+                    {/* Top Row: Timeline + Area Chart - Compact height */}
+                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 20%' }}>
                         {/* Timeline Section - Top Left */}
                         <div className="timeline-section h-full">
                             <div id="timeline-container" className="w-full h-full">
@@ -893,7 +906,15 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                     exhibitionsList={state.exhibitionsList}
                                     compareArtist={state.compareWith}
                                     width={800}
-                                    height={280}
+                                    highlightedYear={state.highlightedYear}
+                                    onEgoNetworkYearHighlight={state.highlightedYear}
+                                    onEgoNetworkHover={(year: number | null) => {
+                                        if (year !== null) {
+                                            handleTimelineCallback(year);
+                                        } else {
+                                            handleTimelineMouseOut();
+                                        }
+                                    }}
                                     onYearHover={(year: number, exhibitions: any[]) => {
                                         handleTimelineCallback(year);
                                         // Could add more year-specific handling here
@@ -943,9 +964,11 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                             groupBy={state.groupBy}
                                             orderBy={state.orderBy}
                                             selectedGroup={state.selectedGroup}
+                                            highlightedYear={state.highlightedYear}
                                             initCallBack={handleNetworkReady}
                                             requestNode={(node?: number) => handleArtistChange(node || null)}
                                             mouseOverCallBack={handleTimelineCallback}
+                                            mouseOutCallBack={handleTimelineMouseOut}
                                             arcClickCallback={handleGroupSelection}
                                             syncColors={() => handleColorSync(state.colors)}
                                         />
@@ -963,7 +986,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 {/* Mobile: Linear Stacked Layout with Scroll */}
                 <div className="lg:hidden flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4">
                     {/* Timeline Section */}
-                    <div className="timeline-section flex-shrink-0" style={{ height: '300px' }}>
+                    <div className="timeline-section flex-shrink-0" style={{ height: '200px' }}>
                         <div id="timeline-container-mobile" className="w-full h-full">
                             <ArtistTimeline 
                                 artist={artist}
@@ -971,6 +994,15 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                 compareArtist={state.compareWith}
                                 width={800}
                                 height={280}
+                                highlightedYear={state.highlightedYear}
+                                onEgoNetworkYearHighlight={state.highlightedYear}
+                                onEgoNetworkHover={(year: number | null) => {
+                                    if (year !== null) {
+                                        handleTimelineCallback(year);
+                                    } else {
+                                        handleTimelineMouseOut();
+                                    }
+                                }}
                                 onYearHover={(year: number, exhibitions: any[]) => {
                                     handleTimelineCallback(year);
                                 }}
@@ -980,7 +1012,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     </div>
 
                     {/* Area Chart Section */}
-                    <div className="area-chart-section flex-shrink-0" style={{ height: '280px' }}>
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '120px' }}>
                         <div id="area-chart-container-mobile" className="w-full h-full">
                             <AreaChartComponent
                                 links={state.links}
@@ -1018,9 +1050,11 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                         groupBy={state.groupBy}
                                         orderBy={state.orderBy}
                                         selectedGroup={state.selectedGroup}
+                                        highlightedYear={state.highlightedYear}
                                         initCallBack={handleNetworkReady}
                                         requestNode={(node?: number) => handleArtistChange(node || null)}
                                         mouseOverCallBack={handleTimelineCallback}
+                                        mouseOutCallBack={handleTimelineMouseOut}
                                         arcClickCallback={handleGroupSelection}
                                         syncColors={() => handleColorSync(state.colors)}
                                     />

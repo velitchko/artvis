@@ -19,9 +19,11 @@ interface EgoNetworkProps {
     groupBy?: string;
     orderBy?: string;
     selectedGroup?: string; // External group selection for highlighting
+    highlightedYear?: number | null; // Year to highlight from timeline
     initCallBack?: () => void;
     requestNode?: (node?: number) => void;
     mouseOverCallBack?: (year: number) => void;
+    mouseOutCallBack?: () => void;
     groupByCallBack?: () => void;
     arcClickCallback?: (group?: string) => void;
     filterCallback?: () => void;
@@ -196,9 +198,11 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     groupBy: propGroupBy,
     orderBy: propOrderBy,
     selectedGroup: externalSelectedGroup,
+    highlightedYear,
     initCallBack,
     requestNode,
     mouseOverCallBack,
+    mouseOutCallBack,
     groupByCallBack,
     arcClickCallback,
     filterCallback,
@@ -297,6 +301,31 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             initCallBack?.();
         }
     }, [state.dimensions, initCallBack]);
+
+    // Highlight year ring when timeline sends highlightedYear
+    useEffect(() => {
+        if (!isInitializedRef.current) return;
+        
+        // Reset all year rings to default style
+        d3.selectAll('.circle-line')
+            .attr('stroke', '#e3e3e3')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', 'none')
+            .attr('opacity', 1);
+
+        // Highlight specific year ring if provided
+        if (highlightedYear !== null && highlightedYear !== undefined) {
+            const yearRing = d3.select(`#circle-${highlightedYear}`);
+            if (!yearRing.empty()) {
+                yearRing
+                    .attr('stroke', '#ff6b35')
+                    .attr('stroke-width', 3)
+                    .attr('stroke-dasharray', '8,4')
+                    .attr('opacity', 1)
+                    .lower(); // Ensure it's underneath everything
+            }
+        }
+    }, [highlightedYear]);
 
     // Callbacks
     const handleZoom = useCallback((event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
@@ -475,14 +504,20 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
     const setupScales = useCallback(() => {
         const scales = scalesRef.current;
+        const { width, height } = state.dimensions;
+        
+        // Calculate responsive radius range based on container size
+        const minDimension = Math.min(width, height);
+        const maxRadius = Math.max(80, minDimension * 0.40); // 40% of smaller dimension (increased from 28%), minimum 80px
+        const minRadius = Math.max(60, minDimension * 0.08); // 8% of smaller dimension (reduced from 15%), minimum 60px
         
         scales.r.domain([YEAR_RANGE.min, YEAR_RANGE.max])
-            .range([100, 400]);
+            .range([minRadius, maxRadius]);
 
         scales.angle.range([0, 2 * Math.PI]);
         scales.nodeR.range([1, 6]);
         scales.outerNodeR.range([1, 6]);
-    }, []);
+    }, [state.dimensions]);
 
     const processAndRenderData = useCallback(() => {
         const currentCoEx = coExhibitionCount ?? state.coEx;
@@ -775,6 +810,10 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         // Use fresh colors if provided, otherwise fallback to state
         const colorsToUse = currentColors || state.colors.colors;
 
+        // Calculate shared dimensions for positioning
+        const minDimension = Math.min(width, height);
+        const labelOffset = Math.max(12, minDimension * 0.05); // Responsive label offset: 5% of smaller dimension, minimum 12px
+
         // Helper functions
         const getAngle = (index: number): number => {
             return scales.angle(index);
@@ -788,6 +827,10 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             return Math.sin(angle) * (scales.r(date) + offset);
         };
 
+        // Calculate unique links and theta for positioning
+        const uniqueLinks = _.uniqBy(linksRef.current, (node: Link) => node.targetId);
+        thetaRef.current = 2 * Math.PI / uniqueLinks.length;
+
         const handleMouseOver = (event: PointerEvent) => {
             const id = (event.target as SVGCircleElement).id;
             const data = d3.select(`#${id}`).datum() as Link;
@@ -796,6 +839,21 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
 
             const x = event.clientX;
             const y = event.clientY;
+
+            // Highlight the corresponding year ring with cool dashed effect
+            const year = data.props.data.year;
+            const yearRing = d3.select(`#circle-${year}`);
+            if (!yearRing.empty()) {
+                yearRing
+                    .attr('stroke', '#ff6b35')
+                    .attr('stroke-width', 3)
+                    .attr('stroke-dasharray', '8,4')
+                    .attr('opacity', 1)
+                    .lower(); // Ensure it's underneath everything
+            }
+
+            // Notify timeline to show corresponding year line
+            mouseOverCallBack?.(year);
 
             // Calculate smart tooltip position with extra offset to avoid cursor overlap
             const tooltipPos = getTooltipPosition(x, y, 180, 80, 20, -25);
@@ -830,8 +888,20 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         };
 
         const handleMouseOut = (event: PointerEvent) => {
+            // Reset year ring highlighting
+            d3.selectAll('.circle-line')
+                .attr('stroke', '#e3e3e3')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', 'none')
+                .attr('opacity', 1);
+
+            // Call timeline callback to clear highlighting
+            if (mouseOutCallBack) {
+                mouseOutCallBack();
+            }
+
             // Remove all tooltips
-            d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
+            d3.selectAll('.label-tooltip, .outer-bar-tooltip, .arc-tooltip').remove();
             d3.selectAll('body > div').filter(function() {
                 return d3.select(this).style('position') === 'absolute' && 
                        (d3.select(this).style('background-color') === 'black' || 
@@ -846,9 +916,329 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('fill', 'transparent');
         };
 
-        // Calculate theta for positioning
-        const uniqueLinks = _.uniqBy(linksRef.current, (node: Link) => node.targetId);
-        thetaRef.current = 2 * Math.PI / uniqueLinks.length;
+        // Draw cumulative count bars FIRST (so they appear behind circles and labels)
+        const { outerCircle } = containersRef.current;
+        if (outerCircle) {
+            // Calculate sums for each unique artist
+            const sums = _.uniqBy(linksRef.current.map((link: Link) => {
+                const sum = linksRef.current.filter((l: Link) => l.targetId === link.targetId)
+                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+                return { targetId: link.targetId, sum: sum };
+            }), (node: { targetId: number, sum: number }) => node.targetId);
+
+            // Set scale for bar length based on co-exhibition counts
+            const sumValues = sums.map(node => node.sum);
+            const minDimension = Math.min(state.dimensions.width, state.dimensions.height);
+            const maxBarLength = Math.max(15, minDimension * 0.06); // Maximum bar length: 6% of container
+            const barLengthScale = d3.scaleLinear()
+                .domain([Math.min(...sumValues), Math.max(...sumValues)])
+                .range([3, maxBarLength]); // Minimum 3px, responsive maximum
+                
+            const barWidth = Math.max(3, minDimension * 0.008); // Bar width: 0.8% of container, minimum 3px
+
+            // Draw radial bars
+            outerCircle.selectAll('rect')
+                .data(uniqueLinks)
+                .join('rect')
+                .attr('id', (d: Link) => `outer-bar-${d.target.id}`)
+                .transition().duration(250)
+                .attr('width', barWidth)
+                .attr('height', (d: Link) => {
+                    // Sum up all counts of links with same targetId
+                    const sum = linksRef.current.filter((link: Link) => link.targetId === d.targetId)
+                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
+                    return barLengthScale(sum);
+                })
+                .attr('x', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    const baseX = getXCoordinates(YEAR_RANGE.max, angle, labelOffset) + width / 2;
+                    return baseX - barWidth / 2; // Center the bar
+                })
+                .attr('y', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    const baseY = getYCoordinates(YEAR_RANGE.max, angle, labelOffset) + height / 2;
+                    // Bar starts from behind the label position and grows outward
+                    return baseY;
+                })
+                .attr('transform', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    const centerX = getXCoordinates(YEAR_RANGE.max, angle, labelOffset) + width / 2;
+                    const centerY = getYCoordinates(YEAR_RANGE.max, angle, labelOffset) + height / 2;
+                    // Rotate bar to align with the ray direction
+                    const angleDegrees = (angle * 180) / Math.PI;
+                    return `rotate(${angleDegrees - 90}, ${centerX}, ${centerY})`;
+                })
+                .attr('opacity', 0.75)
+                .attr('fill', (d: Link) => colorsToUse.get(d.props.group) || 'black')
+                .style('cursor', 'pointer');
+
+            // Add bar event handlers
+            outerCircle.selectAll('rect')
+                .on('mouseover', (event: any, d: any) => {
+                    if (!state.selection) {
+                        // Highlight current bar
+                        d3.select(`#outer-bar-${d.target.id}`)
+                            .attr('stroke', 'black')
+                            .attr('stroke-width', 1)
+                            .attr('stroke-opacity', 1);
+
+                        // Highlight all connected circles
+                        const connectedLinks = linksRef.current.filter((link: Link) => link.targetId === d.targetId);
+                        connectedLinks.forEach((link: Link) => {
+                            const circleId = `node-${link.target.id}-${link.props.data.year}`;
+                            d3.select(`#${circleId}`)
+                                .attr('stroke', 'black')
+                                .attr('stroke-width', 2);
+                        });
+
+                        // Create tooltip for cumulative count circle
+                        const totalExhibitions = connectedLinks.reduce((acc, link) => acc + link.props.data.count, 0);
+                        const totalYears = new Set(connectedLinks.map(link => link.props.data.year)).size;
+                        const birthYear = d.target.props?.data?.birthyear || 'Unknown';
+                        const country = d.target.props?.data?.country || 'Unknown';
+                        
+                        // Calculate smart tooltip position
+                        const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 220, 160, 15, -10);
+                        
+                        d3.select('body').append('div')
+                            .attr('class', 'outer-bar-tooltip')
+                            .style('position', 'absolute')
+                            .style('background-color', 'rgba(0, 0, 0, 0.9)')
+                            .style('color', 'white')
+                            .style('padding', '10px')
+                            .style('border-radius', '5px')
+                            .style('font-size', '12px')
+                            .style('left', `${tooltipPos.left}px`)
+                            .style('top', `${tooltipPos.top}px`)
+                            .style('z-index', '1000')
+                            .style('pointer-events', 'none')
+                            .style('box-shadow', '0 2px 5px rgba(0,0,0,0.3)')
+                            .style('max-width', '220px')
+                            .html(`
+                                <div><strong>${d.target.name}</strong></div>
+                                <div>Born: ${birthYear}</div>
+                                <div>Country: ${country}</div>
+                                <div>Group: ${d.props.group}</div>
+                                <div><strong>Total co-exhibitions: ${totalExhibitions}</strong></div>
+                                <div>Years active: ${totalYears}</div>
+                                <div style="margin-top: 5px; font-size: 10px; opacity: 0.8;">Click to select artist</div>
+                            `);
+                    }
+                })
+                .on('mouseout', (event: any, d: any) => {
+                    // Remove outer circle tooltip
+                    d3.selectAll('.outer-bar-tooltip').remove();
+
+                    if (!state.selection) {
+                        // Reset bar styles
+                        d3.select(`#outer-bar-${d.target.id}`)
+                            .attr('stroke', 'none')
+                            .attr('stroke-width', 0);
+
+                        // Reset inner circle styles
+                        artist.selectAll('circle')
+                            .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
+                            .attr('stroke-width', 2);
+                    }
+                })
+                .on('click', (event: any, d: any) => {
+                    // Remove any existing tooltips
+                    d3.selectAll('.label-tooltip, .outer-bar-tooltip, .arc-tooltip').remove();
+                    
+                    // Set state.selection to true
+                    setState(prev => ({ ...prev, selection: true }));
+
+                    // ctrl+click to deselect
+                    if (event.ctrlKey) {
+                        setState(prev => ({ ...prev, selection: false }));
+
+                        // Reset all styles
+                        outerCircle.selectAll('rect').attr('stroke', 'none').attr('stroke-width', 0);
+                        artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black').attr('stroke-width', 2);
+                        artist.selectAll('circle').attr('opacity', 0.75);
+                        outerCircle.selectAll('.artist-label').attr('opacity', 1);
+
+                        requestNode?.();
+                        return;
+                    }
+
+                    console.log('Clicked outer circle:', d.target.name, 'ID:', d.targetId);
+
+                    if (!d) return;
+
+                    requestNode?.(d.targetId);
+                });
+
+            // Draw artist labels in the same container (so they appear on top of bars)
+            const labelSelection = outerCircle.selectAll('.artist-label')
+                .data(uniqueLinks)
+                .join('text')
+                .attr('class', 'artist-label')
+                .attr('id', (d: Link) => `artist-label-${d.target.id}`)
+                .attr('x', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    return getXCoordinates(YEAR_RANGE.max, angle, labelOffset) + width / 2;
+                })
+                .attr('y', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    return getYCoordinates(YEAR_RANGE.max, angle, labelOffset) + height / 2;
+                })
+                .attr('transform', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    const x2 = getXCoordinates(YEAR_RANGE.max, angle, labelOffset) + width / 2;
+                    const y2 = getYCoordinates(YEAR_RANGE.max, angle, labelOffset) + height / 2;
+
+                    // Convert angle to degrees for rotation
+                    let rotationAngleDegrees = (angle * 180) / Math.PI;
+
+                    // Adjust for readability - if text would be upside down, rotate it 180 degrees
+                    if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
+                        rotationAngleDegrees += 180;
+                    }
+
+                    return `rotate(${rotationAngleDegrees}, ${x2}, ${y2})`;
+                })
+                .attr('text-anchor', (d: Link) => {
+                    const angle = getAngle(d.props.originalIndex);
+                    let rotationAngleDegrees = (angle * 180) / Math.PI;
+                    
+                    // Normalize angle to 0-360
+                    if (rotationAngleDegrees < 0) rotationAngleDegrees += 360;
+                    
+                    // Determine text anchor based on angle
+                    if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
+                        return 'end'; // Text flows from right to left when rotated
+                    } else {
+                        return 'start'; // Text flows from left to right
+                    }
+                })
+                .attr('font-size', `${Math.max(8, minDimension * 0.012)}px`) // Responsive font size: 1.2% of container, minimum 8px
+                .attr('fill', 'black')
+                .attr('stroke', 'white')
+                .attr('stroke-width', '0.5px')
+                .attr('paint-order', 'stroke')
+                .attr('dy', '0.35em')
+                .text((d: Link) => {
+                    // Show only last name for cleaner look
+                    const name = d.target.name;
+                    const parts = name.split(' ');
+                    if (parts.length > 1) {
+                        return parts[parts.length - 1]; // Return last part (surname)
+                    }
+                    return name; // If only one word, return as is
+                })
+                .style('cursor', 'pointer');
+
+            // Add click and hover events to labels
+            labelSelection
+                .on('mouseover', (event: PointerEvent, d: Link) => {
+                    // Set state.selection to true
+                    setState(prev => ({ ...prev, selection: true }));
+
+                    // Reset font weight of all labels
+                    outerCircle.selectAll('.artist-label').attr('font-weight', 'normal');
+
+                    // Make current label bold
+                    d3.select(`#artist-label-${d.target.id}`).attr('font-weight', 'bold');
+
+                    // Highlight current node
+                    const circles = artist.selectAll('circle').filter((circleData: any) => circleData.targetId === d.targetId);
+                    circles.attr('stroke', 'black').attr('stroke-width', 2).attr('stroke-opacity', 1);
+
+                    // Highlight all links with same targetId 
+                    const connectedLinks = linksRef.current.filter((link: Link) => link.targetId === d.targetId);
+                    connectedLinks.forEach((link: Link) => {
+                        const circleId = `node-${link.target.id}-${link.props.data.year}`;
+                        const circle = d3.select(`#${circleId}`);
+                        if (!circle.empty()) {
+                            circle.attr('stroke', 'black').attr('stroke-width', 2);
+                        }
+                    });
+
+                    // Create tooltip for label
+                    const totalExhibitions = connectedLinks.reduce((acc, link) => acc + link.props.data.count, 0);
+                    const birthYear = d.target.props?.data?.birthyear || 'Unknown';
+                    const country = d.target.props?.data?.country || 'Unknown';
+                    
+                    // Calculate smart tooltip position
+                    const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 200, 130, 15, -10);
+                    
+                    d3.select('body').append('div')
+                        .attr('class', 'label-tooltip')
+                        .style('position', 'absolute')
+                        .style('background-color', 'black')
+                        .style('color', 'white')
+                        .style('padding', '8px')
+                        .style('border-radius', '5px')
+                        .style('font-size', '12px')
+                        .style('left', `${tooltipPos.left}px`)
+                        .style('top', `${tooltipPos.top}px`)
+                        .style('z-index', '1000')
+                        .style('pointer-events', 'none')
+                        .style('max-width', '200px')
+                        .html(`
+                            <div><strong>${d.target.name}</strong></div>
+                            <div>Born: ${birthYear}</div>
+                            <div>Country: ${country}</div>
+                            <div>Total co-exhibitions: ${totalExhibitions}</div>
+                            <div>Group: ${d.props.group}</div>
+                        `);
+                })
+                .on('mouseout', (event: PointerEvent, d: Link) => {
+                    // Remove label tooltip
+                    d3.selectAll('.label-tooltip').remove();
+
+                    // Reset styles only if no selection is active
+                    if (!state.selection) {
+                        outerCircle.selectAll('.artist-label').attr('font-weight', 'normal');
+                        artist.selectAll('circle')
+                            .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
+                            .attr('stroke-width', 2)
+                            .attr('stroke-opacity', 1);
+                    }
+                })
+                .on('click', (event: PointerEvent, d: Link) => {
+                    // Remove any existing tooltips
+                    d3.selectAll('.label-tooltip, .outer-bar-tooltip, .arc-tooltip').remove();
+                    
+                    // Set state.selection to true
+                    setState(prev => ({ ...prev, selection: true }));
+
+                    // Reset font weight of all labels
+                    outerCircle.selectAll('.artist-label').attr('font-weight', 'normal');
+
+                    // ctrl+click to deselect
+                    if (event.ctrlKey) {
+                        // Set state.selection to false
+                        setState(prev => ({ ...prev, selection: false }));
+
+                        // Unhighlight all nodes 
+                        artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black');
+                        artist.selectAll('circle').attr('stroke-width', 2);
+
+                        // Reset all labels font weight to normal
+                        outerCircle.selectAll('.artist-label').attr('font-weight', 'normal');
+
+                        // Reset opacity of all nodes
+                        artist.selectAll('circle').attr('opacity', 0.75);
+
+                        // Reset opacity of labels
+                        outerCircle.selectAll('.artist-label').attr('opacity', 1);
+
+                        requestNode?.();
+                        return;
+                    }
+
+                    console.log('Clicked artist:', d.target.name, 'ID:', d.targetId);
+
+                    if (!d) return;
+
+                    requestNode?.(d.targetId);
+
+                    // Set current label font weight to bold
+                    d3.select(`#artist-label-${d.target.id}`).attr('font-weight', 'bold').attr('opacity', 1);
+                });
+        }
 
         // Draw artist circles with blooming flower animation
         const circles = artist.selectAll('circle')
@@ -919,7 +1309,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 setState(prev => ({ ...prev, selection: true }));
 
                 // Reset font weight of all labels
-                artist.selectAll('.artist-label').attr('font-weight', 'normal');
+                outerCircle?.selectAll('.artist-label').attr('font-weight', 'normal');
 
                 // ctrl+click to deselect
                 if (event.ctrlKey) {
@@ -931,13 +1321,13 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     artist.selectAll('circle').attr('stroke-width', 2);
 
                     // Reset all labels font weight to normal
-                    artist.selectAll('.artist-label').attr('font-weight', 'normal');
+                    outerCircle?.selectAll('.artist-label').attr('font-weight', 'normal');
 
                     // Reset opacity of all nodes
                     artist.selectAll('circle').attr('opacity', 0.75);
 
                     // Reset opacity of labels
-                    artist.selectAll('.artist-label').attr('opacity', 1);
+                    outerCircle?.selectAll('.artist-label').attr('opacity', 1);
 
                     requestNode?.();
                     return;
@@ -953,312 +1343,6 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 // Set current label font weight to bold
                 const label = d3.select(`#artist-label-${data.target.id}`);
                 if (label) label.attr('font-weight', 'bold').attr('opacity', 1);
-            });
-
-        // Draw cumulative count circles (outer circles)
-        const { outerCircle } = containersRef.current;
-        if (outerCircle) {
-            // Calculate sums for each unique artist
-            const sums = _.uniqBy(linksRef.current.map((link: Link) => {
-                const sum = linksRef.current.filter((l: Link) => l.targetId === link.targetId)
-                    .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-                return { targetId: link.targetId, sum: sum };
-            }), (node: { targetId: number, sum: number }) => node.targetId);
-
-            // Set outer node scale domain
-            const sumValues = sums.map(node => node.sum);
-            scales.outerNodeR.domain([Math.min(...sumValues), Math.max(...sumValues)]);
-
-            // Draw outer circles
-            outerCircle.selectAll('circle')
-                .data(uniqueLinks)
-                .join('circle')
-                .attr('id', (d: Link) => `outer-circle-${d.target.id}`)
-                .transition().duration(250)
-                .attr('r', (d: Link) => {
-                    // Sum up all counts of links with same targetId
-                    const sum = linksRef.current.filter((link: Link) => link.targetId === d.targetId)
-                        .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-                    return scales.outerNodeR(sum);
-                })
-                .attr('cx', (d: Link) => {
-                    const angle = getAngle(d.props.originalIndex);
-                    return getXCoordinates(YEAR_RANGE.max, angle, 40) + width / 2;
-                })
-                .attr('cy', (d: Link) => {
-                    const angle = getAngle(d.props.originalIndex);
-                    return getYCoordinates(YEAR_RANGE.max, angle, 40) + height / 2;
-                })
-                .attr('opacity', 0.75)
-                .attr('fill', (d: Link) => colorsToUse.get(d.props.group) || 'black')
-                .style('cursor', 'pointer');
-
-            // Add outer circle event handlers
-            outerCircle.selectAll('circle')
-                .on('mouseover', (event: any, d: any) => {
-                    if (!state.selection) {
-                        // Highlight current outer circle
-                        d3.select(`#outer-circle-${d.target.id}`)
-                            .attr('stroke', 'black')
-                            .attr('stroke-width', 2)
-                            .attr('stroke-opacity', 1);
-
-                        // Highlight all connected circles
-                        const connectedLinks = linksRef.current.filter((link: Link) => link.targetId === d.targetId);
-                        connectedLinks.forEach((link: Link) => {
-                            const circleId = `node-${link.target.id}-${link.props.data.year}`;
-                            d3.select(`#${circleId}`)
-                                .attr('stroke', 'black')
-                                .attr('stroke-width', 2);
-                        });
-
-                        // Create tooltip for cumulative count circle
-                        const totalExhibitions = connectedLinks.reduce((acc, link) => acc + link.props.data.count, 0);
-                        const totalYears = new Set(connectedLinks.map(link => link.props.data.year)).size;
-                        const birthYear = d.target.props?.data?.birthyear || 'Unknown';
-                        const country = d.target.props?.data?.country || 'Unknown';
-                        
-                        // Calculate smart tooltip position
-                        const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 220, 160, 15, -10);
-                        
-                        d3.select('body').append('div')
-                            .attr('class', 'outer-circle-tooltip')
-                            .style('position', 'absolute')
-                            .style('background-color', 'rgba(0, 0, 0, 0.9)')
-                            .style('color', 'white')
-                            .style('padding', '10px')
-                            .style('border-radius', '5px')
-                            .style('font-size', '12px')
-                            .style('left', `${tooltipPos.left}px`)
-                            .style('top', `${tooltipPos.top}px`)
-                            .style('z-index', '1000')
-                            .style('pointer-events', 'none')
-                            .style('box-shadow', '0 2px 5px rgba(0,0,0,0.3)')
-                            .style('max-width', '220px')
-                            .html(`
-                                <div><strong>${d.target.name}</strong></div>
-                                <div>Born: ${birthYear}</div>
-                                <div>Country: ${country}</div>
-                                <div>Group: ${d.props.group}</div>
-                                <div><strong>Total co-exhibitions: ${totalExhibitions}</strong></div>
-                                <div>Years active: ${totalYears}</div>
-                                <div style="margin-top: 5px; font-size: 10px; opacity: 0.8;">Click to select artist</div>
-                            `);
-                    }
-                })
-                .on('mouseout', (event: any, d: any) => {
-                    // Remove outer circle tooltip
-                    d3.selectAll('.outer-circle-tooltip').remove();
-
-                    if (!state.selection) {
-                        // Reset outer circle styles
-                        d3.select(`#outer-circle-${d.target.id}`)
-                            .attr('stroke', 'none')
-                            .attr('stroke-width', 0);
-
-                        // Reset inner circle styles
-                        artist.selectAll('circle')
-                            .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
-                            .attr('stroke-width', 2);
-                    }
-                })
-                .on('click', (event: any, d: any) => {
-                    // Remove any existing tooltips
-                    d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
-                    
-                    // Set state.selection to true
-                    setState(prev => ({ ...prev, selection: true }));
-
-                    // ctrl+click to deselect
-                    if (event.ctrlKey) {
-                        setState(prev => ({ ...prev, selection: false }));
-
-                        // Reset all styles
-                        outerCircle.selectAll('circle').attr('stroke', 'none').attr('stroke-width', 0);
-                        artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black').attr('stroke-width', 2);
-                        artist.selectAll('circle').attr('opacity', 0.75);
-                        artist.selectAll('.artist-label').attr('opacity', 1);
-
-                        requestNode?.();
-                        return;
-                    }
-
-                    console.log('Clicked outer circle:', d.target.name, 'ID:', d.targetId);
-
-                    if (!d) return;
-
-                    requestNode?.(d.targetId);
-                });
-        }
-
-        // Draw artist labels
-        const labelSelection = artist.selectAll('.artist-label')
-            .data(uniqueLinks)
-            .join('text')
-            .attr('class', 'artist-label')
-            .attr('id', (d: Link) => `artist-label-${d.target.id}`)
-            .attr('x', (d: Link) => {
-                const angle = getAngle(d.props.originalIndex);
-                // Increase offset to move labels further from arcs
-                return getXCoordinates(YEAR_RANGE.max, angle, 80) + width / 2;
-            })
-            .attr('y', (d: Link) => {
-                const angle = getAngle(d.props.originalIndex);
-                return getYCoordinates(YEAR_RANGE.max, angle, 80) + height / 2;
-            })
-            .attr('transform', (d: Link) => {
-                const angle = getAngle(d.props.originalIndex);
-                const x2 = getXCoordinates(YEAR_RANGE.max, angle, 80) + width / 2;
-                const y2 = getYCoordinates(YEAR_RANGE.max, angle, 80) + height / 2;
-
-                // Convert angle to degrees for rotation
-                let rotationAngleDegrees = (angle * 180) / Math.PI;
-
-                // Adjust for readability - if text would be upside down, rotate it 180 degrees
-                if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
-                    rotationAngleDegrees += 180;
-                }
-
-                return `rotate(${rotationAngleDegrees}, ${x2}, ${y2})`;
-            })
-            .attr('text-anchor', (d: Link) => {
-                const angle = getAngle(d.props.originalIndex);
-                let rotationAngleDegrees = (angle * 180) / Math.PI;
-                
-                // Normalize angle to 0-360
-                if (rotationAngleDegrees < 0) rotationAngleDegrees += 360;
-                
-                // Determine text anchor based on angle
-                if (rotationAngleDegrees > 90 && rotationAngleDegrees < 270) {
-                    return 'end'; // Text flows from right to left when rotated
-                } else {
-                    return 'start'; // Text flows from left to right
-                }
-            })
-            .attr('font-size', '11px')
-            .attr('fill', 'black')
-            .attr('dy', '0.35em')
-            .text((d: Link) => {
-                // Shorten long names for better readability
-                const name = d.target.name;
-                const parts = name.split(' ');
-                if (parts.length > 2) {
-                    return `${parts[0]} ${parts[1].charAt(0)}.`;
-                } else if (parts.length === 2) {
-                    return `${parts[0]} ${parts[1].charAt(0)}.`;
-                }
-                return name;
-            })
-            .style('cursor', 'pointer');
-
-        // Add click and hover events to labels
-        labelSelection
-            .on('mouseover', (event: PointerEvent, d: Link) => {
-                // Set state.selection to true
-                setState(prev => ({ ...prev, selection: true }));
-
-                // Reset font weight of all labels
-                artist.selectAll('.artist-label').attr('font-weight', 'normal');
-
-                // Make current label bold
-                d3.select(`#artist-label-${d.target.id}`).attr('font-weight', 'bold');
-
-                // Highlight current node
-                const circles = artist.selectAll('circle').filter((circleData: any) => circleData.targetId === d.targetId);
-                circles.attr('stroke', 'black').attr('stroke-width', 2).attr('stroke-opacity', 1);
-
-                // Highlight all links with same targetId 
-                const connectedLinks = linksRef.current.filter((link: Link) => link.targetId === d.targetId);
-                connectedLinks.forEach((link: Link) => {
-                    const circleId = `node-${link.target.id}-${link.props.data.year}`;
-                    const circle = d3.select(`#${circleId}`);
-                    if (!circle.empty()) {
-                        circle.attr('stroke', 'black').attr('stroke-width', 2);
-                    }
-                });
-
-                // Create tooltip for label
-                const totalExhibitions = connectedLinks.reduce((acc, link) => acc + link.props.data.count, 0);
-                const birthYear = d.target.props?.data?.birthyear || 'Unknown';
-                const country = d.target.props?.data?.country || 'Unknown';
-                
-                // Calculate smart tooltip position
-                const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 200, 130, 15, -10);
-                
-                d3.select('body').append('div')
-                    .attr('class', 'label-tooltip')
-                    .style('position', 'absolute')
-                    .style('background-color', 'black')
-                    .style('color', 'white')
-                    .style('padding', '8px')
-                    .style('border-radius', '5px')
-                    .style('font-size', '12px')
-                    .style('left', `${tooltipPos.left}px`)
-                    .style('top', `${tooltipPos.top}px`)
-                    .style('z-index', '1000')
-                    .style('pointer-events', 'none')
-                    .style('max-width', '200px')
-                    .html(`
-                        <div><strong>${d.target.name}</strong></div>
-                        <div>Born: ${birthYear}</div>
-                        <div>Country: ${country}</div>
-                        <div>Total co-exhibitions: ${totalExhibitions}</div>
-                        <div>Group: ${d.props.group}</div>
-                    `);
-            })
-            .on('mouseout', (event: PointerEvent, d: Link) => {
-                // Remove label tooltip
-                d3.selectAll('.label-tooltip').remove();
-
-                // Reset styles only if no selection is active
-                if (!state.selection) {
-                    artist.selectAll('.artist-label').attr('font-weight', 'normal');
-                    artist.selectAll('circle')
-                        .attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black')
-                        .attr('stroke-width', 2)
-                        .attr('stroke-opacity', 1);
-                }
-            })
-            .on('click', (event: PointerEvent, d: Link) => {
-                // Remove any existing tooltips
-                d3.selectAll('.label-tooltip, .outer-circle-tooltip, .arc-tooltip').remove();
-                
-                // Set state.selection to true
-                setState(prev => ({ ...prev, selection: true }));
-
-                // Reset font weight of all labels
-                artist.selectAll('.artist-label').attr('font-weight', 'normal');
-
-                // ctrl+click to deselect
-                if (event.ctrlKey) {
-                    // Set state.selection to false
-                    setState(prev => ({ ...prev, selection: false }));
-
-                    // Unhighlight all nodes 
-                    artist.selectAll('circle').attr('stroke', (circleData: any) => colorsToUse.get(circleData.props.group) || 'black');
-                    artist.selectAll('circle').attr('stroke-width', 2);
-
-                    // Reset all labels font weight to normal
-                    artist.selectAll('.artist-label').attr('font-weight', 'normal');
-
-                    // Reset opacity of all nodes
-                    artist.selectAll('circle').attr('opacity', 0.75);
-
-                    // Reset opacity of labels
-                    artist.selectAll('.artist-label').attr('opacity', 1);
-
-                    requestNode?.();
-                    return;
-                }
-
-                console.log('Clicked artist:', d.target.name, 'ID:', d.targetId);
-
-                if (!d) return;
-
-                requestNode?.(d.targetId);
-
-                // Set current label font weight to bold
-                d3.select(`#artist-label-${d.target.id}`).attr('font-weight', 'bold').attr('opacity', 1);
             });
     }, [state.dimensions, state.colors]);
 
@@ -1321,10 +1405,14 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             return scales.angle(index);
         };
         
-        // Create arc generator with simplified logic
+        // Create arc generator with responsive radii
+        const minDimension = Math.min(state.dimensions.width, state.dimensions.height);
+        const donutInnerOffset = Math.max(3, minDimension * 0.012); // 1.2% of smaller dimension, minimum 3px (reduced gap)
+        const donutWidth = Math.max(6, minDimension * 0.015); // 1.5% of smaller dimension, minimum 6px (much thinner)
+        
         const arc = d3.arc<Link>()
-            .innerRadius(scales.r(YEAR_RANGE.max) + 10)
-            .outerRadius(scales.r(YEAR_RANGE.max) + 25)
+            .innerRadius(scales.r(YEAR_RANGE.max) + donutInnerOffset)
+            .outerRadius(scales.r(YEAR_RANGE.max) + donutInnerOffset + donutWidth)
             .startAngle((d: Link) => {
                 const range = groupRanges.get(d.props.group);
                 if (!range) return 0;
@@ -1397,7 +1485,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             })
             .on('click', (event: MouseEvent, d: Link) => {
                 // Remove any existing tooltips
-                d3.selectAll('.arc-tooltip, .label-tooltip, .outer-circle-tooltip').remove();
+                d3.selectAll('.arc-tooltip, .label-tooltip, .outer-bar-tooltip').remove();
                 
                 console.log('Clicked arc with group:', d.props.group);
                 console.log('Arc ID:', `donut-${d.props.group}`);
@@ -1418,14 +1506,14 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     // Reset all artist dots to full opacity
                     if (artist) {
                         const allCircles = artist.selectAll('circle');
-                        const allOuterCircles = outerCircle?.selectAll('circle');
-                        const allLabels = artist.selectAll('.artist-label');
+                        const allOuterCircles = outerCircle?.selectAll('rect');
+                        const allLabels = outerCircle?.selectAll('.artist-label');
                         
 
                         
                         allCircles.attr('opacity', 0.75);
                         allOuterCircles?.attr('opacity', 0.75);
-                        allLabels.attr('opacity', 1);
+                        allLabels?.attr('opacity', 1);
                     }
                     
                     selectedGroupRef.current = '';
@@ -1444,13 +1532,13 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     // Highlight dots belonging to this group
                     if (artist) {
                         const allCircles = artist.selectAll('circle');
-                        const allOuterCircles = outerCircle?.selectAll('circle');
-                        const allLabels = artist.selectAll('.artist-label');
+                        const allOuterCircles = outerCircle?.selectAll('rect');
+                        const allLabels = outerCircle?.selectAll('.artist-label');
                         
                         // Set all dots to reduced opacity first
                         allCircles.attr('opacity', 0.25);
                         allOuterCircles?.attr('opacity', 0.25);
-                        allLabels.attr('opacity', 0.25);
+                        allLabels?.attr('opacity', 0.25);
                         
                         // Highlight dots matching the selected group
                         const matchingCircles = allCircles.filter((dotData: any) => {
@@ -1461,13 +1549,13 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                             return dotData?.target?.props?.[prop] === d.props.group;
                         });
                         
-                        const matchingLabels = allLabels.filter((dotData: any) => {
+                        const matchingLabels = allLabels?.filter((dotData: any) => {
                             return dotData?.target?.props?.[prop] === d.props.group;
                         });
                         
                         matchingCircles.attr('opacity', 1);
                         matchingOuterCircles?.attr('opacity', 1);
-                        matchingLabels.attr('opacity', 1);
+                        matchingLabels?.attr('opacity', 1);
                     }
                     
                     selectedGroupRef.current = d.props.group;
@@ -1583,7 +1671,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('stroke', '#333')
                 .attr('stroke-width', 1);
 
-            artist.selectAll('.artist-label')
+            outerCircle?.selectAll('.artist-label')
                 .attr('opacity', 1)
                 .attr('font-weight', 'normal');
         } else {
@@ -1609,7 +1697,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('stroke', '#333')
                 .attr('stroke-width', 1);
 
-            artist.selectAll('.artist-label')
+            outerCircle?.selectAll('.artist-label')
                 .attr('opacity', 0.15)
                 .attr('font-weight', 'normal');
 
@@ -1622,7 +1710,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 .attr('stroke-width', 3)
                 .raise();
 
-            artist.selectAll('.artist-label')
+            outerCircle?.selectAll('.artist-label')
                 .filter((d: any) => d.target.props[prop] === group)
                 .attr('opacity', 1)
                 .attr('font-weight', 'bold')
@@ -1708,11 +1796,11 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             .attr('opacity', 1)
             .attr('stroke', 'black');
 
-        outerCircle?.selectAll('circle').attr('opacity', 0.25);
+        outerCircle?.selectAll('rect').attr('opacity', 0.25);
 
         // Highlight all links from the links array 
         links.forEach((link: Link) => {
-            const linkId = `outer-circle-${link.target.id}`;
+            const linkId = `outer-bar-${link.target.id}`;
             const outer = outerCircle?.select(`#${linkId}`);
 
             if (!outer) return;
@@ -1733,7 +1821,7 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
         circles.attr('opacity', 1);
 
         // Highlight baseNode artist and outer circle
-        const baseOuter = outerCircle?.select(`#outer-circle-${state.compareNode.id}`);
+        const baseOuter = outerCircle?.select(`#outer-bar-${state.compareNode.id}`);
 
         if (baseOuter) {
             baseOuter
