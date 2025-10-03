@@ -38,7 +38,7 @@ interface D3Elements {
 // Constants
 const YEAR_RANGE = { min: 1905, max: 1915 };
 const DEFAULT_CO_EX = 3;
-const MARGINS = { top: 50, bottom: 30, left: 30, right: 30 };
+const MARGINS = { top: 55, bottom: 50, left: 50, right: 30 }; // Balanced margins for proper alignment
 
 // Color utility function - matches ego network implementation
 const getColorMapping = (groupType: string, uniqueGroups?: string[]): Map<string, string> => {
@@ -353,30 +353,36 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
             .attr('preserveAspectRatio', 'xMinYMin meet')
             .style('overflow', 'visible');
 
-        // Setup axes
+        // Setup axes - positioned like timeline
         const xAxis = svg.append('g')
             .attr('transform', `translate(0, ${height - MARGINS.bottom})`)
             .attr('class', 'x-axis');
 
         const yAxis = svg.append('g')
-            .attr('transform', `translate(${MARGINS.left + 10}, 0)`)
+            .attr('transform', `translate(${MARGINS.left}, 0)`)  // Remove +10 offset
             .attr('class', 'y-axis');
 
-        // Add axis labels
+        // Add axis labels with subtle styling like timeline
         svg.append('text')
             .attr('class', 'x-axis-label')
             .attr('x', width / 2)
-            .attr('y', height - MARGINS.bottom + 36)
+            .attr('y', height - MARGINS.bottom + 20) // Move closer to axis, but with some padding
             .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
             .text('Year');
 
         svg.append('text')
             .attr('class', 'y-axis-label')
-            .attr('x', -height / 2)
-            .attr('y', MARGINS.left / 2)
             .attr('transform', 'rotate(-90)')
+            .attr('y', 20) // Move further from chart area
+            .attr('x', -(height / 2))
             .attr('text-anchor', 'middle')
-            .text('Number of Co-Exhibitors');
+            .attr('font-size', '12px')
+            .attr('fill', 'black')
+            .attr('font-family', 'Arial, sans-serif')
+            .text('Co-Exhibitors'); // Shorter label
 
         // Setup containers
         svg.append('g').attr('id', 'area-wrapper');
@@ -384,13 +390,13 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
             .attr('id', 'legend-wrapper')
             .attr('transform', `translate(${width / 2}, 0)`);
 
-        // Store D3 elements
+        // Store D3 elements with timeline-consistent scale ranges
         d3ElementsRef.current = {
             svg,
             xAxis,
             yAxis,
-            xScale: d3.scaleLinear().range([MARGINS.left * 2, width - MARGINS.right]),
-            yScale: d3.scaleLinear().range([height - MARGINS.top, MARGINS.top])
+            xScale: d3.scaleLinear().range([MARGINS.left, width - MARGINS.right]), // Match timeline
+            yScale: d3.scaleLinear().range([height - MARGINS.bottom, MARGINS.top]) // Match timeline
         };
 
     }, [state.dimensions]);
@@ -439,12 +445,39 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
         // Add legend
         addLegend(chartData, activeColors);
 
-        // Update axes
-        const xAxisGenerator = d3.axisBottom(xScale).tickFormat(d3.format('d'));
-        const yAxisGenerator = d3.axisLeft(yScale).tickFormat(d3.format('d')).ticks(5);
+        // Update axes with timeline-style grid and styling
+        // Calculate exact grid line lengths based on scale ranges
+        const xRange = xScale.range();
+        const yRange = yScale.range();
+        const gridWidth = xRange[1] - xRange[0]; // Actual chart width
+        const gridHeight = yRange[0] - yRange[1]; // Actual chart height
+        
+        const xAxisGenerator = d3.axisBottom(xScale)
+            .tickFormat(d3.format('d'))
+            .tickSize(-gridHeight) // Use exact chart height
+            .tickPadding(10);
+            
+        const yAxisGenerator = d3.axisLeft(yScale)
+            .tickFormat(d3.format('d'))
+            .ticks(5)
+            .tickSize(-gridWidth) // Use exact chart width
+            .tickPadding(10);
 
-        xAxis.call(xAxisGenerator);
-        yAxis.call(yAxisGenerator);
+        // Apply axes with timeline styling
+        xAxis.call(xAxisGenerator)
+            .selectAll('.tick line')
+            .attr('stroke', 'black')
+            .attr('stroke-opacity', 0.15)
+            .attr('stroke-width', 0.5);
+            
+        yAxis.call(yAxisGenerator)
+            .selectAll('.tick line')
+            .attr('stroke', 'black')
+            .attr('stroke-opacity', 0.15)
+            .attr('stroke-width', 0.5);
+
+        // Remove axis domains for clean look
+        svg.selectAll('.domain').remove();
         
         console.log('=== AREA CHART UPDATE COMPLETE ===');
     }, [chartData, state.stacked, colors, dynamicColors]);
@@ -457,7 +490,15 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
 
         // Convert data to format suitable for d3.stack
         const years = d3.range(YEAR_RANGE.min, YEAR_RANGE.max + 1);
-        const groups = data.map(d => d.group);
+        
+        // Sort groups by total count (ascending) so larger stacks are on top
+        const groups = data
+            .map(d => ({
+                group: d.group,
+                totalCount: d.data.reduce((sum, item) => sum + item.count, 0)
+            }))
+            .sort((a, b) => a.totalCount - b.totalCount) // Smaller totals first (bottom), larger on top
+            .map(d => d.group);
         
         // Create data array where each element is an object with year and all group values
         const stackData = years.map(year => {
@@ -547,9 +588,10 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
         const groups = data.map(d => d.group);
         const legend = svg.select('#legend-wrapper');
 
-        // Center the legend and position it lower
+        // Center the legend on the full SVG width - more compact spacing and higher position
+        const svgWidth = Number(d3ElementsRef.current.svg?.attr('width')) || state.dimensions.width;
         legend.attr('transform', 
-            `translate(${(state.dimensions.width / 2) - (groups.length * 40) / 2}, 35)`
+            `translate(${(svgWidth / 2) - (groups.length * 30) / 2}, 15)` // Moved up from 25 to 15
         );
 
         const legendItems = legend.selectAll('.legend-item')
@@ -557,10 +599,10 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
             .enter()
             .append('g')
             .attr('class', 'legend-item')
-            .attr('transform', (d, i) => `translate(${i * 40}, 0)`);
+            .attr('transform', (d, i) => `translate(${i * 30}, 0)`); // Reduced spacing from 40 to 30
 
         legendItems.append('circle')
-            .attr('r', 8)
+            .attr('r', 6) // Reduced from 8 to 6
             .attr('cx', 0)
             .attr('cy', 0)
             .attr('fill', d => {
@@ -571,9 +613,9 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
 
         legendItems.append('text')
             .attr('x', 0)
-            .attr('y', 20)
+            .attr('y', 12) // Reduced from 15 to 12 for more compact spacing
             .attr('text-anchor', 'middle')
-            .attr('font-size', '12px')
+            .attr('font-size', '10px')
             .text(d => d);
 
         legendItems

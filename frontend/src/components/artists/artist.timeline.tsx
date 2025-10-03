@@ -262,7 +262,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         const mainArtistText = svg.append('text')
             .attr('x', margin.left)
             .attr('y', 25)
-            .attr('font-size', '16px')
+            .attr('font-size', '14px') // Reduced from 16px
             .attr('font-weight', 'bold')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
@@ -283,7 +283,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         svg.append('text')
             .attr('x', margin.left)
             .attr('y', 45)
-            .attr('font-size', '12px')
+            .attr('font-size', '10px') // Reduced from 12px
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text(`${artist.deathyear ? `${artist.birthyear} (${artist.birthplace || 'Moscow'}) - ${artist.deathyear} (${artist.deathplace || 'Neuilly-sur-Seine'})` : ''}`);
@@ -291,7 +291,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         svg.append('text')
             .attr('x', margin.left)
             .attr('y', 60)
-            .attr('font-size', '12px')
+            .attr('font-size', '10px') // Reduced from 12px
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text(`${exhibitionsList.length} exhibitions | ${timelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
@@ -303,7 +303,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             const compareArtistText = svg.append('text')
                 .attr('x', compareArtistX)
                 .attr('y', 25)
-                .attr('font-size', '16px')
+                .attr('font-size', '14px') // Reduced from 16px
                 .attr('font-weight', 'bold')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
@@ -328,7 +328,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             svg.append('text')
                 .attr('x', compareArtistX)
                 .attr('y', 45)
-                .attr('font-size', '12px')
+                .attr('font-size', '10px') // Reduced from 12px
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
@@ -337,7 +337,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             svg.append('text')
                 .attr('x', compareArtistX)
                 .attr('y', 60)
-                .attr('font-size', '12px')
+                .attr('font-size', '10px') // Reduced from 12px
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
@@ -425,69 +425,39 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('font-family', 'Arial, sans-serif')
             .text('Year');
 
-        // Legend row - positioned under the Year label with proper spacing
-        const legendY = height - margin.bottom + 50;
-        const legendSpacing = width / 6; // Divide width into 6 sections for even spacing
+        // Legend positioned between main artist and compare artist metadata
+        const legendY = 45; // Same level as artist birth/death info
+        const mainArtistEndX = margin.left + 300; // Approximate end of main artist metadata
+        const compareArtistStartX = compareArtist ? (containerWidth - margin.right - 300) : containerWidth - 200; // Start of compare artist area
+        const centerX = (mainArtistEndX + compareArtistStartX) / 2; // Exact center between them
+        const itemSpacing = 50; // Compact spacing for the center area
         
-        // 1. Base artist legend
-        const baseX = legendSpacing;
-        svg.append('line')
-            .attr('x1', baseX - 15)
-            .attr('x2', baseX)
-            .attr('y1', legendY)
-            .attr('y2', legendY)
-            .attr('stroke', 'black')
-            .attr('stroke-width', 2);
-            
-        svg.append('text')
-            .attr('x', baseX + 5)
-            .attr('y', legendY + 4)
-            .attr('font-size', '10px')
-            .attr('fill', 'black')
-            .attr('font-family', 'Arial, sans-serif')
-            .text(`${artist?.sortname || 'Artist'} (${exhibitionsList.length})`);
-
-        // 2. Compare artist legend (if exists)
-        if (compareArtist) {
-            const compareX = legendSpacing * 2.5;
-            svg.append('line')
-                .attr('x1', compareX - 15)
-                .attr('x2', compareX)
-                .attr('y1', legendY)
-                .attr('y2', legendY)
-                .attr('stroke', 'black')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '3,2');
-                
-            svg.append('text')
-                .attr('x', compareX + 5)
-                .attr('y', legendY + 4)
-                .attr('font-size', '10px')
-                .attr('fill', 'black')
-                .attr('font-family', 'Arial, sans-serif')
-                .text(`${compareArtist.sortname} (${compareTimelineData.filter(d => d.exhibitions > 0).length})`);
-        }
-
-        // 3. Group shows indicator (black circle)
-        const groupX = legendSpacing * 4;
+        // Calculate total width and starting position to center in the available space
+        const totalItems = compareArtist ? 3 : 3; // Group shows, Solo shows, Help (artist legends handled separately)
+        const totalWidth = (totalItems - 1) * itemSpacing;
+        let currentX = centerX - (totalWidth / 2);
+        
+        // 1. Group shows indicator (black circle)
         svg.append('circle')
-            .attr('cx', groupX - 5)
+            .attr('cx', currentX)
             .attr('cy', legendY)
             .attr('r', 4)
             .attr('fill', 'black');
             
         svg.append('text')
-            .attr('x', groupX + 5)
-            .attr('y', legendY + 4)
-            .attr('font-size', '10px')
+            .attr('x', currentX)
+            .attr('y', legendY + 15)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '8px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text('Group shows');
 
-        // 4. Solo shows indicator (white circle with black border)
-        const soloX = legendSpacing * 5;
+        currentX += itemSpacing; // Move to next position
+
+        // 2. Solo shows indicator (white circle with black border)
         svg.append('circle')
-            .attr('cx', soloX - 5)
+            .attr('cx', currentX)
             .attr('cy', legendY)
             .attr('r', 4)
             .attr('fill', 'white')
@@ -495,19 +465,21 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('stroke-width', 1);
             
         svg.append('text')
-            .attr('x', soloX + 5)
-            .attr('y', legendY + 4)
-            .attr('font-size', '10px')
+            .attr('x', currentX)
+            .attr('y', legendY + 15)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '8px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text('Solo shows');
 
-        // 5. Help icon with tooltip - positioned at the far right
-        const helpX = legendSpacing * 5.8;
+        currentX += itemSpacing; // Move to next position
+
+        // 3. Help icon with tooltip - in center area
         svg.append('circle')
-            .attr('cx', helpX)
+            .attr('cx', currentX)
             .attr('cy', legendY)
-            .attr('r', 8)
+            .attr('r', 6)
             .attr('fill', 'white')
             .attr('stroke', 'black')
             .attr('stroke-width', 1)
@@ -517,18 +489,18 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 const tooltip = svg.append('g').attr('class', 'help-tooltip');
                 
                 tooltip.append('rect')
-                    .attr('x', helpX - 100)
-                    .attr('y', legendY - 35)
-                    .attr('width', 200)
-                    .attr('height', 18)
+                    .attr('x', currentX - 80)
+                    .attr('y', legendY - 25)
+                    .attr('width', 160)
+                    .attr('height', 16)
                     .attr('fill', 'black')
                     .attr('rx', 2);
                     
                 tooltip.append('text')
-                    .attr('x', helpX)
-                    .attr('y', legendY - 22)
+                    .attr('x', currentX)
+                    .attr('y', legendY - 12)
                     .attr('text-anchor', 'middle')
-                    .attr('font-size', '10px')
+                    .attr('font-size', '8px')
                     .attr('fill', 'white')
                     .attr('font-family', 'Arial, sans-serif')
                     .text('Timeline shows exhibitions over time');
@@ -538,10 +510,10 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             });
             
         svg.append('text')
-            .attr('x', helpX)
-            .attr('y', legendY + 4)
+            .attr('x', currentX)
+            .attr('y', legendY + 15)
             .attr('text-anchor', 'middle')
-            .attr('font-size', '11px')
+            .attr('font-size', '8px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .attr('font-weight', 'bold')
