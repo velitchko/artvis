@@ -39,6 +39,13 @@ module.exports = (env, argv) => {
           options: {
             replacement: resolve(`./environments/environment.${prod}.ts`),
           }
+        },
+        {
+          test: /\.(png|jpe?g|gif|ico)$/i,
+          type: 'asset/resource',
+          generator: {
+            filename: '[name][ext]'
+          }
         }
       ]
     },
@@ -49,6 +56,7 @@ module.exports = (env, argv) => {
     plugins: [
       new HtmlWebpackPlugin({
         template: 'index.html',
+        favicon: 'favicon.png'
       }),
       new MiniCssExtractPlugin()
     ]
