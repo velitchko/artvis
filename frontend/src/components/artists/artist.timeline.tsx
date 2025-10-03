@@ -308,7 +308,9 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
-                .text(`${compareArtist.sortname} (${compareArtist.birthyear}, ${compareArtist.country})`);
+                .text(`${compareArtist.sortname || (compareArtist.firstname && compareArtist.lastname ? `${compareArtist.firstname} ${compareArtist.lastname}` : 'Unknown')} (${compareArtist.birthyear}, ${compareArtist.country})`);
+
+            // Get text width for underline`
 
             // Get text width for underline
             const compareTextWidth = (compareArtistText.node() as SVGTextElement)?.getBBox().width || 200;
@@ -546,6 +548,69 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .style('cursor', 'pointer')
             .text('?');
 
+        // Co-exhibition bars - show years when both artists exhibited together in the SAME exhibitions
+        // Render these before glyphs so they appear in the background
+        if (compareTimelineData && compareTimelineData.length > 0 && compareArtist) {
+            console.log('Drawing co-exhibition bars for shared exhibitions');
+            
+            // Find exhibitions where BOTH artists have items (actual co-exhibitions)
+            const sharedExhibitions: { exhibitionId: number, year: number, count: number }[] = [];
+            
+            exhibitionsList.forEach(exhibition => {
+                const year = +exhibition.startyear;
+                
+                // Check if main artist has items in this exhibition
+                const mainArtistItems = exhibition.exhibitsItems?.filter(item => 
+                    item.artistsCreated?.some(artist_created => artist_created.id === artist.id)
+                )?.length || 0;
+                
+                // Check if compare artist has items in this exhibition
+                const compareArtistItems = exhibition.exhibitsItems?.filter(item => 
+                    item.artistsCreated?.some(artist_created => artist_created.id === compareArtist.id)
+                )?.length || 0;
+                
+                // If both artists have items in this exhibition, it's a true co-exhibition
+                if (mainArtistItems > 0 && compareArtistItems > 0) {
+                    sharedExhibitions.push({
+                        exhibitionId: +exhibition.id,
+                        year: year,
+                        count: 1 // Each shared exhibition counts as 1
+                    });
+                }
+            });
+            
+            // Group shared exhibitions by year and count them
+            const coExhibitionsByYear = new Map<number, number>();
+            sharedExhibitions.forEach(shared => {
+                coExhibitionsByYear.set(
+                    shared.year, 
+                    (coExhibitionsByYear.get(shared.year) || 0) + shared.count
+                );
+            });
+            
+            // Convert to array format for D3
+            const coExhibitionData = Array.from(coExhibitionsByYear.entries()).map(([year, count]) => ({
+                year,
+                sharedExhibitions: count
+            }));
+            
+            console.log('Shared exhibitions by year:', coExhibitionData);
+            
+            // Draw bars for co-exhibition years (only where they actually co-exhibited)
+            svg.selectAll('.co-exhibition-bar')
+                .data(coExhibitionData)
+                .enter()
+                .append('rect') // Use regular append, positioned before glyphs
+                .attr('class', 'co-exhibition-bar')
+                .attr('x', (d: any) => xScale(d.year) - 12) // Wider bars - 24px width
+                .attr('y', (d: any) => yScale(d.sharedExhibitions)) // Start from the shared exhibition count
+                .attr('width', 24) // Wider bars
+                .attr('height', (d: any) => yScale(0) - yScale(d.sharedExhibitions)) // Height corresponds to number of shared exhibitions
+                .attr('fill', 'yellow') // Yellow color
+                .attr('opacity', 0.3) // Lower opacity for background effect
+                .style('pointer-events', 'none'); // Don't interfere with other interactions
+        }
+
         // Top semi-circles (absolute items) - solid black like in screenshot
         svg.selectAll('.abs-half-circle')
             .data(timelineData)
@@ -564,7 +629,84 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }) as string;
             })
             .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-            .style('cursor', 'pointer');
+            .style('cursor', 'pointer')
+            .on('mouseenter', function(event, d) {
+                if (d.items === 0) return; // No tooltip for empty data
+                
+                const x = event.clientX;
+                const y = event.clientY;
+                
+                // Add year highlighting functionality to glyph hover
+                const yearX = xScale(d.year);
+                svg.selectAll('.hover-line').remove(); // Remove existing lines first
+                svg.append('line')
+                    .attr('class', 'hover-line')
+                    .attr('x1', yearX)
+                    .attr('x2', yearX)
+                    .attr('y1', margin.top)
+                    .attr('y2', height - margin.bottom)
+                    .attr('stroke', '#ff6b35')
+                    .attr('stroke-width', 3)
+                    .attr('stroke-dasharray', '8,4')
+                    .attr('opacity', 0.8);
+                
+                // Notify ego network to highlight corresponding year ring (only once)
+                if (onEgoNetworkHover) {
+                    onEgoNetworkHover(d.year);
+                }
+                
+                // Remove any existing tooltips first
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
+                }).remove();
+                
+                // Create tooltip with ego network styling
+                const tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('font-size', '12px')
+                    .style('left', `${x + 15}px`)
+                    .style('top', `${y - 10}px`)
+                    .style('z-index', '1000')
+                    .style('max-width', '200px')
+                    .html(`
+                        <p><b>${artist.sortname}</b></p>
+                        <p>Year: ${d.year}</p>
+                        <p>Total Artworks: ${d.items}</p>
+                        <p>Exhibitions: ${d.exhibitions}</p>
+                    `);
+            })
+            .on('mousemove', function(event, d) {
+                // Update tooltip position on mouse move without recreating line
+                const x = event.clientX;
+                const y = event.clientY;
+                
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
+                })
+                .style('left', `${x + 15}px`)
+                .style('top', `${y - 10}px`);
+            })
+            .on('mouseleave', function() {
+                // Remove year highlighting
+                svg.selectAll('.hover-line').remove();
+                
+                // Notify ego network to remove highlight
+                if (onEgoNetworkHover) {
+                    onEgoNetworkHover(null);
+                }
+                
+                // Remove tooltip
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
+                }).remove();
+            });
 
         // Bottom semi-circles (average items) - white with black outline like in screenshot
         svg.selectAll('.avg-half-circle')
@@ -586,52 +728,85 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 }) as string;
             })
             .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-            .style('cursor', 'pointer');
-
-        // SIMPLE HOVER SYSTEM - START FROM SCRATCH
-        console.log('=== CREATING SIMPLE HOVER SYSTEM ===');
-        
-        timelineData.forEach(d => {
-            const yearX = xScale(d.year);
-            console.log(`Year ${d.year}: x=${yearX}`);
-            
-            svg.append('rect')
-                .attr('x', yearX - 20)
-                .attr('y', 0)
-                .attr('width', 40)
-                .attr('height', height)
-                .attr('fill', 'transparent')
-                .style('cursor', 'pointer')
-                .on('mouseenter', function() {
-                    console.log(`TIMELINE HOVER: ${d.year}`);
-                    
-                    // Show timeline line
-                    svg.append('line')
-                        .attr('class', 'hover-line')
-                        .attr('x1', yearX)
-                        .attr('x2', yearX)
-                        .attr('y1', margin.top)
-                        .attr('y2', height - margin.bottom)
-                        .attr('stroke', '#ff6b35')
-                        .attr('stroke-width', 3)
-                        .attr('stroke-dasharray', '8,4')
-                        .attr('opacity', 0.8);
-                    
-                    // Notify ego network to highlight corresponding year ring
-                    if (onEgoNetworkHover) {
-                        onEgoNetworkHover(d.year);
-                    }
+            .style('cursor', 'pointer')
+            .on('mouseenter', function(event, d) {
+                if (d.exhibitions === 0) return; // No tooltip for empty data
+                
+                const x = event.clientX;
+                const y = event.clientY;
+                const avgItems = d.exhibitions > 0 ? d.items / d.exhibitions : 0;
+                
+                // Add year highlighting functionality to glyph hover
+                const yearX = xScale(d.year);
+                svg.selectAll('.hover-line').remove(); // Remove existing lines first
+                svg.append('line')
+                    .attr('class', 'hover-line')
+                    .attr('x1', yearX)
+                    .attr('x2', yearX)
+                    .attr('y1', margin.top)
+                    .attr('y2', height - margin.bottom)
+                    .attr('stroke', '#ff6b35')
+                    .attr('stroke-width', 3)
+                    .attr('stroke-dasharray', '8,4')
+                    .attr('opacity', 0.8);
+                
+                // Notify ego network to highlight corresponding year ring (only once)
+                if (onEgoNetworkHover) {
+                    onEgoNetworkHover(d.year);
+                }
+                
+                // Remove any existing tooltips first
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
+                }).remove();
+                
+                // Create tooltip with ego network styling
+                const tooltip = d3.select('body').append('div')
+                    .style('position', 'absolute')
+                    .style('background-color', 'black')
+                    .style('color', 'white')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('font-size', '12px')
+                    .style('left', `${x + 15}px`)
+                    .style('top', `${y - 10}px`)
+                    .style('z-index', '1000')
+                    .style('max-width', '200px')
+                    .html(`
+                        <p><b>${artist.sortname}</b></p>
+                        <p>Year: ${d.year}</p>
+                        <p>Avg Artworks/Exhibition: ${avgItems.toFixed(1)}</p>
+                        <p>Exhibitions: ${d.exhibitions}</p>
+                    `);
+            })
+            .on('mousemove', function(event, d) {
+                // Update tooltip position on mouse move without recreating line
+                const x = event.clientX;
+                const y = event.clientY;
+                
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
                 })
-                .on('mouseleave', function() {
-                    console.log(`TIMELINE LEAVE: ${d.year}`);
-                    svg.selectAll('.hover-line').remove();
-                    
-                    // Notify ego network to remove highlight
-                    if (onEgoNetworkHover) {
-                        onEgoNetworkHover(null);
-                    }
-                });
-        });
+                .style('left', `${x + 15}px`)
+                .style('top', `${y - 10}px`);
+            })
+            .on('mouseleave', function() {
+                // Remove year highlighting
+                svg.selectAll('.hover-line').remove();
+                
+                // Notify ego network to remove highlight
+                if (onEgoNetworkHover) {
+                    onEgoNetworkHover(null);
+                }
+                
+                // Remove tooltip
+                d3.selectAll('body > div').filter(function() {
+                    return d3.select(this).style('position') === 'absolute' && 
+                           d3.select(this).style('background-color') === 'black';
+                }).remove();
+            });
 
         // Compare artist semi-circles if data exists
         if (compareTimelineData && compareTimelineData.length > 0) {
@@ -657,7 +832,84 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     }) as string;
                 })
                 .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-                .style('cursor', 'pointer');
+                .style('cursor', 'pointer')
+                .on('mouseenter', function(event, d) {
+                    if (d.items === 0) return; // No tooltip for empty data
+                    
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    
+                    // Add year highlighting functionality to glyph hover
+                    const yearX = xScale(d.year);
+                    svg.selectAll('.hover-line').remove(); // Remove existing lines first
+                    svg.append('line')
+                        .attr('class', 'hover-line')
+                        .attr('x1', yearX)
+                        .attr('x2', yearX)
+                        .attr('y1', margin.top)
+                        .attr('y2', height - margin.bottom)
+                        .attr('stroke', '#ff6b35')
+                        .attr('stroke-width', 3)
+                        .attr('stroke-dasharray', '8,4')
+                        .attr('opacity', 0.8);
+                    
+                    // Notify ego network to highlight corresponding year ring (only once)
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(d.year);
+                    }
+                    
+                    // Remove any existing tooltips first
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    }).remove();
+                    
+                    // Create tooltip with ego network styling
+                    const tooltip = d3.select('body').append('div')
+                        .style('position', 'absolute')
+                        .style('background-color', 'black')
+                        .style('color', 'white')
+                        .style('padding', '5px')
+                        .style('border-radius', '5px')
+                        .style('font-size', '12px')
+                        .style('left', `${x + 15}px`)
+                        .style('top', `${y - 10}px`)
+                        .style('z-index', '1000')
+                        .style('max-width', '200px')
+                        .html(`
+                            <p><b>${compareArtist?.sortname || (compareArtist?.firstname && compareArtist?.lastname ? `${compareArtist.firstname} ${compareArtist.lastname}` : 'Unknown')}</b></p>
+                            <p>Year: ${d.year}</p>
+                            <p>Total Artworks: ${d.items}</p>
+                            <p>Exhibitions: ${d.exhibitions}</p>
+                        `);
+                })
+                .on('mousemove', function(event, d) {
+                    // Update tooltip position on mouse move without recreating line
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    })
+                    .style('left', `${x + 15}px`)
+                    .style('top', `${y - 10}px`);
+                })
+                .on('mouseleave', function() {
+                    // Remove year highlighting
+                    svg.selectAll('.hover-line').remove();
+                    
+                    // Notify ego network to remove highlight
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(null);
+                    }
+                    
+                    // Remove tooltip
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    }).remove();
+                });
 
             // Compare bottom semi-circles (average items) - light gray with dashed outline
             svg.selectAll('.compare-avg-half-circle')
@@ -680,10 +932,89 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     }) as string;
                 })
                 .attr('transform', d => `translate(${xScale(d.year)}, ${yScale(d.exhibitions)})`)
-                .style('cursor', 'pointer');
+                .style('cursor', 'pointer')
+                .on('mouseenter', function(event, d) {
+                    if (d.exhibitions === 0) return; // No tooltip for empty data
+                    
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    const avgItems = d.exhibitions > 0 ? d.items / d.exhibitions : 0;
+                    
+                    // Add year highlighting functionality to glyph hover
+                    const yearX = xScale(d.year);
+                    svg.selectAll('.hover-line').remove(); // Remove existing lines first
+                    svg.append('line')
+                        .attr('class', 'hover-line')
+                        .attr('x1', yearX)
+                        .attr('x2', yearX)
+                        .attr('y1', margin.top)
+                        .attr('y2', height - margin.bottom)
+                        .attr('stroke', '#ff6b35')
+                        .attr('stroke-width', 3)
+                        .attr('stroke-dasharray', '8,4')
+                        .attr('opacity', 0.8);
+                    
+                    // Notify ego network to highlight corresponding year ring (only once)
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(d.year);
+                    }
+                    
+                    // Remove any existing tooltips first
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    }).remove();
+                    
+                    // Create tooltip with ego network styling
+                    const tooltip = d3.select('body').append('div')
+                        .style('position', 'absolute')
+                        .style('background-color', 'black')
+                        .style('color', 'white')
+                        .style('padding', '5px')
+                        .style('border-radius', '5px')
+                        .style('font-size', '12px')
+                        .style('left', `${x + 15}px`)
+                        .style('top', `${y - 10}px`)
+                        .style('z-index', '1000')
+                        .style('max-width', '200px')
+                        .html(`
+                            <p><b>${compareArtist?.sortname || (compareArtist?.firstname && compareArtist?.lastname ? `${compareArtist.firstname} ${compareArtist.lastname}` : 'Unknown')}</b></p>
+                            <p>Year: ${d.year}</p>
+                            <p>Avg Artworks/Exhibition: ${avgItems.toFixed(1)}</p>
+                            <p>Exhibitions: ${d.exhibitions}</p>
+                        `);
+                })
+                .on('mousemove', function(event, d) {
+                    // Update tooltip position on mouse move without recreating line
+                    const x = event.clientX;
+                    const y = event.clientY;
+                    
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    })
+                    .style('left', `${x + 15}px`)
+                    .style('top', `${y - 10}px`);
+                })
+                .on('mouseleave', function() {
+                    // Remove year highlighting
+                    svg.selectAll('.hover-line').remove();
+                    
+                    // Notify ego network to remove highlight
+                    if (onEgoNetworkHover) {
+                        onEgoNetworkHover(null);
+                    }
+                    
+                    // Remove tooltip
+                    d3.selectAll('body > div').filter(function() {
+                        return d3.select(this).style('position') === 'absolute' && 
+                               d3.select(this).style('background-color') === 'black';
+                    }).remove();
+                });
         }
 
-    }, [timelineData, scales, width, height, margin, onYearHover, exhibitionsList]);
+
+    }, [timelineData, compareTimelineData, scales, containerWidth, height, margin, onYearHover, exhibitionsList, onEgoNetworkHover]);
 
     useEffect(() => {
         drawTimeline();
