@@ -540,8 +540,7 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
                 return color;
             })
             .attr('fill-opacity', 0.8)
-            .attr('stroke-width', 1)
-            .attr('stroke', d => activeColors?.colors?.get(d.key) || 'steelblue')
+            .attr('stroke', 'none')
             .attr('d', area)
             .on('mouseover', handleAreaMouseOver)
             .on('mouseout', handleAreaMouseOut)
@@ -572,8 +571,7 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
                 return color;
             })
             .attr('fill-opacity', 0.25)
-            .attr('stroke', d => activeColors?.colors?.get(d.group) || 'steelblue')
-            .attr('stroke-width', 2)
+            .attr('stroke', 'none')
             .on('mouseover', handleAreaMouseOver)
             .on('mouseout', handleAreaMouseOut)
             .on('click', handleAreaClick);
@@ -585,7 +583,13 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
 
         svg.selectAll('.legend-item').remove();
 
-        const groups = data.map(d => d.group);
+        // Calculate total count for each group and sort by size (largest first)
+        const groupsWithTotals = data.map(d => ({
+            group: d.group,
+            total: d.data.reduce((sum, item) => sum + item.count, 0)
+        }));
+        groupsWithTotals.sort((a, b) => b.total - a.total);
+        const groups = groupsWithTotals.map(d => d.group);
         const legend = svg.select('#legend-wrapper');
 
         // Center the legend on the full SVG width - more compact spacing and higher position
@@ -626,12 +630,30 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
 
     // Event handlers
     const handleAreaMouseOver = useCallback((event: MouseEvent, d: any) => {
-        console.log('Area mouseover:', d);
-    }, []);
+        const { svg } = d3ElementsRef.current;
+        if (!svg) return;
+        
+        const hoveredGroup = d.key || d.group;
+        console.log('Area mouseover:', hoveredGroup);
+        
+        // Dim all other areas, keep hovered one at full opacity
+        svg.selectAll('.area')
+            .attr('fill-opacity', (areaData: any) => {
+                const areaGroup = areaData.key || areaData.group;
+                return areaGroup === hoveredGroup ? (state.stacked ? 0.9 : 0.4) : 0.15;
+            });
+    }, [state.stacked]);
 
     const handleAreaMouseOut = useCallback(() => {
+        const { svg } = d3ElementsRef.current;
+        if (!svg) return;
+        
         console.log('Area mouseout');
-    }, []);
+        
+        // Reset all areas to default opacity
+        svg.selectAll('.area')
+            .attr('fill-opacity', state.stacked ? 0.8 : 0.25);
+    }, [state.stacked]);
 
     // Public methods
     const highlightGroup = useCallback((group: string, isTemporary: boolean = true) => {

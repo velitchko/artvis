@@ -15,6 +15,7 @@ import ArtistDetailHeader from './artist.detail.header';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
 import GET_ARTIST_BY_NAME from '../../queries/artistByName';
+import GET_ARTIST from '../../queries/artist';
 
 // Debug configuration
 const DEBUG = process.env.NODE_ENV !== 'production';
@@ -45,6 +46,8 @@ interface ArtistDetailState {
     // Search functionality
     searchTerm: string;
     searchResults: Artist[];
+    // Loading state for ego network artist selection
+    loadingCompareArtist: boolean;
 }
 
 interface TimelineData {
@@ -306,7 +309,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         highlightedYear: null,
         // Search functionality
         searchTerm: '',
-        searchResults: []
+        searchResults: [],
+        // Loading state for ego network artist selection
+        loadingCompareArtist: false
     });
 
     // Custom hooks
@@ -680,21 +685,83 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         }
     }, [artist]);
 
-    const handleArtistChange = useCallback((artistId: number | null) => {
-        if (artistId === null) {
-            setState(prev => ({ ...prev, compareWith: null }));
+    const handleArtistChange = useCallback(async (artistId: number | null) => {
+        if (!artistId) {
+            // Clear comparison if no artist ID provided
+            if (DEBUG) {
+                console.log('Clearing compare artist from ego network');
+            }
+            setState(prev => ({ ...prev, compareWith: null, loadingCompareArtist: false }));
             return;
         }
 
-        // Implementation for handling artist comparison
-        loadCallback(true);
-        
-        // This would involve fetching the comparison artist data
-        // and updating the visualization accordingly
-        
-        setTimeout(() => {
+        if (DEBUG) {
+            console.log('🎨 Loading artist from ego network with ID:', artistId);
+        }
+
+        try {
+            loadCallback(true);
+            setState(prev => ({ ...prev, loadingCompareArtist: true }));
+            
+            // Fetch the artist's basic data first using GET_ARTIST query
+            const artistResult = await client.query({
+                query: GET_ARTIST,
+                variables: { searchId: String(artistId) }
+            });
+
+            const selectedArtist = artistResult.data.artists[0];
+            
+            if (!selectedArtist) {
+                console.warn('❌ Artist not found for ID:', artistId);
+                setState(prev => ({ ...prev, loadingCompareArtist: false }));
+                loadCallback(false);
+                return;
+            }
+
+            if (DEBUG) {
+                console.log('✅ Found artist from API:', selectedArtist.sortname);
+            }
+
+            // Now fetch their full exhibition data using the same query as search
+            const exhibitionResult = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: String(artistId) }
+            });
+
+            const fullArtistData = exhibitionResult.data.artists[0];
+            
+            if (DEBUG) {
+                console.log('📊 Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+            }
+            
+            // Merge the full exhibition data with the original artist data
+            // This is exactly what handleArtistSelect does
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...(fullArtistData || {}),
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            if (DEBUG) {
+                console.log('🔄 Setting enhanced compare artist from ego network:', enhancedCompareArtist.sortname);
+            }
+            
+            // Update state exactly like handleArtistSelect does
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: selectedArtist.sortname || '',
+                searchResults: [],
+                loadingCompareArtist: false
+            }));
+            
             loadCallback(false);
-        }, 100);
+            
+        } catch (error) {
+            console.error('❌ Error loading artist from ego network:', error);
+            setState(prev => ({ ...prev, loadingCompareArtist: false }));
+            loadCallback(false);
+        }
     }, [loadCallback]);
 
     const handleTimelineCallback = useCallback((year: number) => {
@@ -887,6 +954,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                     onArtistSelect={handleArtistSelect}
                     compareWith={state.compareWith}
                     onClearComparison={handleClearComparison}
+                    loadingCompareArtist={state.loadingCompareArtist}
                     totalExhibitions={state.exhibitionsList.length}
                     totalLinks={state.links.length} // Total co-exhibition links
                     totalArtists={new Set(state.links.map(link => link.target.id)).size + 1} // Unique connected artists + base artist
@@ -965,6 +1033,7 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                                             orderBy={state.orderBy}
                                             selectedGroup={state.selectedGroup}
                                             highlightedYear={state.highlightedYear}
+                                            compareArtist={state.compareWith}
                                             initCallBack={handleNetworkReady}
                                             requestNode={(node?: number) => handleArtistChange(node || null)}
                                             mouseOverCallBack={handleTimelineCallback}

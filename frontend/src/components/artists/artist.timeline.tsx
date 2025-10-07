@@ -578,8 +578,12 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('y', (d: any) => yScale(d.sharedExhibitions)) // Start from the shared exhibition count
                 .attr('width', 24) // Wider bars
                 .attr('height', (d: any) => yScale(0) - yScale(d.sharedExhibitions)) // Height corresponds to number of shared exhibitions
-                .attr('fill', 'yellow') // Yellow color
-                .attr('opacity', 0.3) // Lower opacity for background effect
+                .attr('fill', '#FEF3C7') // Yellow-100 background (matching header bg-yellow-100)
+                .attr('stroke', '#FACC15') // Yellow-400 border (matching header border-yellow-400)
+                .attr('stroke-width', 2)
+                .attr('rx', 2) // Slight rounded corners
+                .attr('ry', 2)
+                .attr('opacity', 1)
                 .style('pointer-events', 'none'); // Don't interfere with other interactions
         }
 
