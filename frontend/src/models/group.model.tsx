@@ -1,4 +1,7 @@
+import { Artist } from './artist.model';
+
 export type Group = {
+	id: string;
 	name: string;
-	artistsMemberOf: Array<any>; // Artist type to avoid circular dependency
+	artistsMemberOf: Array<Artist>;
 };
