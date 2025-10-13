@@ -363,10 +363,12 @@ const AreaChartComponent: React.FC<AreaChartProps> = ({
             .attr('class', 'y-axis');
 
         // Add axis labels with subtle styling like timeline
+        // Calculate inner width for proper centering on chart area
+        const innerWidth = width - MARGINS.left - MARGINS.right;
         svg.append('text')
             .attr('class', 'x-axis-label')
-            .attr('x', width / 2)
-            .attr('y', height - MARGINS.bottom + 20) // Move closer to axis, but with some padding
+            .attr('x', MARGINS.left + innerWidth / 2)
+            .attr('y', height - MARGINS.bottom + 35) // More spacing to avoid overlap with year ticks
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px')
             .attr('fill', 'black')

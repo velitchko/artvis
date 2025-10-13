@@ -824,26 +824,38 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     const handleSearchChange = useCallback((searchTerm: string) => {
         setState(prev => ({ ...prev, searchTerm }));
         
-        // Clear existing timeout
+        // Clear results if search term is too short
+        if (searchTerm.length < 2) {
+            setState(prev => ({ ...prev, searchResults: [] }));
+            // Clear any pending search
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+            return;
+        }
+        
+        // Clear existing timeout to debounce
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
         
-        // Clear results if search term is too short
-        if (searchTerm.length < 2) {
-            setState(prev => ({ ...prev, searchResults: [] }));
-            return;
+        // Trigger search immediately for responsive feedback
+        if (DEBUG) {
+            console.log('Searching for:', searchTerm);
         }
+        searchArtists({
+            variables: { value: searchTerm }
+        });
         
-        // Debounced search with 250ms delay
+        // Set up debounce for subsequent rapid changes (150ms)
         searchTimeoutRef.current = setTimeout(() => {
             if (DEBUG) {
-                console.log('Searching for:', searchTerm);
+                console.log('Debounced search for:', searchTerm);
             }
             searchArtists({
                 variables: { value: searchTerm }
             });
-        }, 250);
+        }, 150);
     }, [searchArtists]);
 
     // Handle search results

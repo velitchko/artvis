@@ -39,31 +39,29 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [tooltipVisible, setTooltipVisible] = useState(false);
     const [containerWidth, setContainerWidth] = useState(width);
+    const [containerHeight, setContainerHeight] = useState(propHeight);
 
-    // Dynamic height based on whether we have a compare artist
-    const compareArtistHeight = compareArtist ? 30 : 0;
-    const height = propHeight + compareArtistHeight;
-
-    // Update width based on container size
+    // Update dimensions based on container size to match area chart behavior
     useEffect(() => {
-        const updateWidth = () => {
+        const updateDimensions = () => {
             if (containerRef.current) {
                 const rect = containerRef.current.getBoundingClientRect();
                 setContainerWidth(rect.width || width);
+                setContainerHeight(rect.height || propHeight);
             }
         };
 
-        updateWidth();
-        window.addEventListener('resize', updateWidth);
-        return () => window.removeEventListener('resize', updateWidth);
-    }, [width]);
+        updateDimensions();
+        window.addEventListener('resize', updateDimensions);
+        return () => window.removeEventListener('resize', updateDimensions);
+    }, [width, propHeight]);
 
-    // Use responsive width
+    // Use responsive dimensions from container
     const actualWidth = containerWidth;
-    const actualHeight = height;
+    const actualHeight = containerHeight;
 
-    // Constants from original - adjust margins for responsive design
-    const margin = { top: 40, bottom: 30, left: 60, right: 60 }; // Reduced margins for more compact display
+    // Constants from original - margins matched with area chart for alignment
+    const margin = { top: 55, bottom: 50, left: 50, right: 30 }; // Matched with area chart margins
     const minYear = 1905;
     const maxYear = 1915;
     const innerWidth = actualWidth - margin.left - margin.right;
@@ -219,7 +217,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         const yExtent = d3.extent(allExhibitionCounts) as [number, number];
         const yScale = d3.scaleLinear()
             .domain([0, Math.max(yExtent[1] || 1, 1)])
-            .range([height - margin.bottom, margin.top]);
+            .range([actualHeight - margin.bottom, margin.top]);
 
         // Calculate extents for radius scaling
         const allItems = [
@@ -231,18 +229,16 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             ...(compareTimelineData?.map(d => d.exhibitions > 0 ? d.items / d.exhibitions : 0) || [])
         ];
         
-        const rScale = d3.scalePow()
-            .exponent(0.5)
+        // Use square root scale with smaller max radius to keep glyphs reasonable
+        const rScale = d3.scaleSqrt()
             .domain([0, Math.max(
                 d3.max(allItems) || 1,
                 d3.max(allAvgItems) || 1
             )])
-            .range([0, 20]);
+            .range([2, 12]); // Min 2px, Max 12px for better proportions
 
-        return { xScale, yScale, rScale };
-    }, [timelineData, compareTimelineData, width, height, margin, minYear, maxYear]);
-
-    // Draw timeline
+            return { xScale, yScale, rScale };
+    }, [timelineData, compareTimelineData, width, actualHeight, margin, minYear, maxYear]);    // Draw timeline
     const drawTimeline = useCallback(() => {
         if (!svgRef.current || timelineData.length === 0) return;
 
@@ -254,15 +250,15 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         // Background - clean white
         svg.append('rect')
             .attr('width', width)
-            .attr('height', height)
+            .attr('height', actualHeight)
             .attr('fill', '#ffffff')
             .attr('stroke', 'none');
 
-        // Main artist metadata (left side)
+        // Main artist metadata (left side) - aligned with area chart legend at y=15
         const mainArtistText = svg.append('text')
             .attr('x', margin.left)
-            .attr('y', 25)
-            .attr('font-size', '14px') // Reduced from 16px
+            .attr('y', 15)
+            .attr('font-size', '14px')
             .attr('font-weight', 'bold')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
@@ -275,42 +271,40 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         svg.append('line')
             .attr('x1', margin.left)
             .attr('x2', margin.left + mainTextWidth)
-            .attr('y1', 28)
-            .attr('y2', 28)
+            .attr('y1', 18)
+            .attr('y2', 18)
             .attr('stroke', 'black')
             .attr('stroke-width', 1);
 
         svg.append('text')
             .attr('x', margin.left)
-            .attr('y', 45)
-            .attr('font-size', '10px') // Reduced from 12px
+            .attr('y', 30)
+            .attr('font-size', '10px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text(`${artist.deathyear ? `${artist.birthyear} (${artist.birthplace || 'Moscow'}) - ${artist.deathyear} (${artist.deathplace || 'Neuilly-sur-Seine'})` : ''}`);
 
         svg.append('text')
             .attr('x', margin.left)
-            .attr('y', 60)
-            .attr('font-size', '10px') // Reduced from 12px
+            .attr('y', 42)
+            .attr('font-size', '10px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text(`${exhibitionsList.length} exhibitions | ${timelineData.reduce((sum, d) => sum + d.items, 0)} artworks`);
 
-        // Compare artist metadata (top right) - only show when real compare artist exists
+        // Compare artist metadata (top right) - aligned with area chart legend at y=15
         if (compareArtist) {
             const compareArtistX = containerWidth - margin.right; // Align with end of timeline
             
             const compareArtistText = svg.append('text')
                 .attr('x', compareArtistX)
-                .attr('y', 25)
-                .attr('font-size', '14px') // Reduced from 16px
+                .attr('y', 15)
+                .attr('font-size', '14px')
                 .attr('font-weight', 'bold')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
                 .text(`${compareArtist.sortname || (compareArtist.firstname && compareArtist.lastname ? `${compareArtist.firstname} ${compareArtist.lastname}` : 'Unknown')} (${compareArtist.birthyear}, ${compareArtist.country})`);
-
-            // Get text width for underline`
 
             // Get text width for underline
             const compareTextWidth = (compareArtistText.node() as SVGTextElement)?.getBBox().width || 200;
@@ -319,16 +313,16 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             svg.append('line')
                 .attr('x1', compareArtistX - compareTextWidth) // Start line to fit text width
                 .attr('x2', compareArtistX)                    // End at the text position
-                .attr('y1', 28)
-                .attr('y2', 28)
+                .attr('y1', 18)
+                .attr('y2', 18)
                 .attr('stroke', 'black')
                 .attr('stroke-width', 1)
                 .attr('stroke-dasharray', '3,3');
 
             svg.append('text')
                 .attr('x', compareArtistX)
-                .attr('y', 45)
-                .attr('font-size', '10px') // Reduced from 12px
+                .attr('y', 30)
+                .attr('font-size', '10px')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
@@ -336,8 +330,8 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
 
             svg.append('text')
                 .attr('x', compareArtistX)
-                .attr('y', 60)
-                .attr('font-size', '10px') // Reduced from 12px
+                .attr('y', 42)
+                .attr('font-size', '10px')
                 .attr('fill', 'black')
                 .attr('font-family', 'Arial, sans-serif')
                 .attr('text-anchor', 'end') // Right-align text
@@ -384,7 +378,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
 
         // X-axis
         svg.append('g')
-            .attr('transform', `translate(0, ${height - margin.bottom})`)
+            .attr('transform', `translate(0, ${actualHeight - margin.bottom})`)
             .call(xAxis)
             .selectAll('.tick line')
             .attr('stroke', 'black')
@@ -408,36 +402,37 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         svg.append('text')
             .attr('transform', 'rotate(-90)')
             .attr('y', 15)
-            .attr('x', -(height / 2))
+            .attr('x', -(actualHeight / 2))
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text('Exhibitions');
 
-        // X-axis label - positioned just under the x-axis with more spacing
+        // X-axis label - centered on chart area (not full SVG)
         svg.append('text')
-            .attr('x', width / 2)
-            .attr('y', height - margin.bottom + 35)
+            .attr('x', margin.left + innerWidth / 2)
+            .attr('y', actualHeight - margin.bottom + 35)
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
             .text('Year');
 
-        // Legend positioned between main artist and compare artist metadata
-        const legendY = 45; // Same level as artist birth/death info
-        const mainArtistEndX = margin.left + 300; // Approximate end of main artist metadata
-        const compareArtistStartX = compareArtist ? (containerWidth - margin.right - 300) : containerWidth - 200; // Start of compare artist area
-        const centerX = (mainArtistEndX + compareArtistStartX) / 2; // Exact center between them
-        const itemSpacing = 50; // Compact spacing for the center area
+        // Legend positioned between main artist and compare artist metadata - aligned with metadata
+        const legendY = 20; // Aligned with artist birth/death info (now at y=30)
+        // const mainArtistEndX = margin.left + 300; // Approximate end of main artist metadata
+        // const compareArtistStartX = compareArtist ? (containerWidth - margin.right - 300) : containerWidth - 200; // Start of compare artist area
+        // Calculate centerX as the x position of the year 1910
+        const centerX = xScale(1910);
+        const itemSpacing = 100; // Compact spacing for the center area
         
         // Calculate total width and starting position to center in the available space
         const totalItems = compareArtist ? 3 : 3; // Group shows, Solo shows, Help (artist legends handled separately)
         const totalWidth = (totalItems - 1) * itemSpacing;
         let currentX = centerX - (totalWidth / 2);
         
-        // 1. Group shows indicator (black circle)
+        // 1. Total Artworks indicator (black circle)
         svg.append('circle')
             .attr('cx', currentX)
             .attr('cy', legendY)
@@ -451,11 +446,11 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('font-size', '8px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
-            .text('Group shows');
+            .text('Total Artworks');
 
         currentX += itemSpacing; // Move to next position
 
-        // 2. Solo shows indicator (white circle with black border)
+        // 2. Average Artworks/Exhibition indicator (white circle with black border)
         svg.append('circle')
             .attr('cx', currentX)
             .attr('cy', legendY)
@@ -471,54 +466,54 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
             .attr('font-size', '8px')
             .attr('fill', 'black')
             .attr('font-family', 'Arial, sans-serif')
-            .text('Solo shows');
+            .text('Avg Artworks/Exhib.');
 
         currentX += itemSpacing; // Move to next position
 
         // 3. Help icon with tooltip - in center area
-        svg.append('circle')
-            .attr('cx', currentX)
-            .attr('cy', legendY)
-            .attr('r', 6)
-            .attr('fill', 'white')
-            .attr('stroke', 'black')
-            .attr('stroke-width', 1)
-            .style('cursor', 'pointer')
-            .on('mouseenter', function() {
-                // Show tooltip on hover
-                const tooltip = svg.append('g').attr('class', 'help-tooltip');
+        // svg.append('circle')
+        //     .attr('cx', currentX)
+        //     .attr('cy', legendY)
+        //     .attr('r', 6)
+        //     .attr('fill', 'white')
+        //     .attr('stroke', 'black')
+        //     .attr('stroke-width', 1)
+        //     .style('cursor', 'pointer')
+        //     .on('mouseenter', function() {
+        //         // Show tooltip on hover
+        //         const tooltip = svg.append('g').attr('class', 'help-tooltip');
                 
-                tooltip.append('rect')
-                    .attr('x', currentX - 80)
-                    .attr('y', legendY - 25)
-                    .attr('width', 160)
-                    .attr('height', 16)
-                    .attr('fill', 'black')
-                    .attr('rx', 2);
+        //         tooltip.append('rect')
+        //             .attr('x', currentX - 90)
+        //             .attr('y', legendY - 28)
+        //             .attr('width', 180)
+        //             .attr('height', 20)
+        //             .attr('fill', 'black')
+        //             .attr('rx', 2);
                     
-                tooltip.append('text')
-                    .attr('x', currentX)
-                    .attr('y', legendY - 12)
-                    .attr('text-anchor', 'middle')
-                    .attr('font-size', '8px')
-                    .attr('fill', 'white')
-                    .attr('font-family', 'Arial, sans-serif')
-                    .text('Timeline shows exhibitions over time');
-            })
-            .on('mouseleave', function() {
-                svg.selectAll('.help-tooltip').remove();
-            });
+        //         tooltip.append('text')
+        //             .attr('x', currentX)
+        //             .attr('y', legendY - 13)
+        //             .attr('text-anchor', 'middle')
+        //             .attr('font-size', '11px')
+        //             .attr('fill', 'white')
+        //             .attr('font-family', 'Arial, sans-serif')
+        //             .text('Timeline shows exhibitions over time');
+        //     })
+        //     .on('mouseleave', function() {
+        //         svg.selectAll('.help-tooltip').remove();
+        //     });
             
-        svg.append('text')
-            .attr('x', currentX)
-            .attr('y', legendY + 15)
-            .attr('text-anchor', 'middle')
-            .attr('font-size', '8px')
-            .attr('fill', 'black')
-            .attr('font-family', 'Arial, sans-serif')
-            .attr('font-weight', 'bold')
-            .style('cursor', 'pointer')
-            .text('?');
+        // svg.append('text')
+        //     .attr('x', currentX)
+        //     .attr('y', legendY + 15)
+        //     .attr('text-anchor', 'middle')
+        //     .attr('font-size', '8px')
+        //     .attr('fill', 'black')
+        //     .attr('font-family', 'Arial, sans-serif')
+        //     .attr('font-weight', 'bold')
+        //     .style('cursor', 'pointer')
+        //     .text('?');
 
         // Co-exhibition bars - show years when both artists exhibited together in the SAME exhibitions
         // Render these before glyphs so they appear in the background
@@ -620,7 +615,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     .attr('x1', yearX)
                     .attr('x2', yearX)
                     .attr('y1', margin.top)
-                    .attr('y2', height - margin.bottom)
+                    .attr('y2', actualHeight - margin.bottom)
                     .attr('stroke', '#ff6b35')
                     .attr('stroke-width', 3)
                     .attr('stroke-dasharray', '8,4')
@@ -712,7 +707,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                     .attr('x1', yearX)
                     .attr('x2', yearX)
                     .attr('y1', margin.top)
-                    .attr('y2', height - margin.bottom)
+                    .attr('y2', actualHeight - margin.bottom)
                     .attr('stroke', '#ff6b35')
                     .attr('stroke-width', 3)
                     .attr('stroke-dasharray', '8,4')
@@ -807,7 +802,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                         .attr('x1', yearX)
                         .attr('x2', yearX)
                         .attr('y1', margin.top)
-                        .attr('y2', height - margin.bottom)
+                        .attr('y2', actualHeight - margin.bottom)
                         .attr('stroke', '#ff6b35')
                         .attr('stroke-width', 3)
                         .attr('stroke-dasharray', '8,4')
@@ -900,7 +895,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                         .attr('x1', yearX)
                         .attr('x2', yearX)
                         .attr('y1', margin.top)
-                        .attr('y2', height - margin.bottom)
+                        .attr('y2', actualHeight - margin.bottom)
                         .attr('stroke', '#ff6b35')
                         .attr('stroke-width', 3)
                         .attr('stroke-dasharray', '8,4')
@@ -958,7 +953,7 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
         }
 
 
-    }, [timelineData, compareTimelineData, scales, containerWidth, height, margin, onYearHover, exhibitionsList, onEgoNetworkHover]);
+    }, [timelineData, compareTimelineData, scales, containerWidth, actualHeight, margin, onYearHover, exhibitionsList, onEgoNetworkHover]);
 
     useEffect(() => {
         drawTimeline();
@@ -982,21 +977,21 @@ const ArtistTimeline: React.FC<ArtistTimelineProps> = ({
                 .attr('x1', yearX)
                 .attr('x2', yearX)
                 .attr('y1', margin.top)
-                .attr('y2', height - margin.bottom)
+                .attr('y2', actualHeight - margin.bottom)
                 .attr('stroke', '#ff6b35')
                 .attr('stroke-width', 3)
                 .attr('stroke-dasharray', '8,4')
                 .attr('opacity', 0.8)
                 .style('pointer-events', 'none');
         }
-    }, [onEgoNetworkYearHighlight, scales, height, margin]);
+    }, [onEgoNetworkYearHighlight, scales, actualHeight, margin]);
 
     return (
-        <div ref={containerRef} className={className} style={{ minHeight: height }}>
+        <div ref={containerRef} className={className} style={{ minHeight: actualHeight }}>
             <svg
                 ref={svgRef}
                 width={width}
-                height={height}
+                height={actualHeight}
                 style={{ width: '100%', height: '100%' }}
             />
         </div>
