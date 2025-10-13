@@ -4,7 +4,9 @@ export type Venue = {
 	id: number;
 	name: string;
 	place: string;
-	place_tgn: string;
-	type: string;
+	place_tgn: number;
+	type?: string;
+	status: number;
+	flags: number;
 	heldExhibitions: Array<Exhibition>;
 };

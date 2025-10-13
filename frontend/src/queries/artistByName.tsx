@@ -7,11 +7,16 @@ query ArtistByName($value: String!) {
             { firstname_CONTAINS: $value },
             { lastname_CONTAINS: $value }
         ]
-    }) 
+    }, options: { limit: 20 }) 
     {
         firstname, 
         lastname,
-        id
+        id,
+        country,
+        birthyear,
+        deathyear,
+        birthplace,
+        deathplace
     }
 }
 `;

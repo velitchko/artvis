@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
 import _ from 'lodash';
+import { useLazyQuery } from '@apollo/client';
 import client from '../apollo/client';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
@@ -9,8 +10,15 @@ import { Link } from '../../models/link';
 import EgoNetworkComponent from '../network/ego.network.refactored';
 import AreaChartComponent from '../linechart/area.chart.refactored';
 import TableComponent from '../table/table.refactored';
+import ArtistTimeline from './artist.timeline';
+import ArtistDetailHeader from './artist.detail.header';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
 import GET_EXHIBITION from '../../queries/exhibition';
+import GET_ARTIST_BY_NAME from '../../queries/artistByName';
+import GET_ARTIST from '../../queries/artist';
+
+// Debug configuration
+const DEBUG = process.env.NODE_ENV !== 'production';
 
 // Types
 interface ArtistDetailProps {
@@ -28,6 +36,18 @@ interface ArtistDetailState {
     compareNumberOfArtworks: number;
     colors: { group: string; colors: Map<string, string> };
     dimensions: { width: number; height: number };
+    // Visualization controls
+    coExhibitionCount: number;
+    groupBy: string;
+    orderBy: string;
+    selectedGroup: string; // For cross-component group selection
+    // Timeline highlighting
+    highlightedYear: number | null;
+    // Search functionality
+    searchTerm: string;
+    searchResults: Artist[];
+    // Loading state for ego network artist selection
+    loadingCompareArtist: boolean;
 }
 
 interface TimelineData {
@@ -119,9 +139,11 @@ const processExhibitionData = (exhibitions: Exhibition[]): TimelineData[] => {
 };
 
 const generateNetworkData = (artist: Artist): Link[] => {
-    console.log('Generating network data for artist:', artist.sortname);
-    console.log('coExhibitedArtists:', artist.coExhibitedArtists?.length || 0);
-    console.log('artistsCoExhibited:', artist.artistsCoExhibited?.length || 0);
+    if (DEBUG) {
+        console.log('Generating network data for artist:', artist.sortname);
+        console.log('coExhibitedArtists:', artist.coExhibitedArtists?.length || 0);
+        console.log('artistsCoExhibited:', artist.artistsCoExhibited?.length || 0);
+    }
     
     const source: Node = {
         id: artist.id,
@@ -135,7 +157,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
 
     // Process coExhibitedArtists
     artist.coExhibitedArtists?.forEach((coArtist: Artist) => {
-        console.log('Processing coExhibitedArtist:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        if (DEBUG) {
+            console.log('Processing coExhibitedArtist:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
         coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             // Check if source artist also exhibited in this exhibition
             const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
@@ -162,7 +186,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
 
     // Process artistsCoExhibited
     artist.artistsCoExhibited?.forEach((coArtist: Artist) => {
-        console.log('Processing artistsCoExhibited:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        if (DEBUG) {
+            console.log('Processing artistsCoExhibited:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
         coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
             // Check if source artist also exhibited in this exhibition
             const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
@@ -187,7 +213,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         });
     });
 
-    console.log('CoexhibMap size:', coexhibMap.size);
+    if (DEBUG) {
+        console.log('CoexhibMap size:', coexhibMap.size);
+    }
 
     // Generate links from coexhibition data
     coexhibMap.forEach((value, key) => {
@@ -198,7 +226,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         }
 
         if (!found) {
-            console.log(key + ' not found');
+            if (DEBUG) {
+                console.log(key + ' not found');
+            }
             return;
         }
 
@@ -228,7 +258,9 @@ const generateNetworkData = (artist: Artist): Link[] => {
         });
     });
 
-    console.log('Generated', links.length, 'links');
+    if (DEBUG) {
+        console.log('Generated', links.length, 'links');
+    }
     return links;
 };
 
@@ -267,11 +299,27 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         baseNumberOfArtworks: 0,
         compareNumberOfArtworks: 0,
         colors: { group: 'country', colors: new Map<string, string>() },
-        dimensions: DEFAULT_DIMENSIONS
+        dimensions: DEFAULT_DIMENSIONS,
+        // Visualization controls
+        coExhibitionCount: 3,
+        groupBy: 'country',
+        orderBy: 'coex', 
+        selectedGroup: '', // For cross-component group selection
+        // Timeline highlighting
+        highlightedYear: null,
+        // Search functionality
+        searchTerm: '',
+        searchResults: [],
+        // Loading state for ego network artist selection
+        loadingCompareArtist: false
     });
 
     // Custom hooks
     const timelineDimensions = useResizeObserver('timeline-container');
+    
+    // Search functionality
+    const [searchArtists, { data: searchData, loading: searchLoading }] = useLazyQuery(GET_ARTIST_BY_NAME);
+    const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
     // Memoized calculations
     const timelineData = useMemo(() => {
@@ -295,15 +343,17 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Initialize baseNode from artist
     useEffect(() => {
         if (artist && artist.id) {
-            console.log('Artist data loaded:', {
-                id: artist.id,
-                sortname: artist.sortname,
-                country: artist.country,
-                sex: artist.sex,
-                coExhibitedArtists: artist.coExhibitedArtists?.length || 0,
-                artistsCoExhibited: artist.artistsCoExhibited?.length || 0,
-                exhibitedAtExhibitions: artist.exhibitedAtExhibitions?.length || 0
-            });
+            if (DEBUG) {
+                console.log('Artist data loaded:', {
+                    id: artist.id,
+                    sortname: artist.sortname,
+                    country: artist.country,
+                    sex: artist.sex,
+                    coExhibitedArtists: artist.coExhibitedArtists?.length || 0,
+                    artistsCoExhibited: artist.artistsCoExhibited?.length || 0,
+                    exhibitedAtExhibitions: artist.exhibitedAtExhibitions?.length || 0
+                });
+            }
 
             const baseNode: Node = {
                 id: artist.id,
@@ -319,7 +369,9 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
                 }
             };
 
-            console.log('Created baseNode:', baseNode);
+            if (DEBUG) {
+                console.log('Created baseNode:', baseNode);
+            }
 
             setState(prev => ({
                 ...prev,
@@ -441,18 +493,47 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
 
     const fetchExhibitionData = useCallback(async () => {
         try {
+            if (DEBUG) {
+                console.log('=== FETCHING EXHIBITION DATA ===');
+                console.log('Artist ID:', artist.id);
+                console.log('Query:', GET_ARTIST_EXHIBITIONS_BY_ID);
+            }
+            
             loadCallback(true);
             const result = await client.query({
                 query: GET_ARTIST_EXHIBITIONS_BY_ID,
                 variables: { searchId: artist.id }
             });
 
+            if (DEBUG) {
+                console.log('Raw GraphQL result:', result);
+                console.log('Artists array:', result.data.artists);
+            }
+            
             const exhibitions = result.data.artists[0]?.exhibitedAtExhibitions || [];
+            
+            if (DEBUG) {
+                console.log('Extracted exhibitions:', exhibitions);
+                console.log('Exhibition count:', exhibitions.length);
+                
+                // Log some sample exhibitions
+                if (exhibitions.length > 0) {
+                    console.log('Sample exhibitions (first 3):');
+                    exhibitions.slice(0, 3).forEach((ex: any, idx: number) => {
+                        console.log(`  ${idx + 1}. Title: "${ex.title}", Year: ${ex.startyear}, ID: ${ex.id}`);
+                        console.log(`     Items: ${ex.exhibitsItems?.length || 0}`);
+                    });
+                }
+            }
             
             setState(prev => ({
                 ...prev,
                 exhibitionsList: exhibitions
             }));
+
+            if (DEBUG) {
+                console.log('=== EXHIBITION DATA FETCH COMPLETE ===');
+            }
 
         } catch (error) {
             console.error('Error fetching exhibition data:', error);
@@ -463,35 +544,40 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     // Generate network data after exhibitions are loaded
     useEffect(() => {
         if (state.exhibitionsList.length > 0 && artist.coExhibitedArtists) {
-            console.log('=== GENERATING NETWORK DATA ===');
-            console.log('Artist exhibitions loaded:', state.exhibitionsList.length);
-            console.log('Co-exhibited artists available:', artist.coExhibitedArtists?.length || 0);
-            console.log('Artists co-exhibited available:', artist.artistsCoExhibited?.length || 0);
+            if (DEBUG) {
+                console.log('=== GENERATING NETWORK DATA ===');
+                console.log('Artist exhibitions loaded:', state.exhibitionsList.length);
+                console.log('Co-exhibited artists available:', artist.coExhibitedArtists?.length || 0);
+                console.log('Artists co-exhibited available:', artist.artistsCoExhibited?.length || 0);
+            }
             
             const links = generateNetworkData(artist);
-            console.log('Generated links total:', links.length);
             
-            // Print summary by target
-            const targetSummary = new Map();
-            links.forEach(link => {
-                const targetId = link.targetId;
-                const targetName = link.target?.name || 'Unknown';
-                if (!targetSummary.has(targetId)) {
-                    targetSummary.set(targetId, { name: targetName, count: 0 });
-                }
-                targetSummary.get(targetId).count++;
-            });
-            
-            console.log('Unique targets:', targetSummary.size);
-            console.log('Target summary (first 5):');
-            let count = 0;
-            targetSummary.forEach((summary, targetId) => {
-                if (count < 5) {
-                    console.log(`  ${summary.name} (ID: ${targetId}): ${summary.count} connections`);
-                    count++;
-                }
-            });
-            console.log('=== END GENERATION DEBUG ===');
+            if (DEBUG) {
+                console.log('Generated links total:', links.length);
+                
+                // Print summary by target
+                const targetSummary = new Map();
+                links.forEach(link => {
+                    const targetId = link.targetId;
+                    const targetName = link.target?.name || 'Unknown';
+                    if (!targetSummary.has(targetId)) {
+                        targetSummary.set(targetId, { name: targetName, count: 0 });
+                    }
+                    targetSummary.get(targetId).count++;
+                });
+                
+                console.log('Unique targets:', targetSummary.size);
+                console.log('Target summary (first 5):');
+                let count = 0;
+                targetSummary.forEach((summary, targetId) => {
+                    if (count < 5) {
+                        console.log(`  ${summary.name} (ID: ${targetId}): ${summary.count} connections`);
+                        count++;
+                    }
+                });
+                console.log('=== END GENERATION DEBUG ===');
+            }
             
             setState(prev => ({
                 ...prev,
@@ -599,26 +685,99 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         }
     }, [artist]);
 
-    const handleArtistChange = useCallback((artistId: number | null) => {
-        if (artistId === null) {
-            setState(prev => ({ ...prev, compareWith: null }));
+    const handleArtistChange = useCallback(async (artistId: number | null) => {
+        if (!artistId) {
+            // Clear comparison if no artist ID provided
+            if (DEBUG) {
+                console.log('Clearing compare artist from ego network');
+            }
+            setState(prev => ({ ...prev, compareWith: null, loadingCompareArtist: false }));
             return;
         }
 
-        // Implementation for handling artist comparison
-        loadCallback(true);
-        
-        // This would involve fetching the comparison artist data
-        // and updating the visualization accordingly
-        
-        setTimeout(() => {
+        if (DEBUG) {
+            console.log('🎨 Loading artist from ego network with ID:', artistId);
+        }
+
+        try {
+            loadCallback(true);
+            setState(prev => ({ ...prev, loadingCompareArtist: true }));
+            
+            // Fetch the artist's basic data first using GET_ARTIST query
+            const artistResult = await client.query({
+                query: GET_ARTIST,
+                variables: { searchId: String(artistId) }
+            });
+
+            const selectedArtist = artistResult.data.artists[0];
+            
+            if (!selectedArtist) {
+                console.warn('❌ Artist not found for ID:', artistId);
+                setState(prev => ({ ...prev, loadingCompareArtist: false }));
+                loadCallback(false);
+                return;
+            }
+
+            if (DEBUG) {
+                console.log('✅ Found artist from API:', selectedArtist.sortname);
+            }
+
+            // Now fetch their full exhibition data using the same query as search
+            const exhibitionResult = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: String(artistId) }
+            });
+
+            const fullArtistData = exhibitionResult.data.artists[0];
+            
+            if (DEBUG) {
+                console.log('📊 Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+            }
+            
+            // Merge the full exhibition data with the original artist data
+            // This is exactly what handleArtistSelect does
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...(fullArtistData || {}),
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            if (DEBUG) {
+                console.log('🔄 Setting enhanced compare artist from ego network:', enhancedCompareArtist.sortname);
+            }
+            
+            // Update state exactly like handleArtistSelect does
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: selectedArtist.sortname || '',
+                searchResults: [],
+                loadingCompareArtist: false
+            }));
+            
             loadCallback(false);
-        }, 100);
+            
+        } catch (error) {
+            console.error('❌ Error loading artist from ego network:', error);
+            setState(prev => ({ ...prev, loadingCompareArtist: false }));
+            loadCallback(false);
+        }
     }, [loadCallback]);
 
     const handleTimelineCallback = useCallback((year: number) => {
-        // Implementation for timeline interaction callbacks
-        console.log('Timeline callback for year:', year);
+        // Set the highlighted year for timeline visualization
+        setState(prev => ({ ...prev, highlightedYear: year }));
+        if (DEBUG) {
+            console.log('Timeline callback for year:', year);
+        }
+    }, []);
+
+    const handleTimelineMouseOut = useCallback(() => {
+        // Clear the highlighted year when mouse leaves
+        setState(prev => ({ ...prev, highlightedYear: null }));
+        if (DEBUG) {
+            console.log('Timeline callback cleared');
+        }
     }, []);
 
     const handleNetworkReady = useCallback(() => {
@@ -630,123 +789,363 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
         setState(prev => ({ ...prev, colors }));
     }, []);
 
-    // Render method
-    const renderControls = () => (
-        <div className="controls-container mb-4">
-            <div className="flex gap-4 items-center">
-                <label className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Group By:</span>
-                    <select 
-                        className="border rounded px-2 py-1"
-                        value={state.colors.group}
-                        onChange={(e) => {
-                            // Handle group by change
-                            setState(prev => ({
-                                ...prev,
-                                colors: { ...prev.colors, group: e.target.value }
-                            }));
-                        }}
-                    >
-                        <option value="country">Country</option>
-                        <option value="sex">Gender</option>
-                        <option value="ageGroup">Age Group</option>
-                    </select>
-                </label>
-                
-                <label className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Min Co-exhibitions:</span>
-                    <input 
-                        type="range" 
-                        min="1" 
-                        max="10" 
-                        className="w-20"
-                        // Handle co-exhibition threshold change
-                    />
-                </label>
-            </div>
-        </div>
-    );
+    const handleGroupSelection = useCallback((selectedGroup?: string) => {
+        if (DEBUG) {
+            console.log('Group selection from area chart:', selectedGroup);
+        }
+        const normalizedGroup = selectedGroup || '';
+        setState(prev => ({ ...prev, selectedGroup: normalizedGroup }));
+    }, []);
+
+    // Visualization control handlers
+    const handleCoExhibitionCountChange = useCallback((coExhibitionCount: number) => {
+        setState(prev => ({ ...prev, coExhibitionCount }));
+        // This filtering affects both ego network and area chart
+        // The components will react to the updated state
+    }, []);
+
+    const handleGroupByChange = useCallback((groupBy: string) => {
+        setState(prev => ({ ...prev, groupBy }));
+        // GroupBy affects both ego network (coloring) and area chart (grouping)
+        // The color generation will be handled by the individual components
+        // but we update the colors structure to reflect the new grouping
+        setState(prevState => ({ 
+            ...prevState, 
+            groupBy,
+            colors: { ...prevState.colors, group: groupBy }
+        }));
+    }, []);
+
+    const handleOrderByChange = useCallback((orderBy: string) => {
+        setState(prev => ({ ...prev, orderBy }));
+        // OrderBy only affects the ego network layout
+    }, []);
+
+    const handleSearchChange = useCallback((searchTerm: string) => {
+        setState(prev => ({ ...prev, searchTerm }));
+        
+        // Clear results if search term is too short
+        if (searchTerm.length < 2) {
+            setState(prev => ({ ...prev, searchResults: [] }));
+            // Clear any pending search
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+            return;
+        }
+        
+        // Clear existing timeout to debounce
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // Trigger search immediately for responsive feedback
+        if (DEBUG) {
+            console.log('Searching for:', searchTerm);
+        }
+        searchArtists({
+            variables: { value: searchTerm }
+        });
+        
+        // Set up debounce for subsequent rapid changes (150ms)
+        searchTimeoutRef.current = setTimeout(() => {
+            if (DEBUG) {
+                console.log('Debounced search for:', searchTerm);
+            }
+            searchArtists({
+                variables: { value: searchTerm }
+            });
+        }, 150);
+    }, [searchArtists]);
+
+    // Handle search results
+    useEffect(() => {
+        if (searchData?.artists) {
+            if (DEBUG) {
+                console.log('Search results received:', searchData.artists);
+            }
+            setState(prev => ({ 
+                ...prev, 
+                searchResults: searchData.artists 
+            }));
+        }
+    }, [searchData]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleArtistSelect = useCallback(async (selectedArtist: Artist) => {
+        // Set selected artist as compare artist and load their data
+        if (DEBUG) {
+            console.log('Selected artist for comparison:', selectedArtist);
+        }
+        
+        try {
+            loadCallback(true);
+            
+            // Fetch the selected artist's full exhibition data
+            const result = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: selectedArtist.id }
+            });
+
+            const fullArtistData = result.data.artists[0];
+            
+            if (DEBUG) {
+                console.log('Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+                console.log('Compare artist full data:', fullArtistData);
+                console.log('Compare artist ID:', fullArtistData?.id, 'Type:', typeof fullArtistData?.id);
+            }
+            
+            // Merge the full exhibition data with the original artist data to preserve other fields
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...(fullArtistData || {}),
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            if (DEBUG) {
+                console.log('Enhanced compare artist:', enhancedCompareArtist);
+            }
+            
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            
+            loadCallback(false);
+        } catch (error) {
+            console.error('Error loading compare artist data:', error);
+            // Fallback: just set the artist without full exhibition data
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: selectedArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            loadCallback(false);
+        }
+    }, [loadCallback]);
+
+    const handleClearComparison = useCallback(() => {
+        if (DEBUG) {
+            console.log('Clearing comparison');
+        }
+        setState(prev => ({ 
+            ...prev, 
+            compareWith: null,
+            searchTerm: '' // Also clear search term for clean state
+        }));
+    }, []);
 
     return (
-        <div className="artist-detail-container p-6">
-            <div className="artist-header mb-6">
-                <h1 className="text-3xl font-bold">{artist.sortname || 'Unknown Artist'}</h1>
-                <p className="text-gray-600">
-                    {artist.birthyear && `Born: ${artist.birthyear}`}
-                    {artist.deathyear && ` - Died: ${artist.deathyear}`}
-                    {artist.birthyear && ` (Age: ${calculateAge(artist.birthyear)})`}
-                </p>
+        <div className="artist-detail-container h-screen flex flex-col overflow-hidden">
+            {/* Artist Detail Integrated Header */}
+            <div className="flex-shrink-0">
+                <ArtistDetailHeader
+                    artist={artist}
+                    coExhibitionCount={state.coExhibitionCount}
+                    onCoExhibitionCountChange={handleCoExhibitionCountChange}
+                    minCoExhibitions={1}
+                    maxCoExhibitions={20}
+                    groupBy={state.groupBy}
+                    onGroupByChange={handleGroupByChange}
+                    orderBy={state.orderBy}
+                    onOrderByChange={handleOrderByChange}
+                    searchTerm={state.searchTerm}
+                    onSearchChange={handleSearchChange}
+                    searchResults={state.searchResults}
+                    onArtistSelect={handleArtistSelect}
+                    compareWith={state.compareWith}
+                    onClearComparison={handleClearComparison}
+                    loadingCompareArtist={state.loadingCompareArtist}
+                    totalExhibitions={state.exhibitionsList.length}
+                    totalLinks={state.links.length} // Total co-exhibition links
+                    totalArtists={new Set(state.links.map(link => link.target.id)).size + 1} // Unique connected artists + base artist
+                />
             </div>
-
-            {renderControls()}
-
-            <div className="visualization-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Timeline Section */}
-                <div className="timeline-section">
-                    <h2 className="text-xl font-semibold mb-4">Exhibition Timeline</h2>
-                    <div id="timeline-container" className="w-full h-64 border rounded">
-                        <svg id="artist-detail-timeline" className="w-full h-full" />
-                    </div>
-                </div>
-
-                {/* Network Section */}
-                <div className="network-section">
-                    <h2 className="text-xl font-semibold mb-4">
-                        Co-exhibition Network ({state.links.length} connections)
-                    </h2>
-                    <div className="text-sm text-gray-600 mb-2">
-                        Base artist: {state.baseNode.name} | 
-                        Exhibitions: {state.exhibitionsList.length} | 
-                        Links: {state.links.length}
-                    </div>
-                    <div id="ego-net-container" className="w-full h-64 border rounded">
-                        {state.baseNode.id ? (
-                            <div>
-                                <div className="text-xs text-gray-500 mb-2">
-                                    Debug: baseNode.id={state.baseNode.id}, links={state.links.length}
-                                </div>
-                                <EgoNetworkComponent
-                                    baseNode={state.baseNode}
-                                    links={state.links}
-                                    colors={state.colors}
-                                    initCallBack={handleNetworkReady}
-                                    requestNode={(node?: number) => handleArtistChange(node || null)}
-                                    mouseOverCallBack={handleTimelineCallback}
-                                    syncColors={() => handleColorSync(state.colors)}
+            
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Desktop: 2x2 Grid Layout */}
+                <div className="hidden lg:flex lg:flex-col lg:h-full lg:gap-1">
+                    {/* Top Row: Timeline + Area Chart - Compact height */}
+                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 20%' }}>
+                        {/* Timeline Section - Top Left */}
+                        <div className="timeline-section h-full">
+                            <div id="timeline-container" className="w-full h-full">
+                                <ArtistTimeline 
+                                    artist={artist}
+                                    exhibitionsList={state.exhibitionsList}
+                                    compareArtist={state.compareWith}
+                                    width={800}
+                                    highlightedYear={state.highlightedYear}
+                                    onEgoNetworkYearHighlight={state.highlightedYear}
+                                    onEgoNetworkHover={(year: number | null) => {
+                                        if (year !== null) {
+                                            handleTimelineCallback(year);
+                                        } else {
+                                            handleTimelineMouseOut();
+                                        }
+                                    }}
+                                    onYearHover={(year: number, exhibitions: any[]) => {
+                                        handleTimelineCallback(year);
+                                        // Could add more year-specific handling here
+                                    }}
+                                    className="w-full h-full"
                                 />
                             </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                Loading network...
+                        </div>
+
+                        {/* Area Chart Section - Top Right */}
+                        <div className="area-chart-section h-full">
+                            <div id="area-chart-container" className="w-full h-full">
+                                <AreaChartComponent
+                                    links={state.links}
+                                    colors={state.colors}
+                                    stacked={true}
+                                    groupBy={state.groupBy}
+                                    coExhibitionCount={state.coExhibitionCount}
+                                    onclick={handleGroupSelection}
+                                />
                             </div>
-                        )}
+                        </div>
+                    </div>
+
+                    {/* Bottom Row: Table + Network - 2/3 height */}
+                    <div className="bottom-row grid grid-cols-2 gap-2 flex-1 min-h-0">
+                        {/* Table Section - Bottom Left */}
+                        <div className="table-section h-full overflow-hidden">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+
+                        {/* Network Section - Bottom Right */}
+                        <div className="network-section h-full flex flex-col">
+                            <div id="ego-net-container" className="flex-1 min-h-0">
+                                {state.baseNode.id ? (
+                                    <div className="h-full">
+                                        <EgoNetworkComponent
+                                            baseNode={state.baseNode}
+                                            links={state.links}
+                                            colors={state.colors}
+                                            coExhibitionCount={state.coExhibitionCount}
+                                            groupBy={state.groupBy}
+                                            orderBy={state.orderBy}
+                                            selectedGroup={state.selectedGroup}
+                                            highlightedYear={state.highlightedYear}
+                                            compareArtist={state.compareWith}
+                                            initCallBack={handleNetworkReady}
+                                            requestNode={(node?: number) => handleArtistChange(node || null)}
+                                            mouseOverCallBack={handleTimelineCallback}
+                                            mouseOutCallBack={handleTimelineMouseOut}
+                                            arcClickCallback={handleGroupSelection}
+                                            syncColors={() => handleColorSync(state.colors)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        Loading network...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Area Chart Section */}
-                <div className="area-chart-section lg:col-span-2">
-                    <h2 className="text-xl font-semibold mb-4">
-                        Co-exhibitor Analysis ({state.links.length} links)
-                    </h2>
-                    <div id="area-chart-container" className="w-full h-48 border rounded">
-                        <AreaChartComponent
-                            links={state.links}
-                            colors={state.colors}
-                            groupBy={state.colors.group}
-                        />
+                {/* Mobile: Linear Stacked Layout with Scroll */}
+                <div className="lg:hidden flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4">
+                    {/* Timeline Section */}
+                    <div className="timeline-section flex-shrink-0" style={{ height: '200px' }}>
+                        <div id="timeline-container-mobile" className="w-full h-full">
+                            <ArtistTimeline 
+                                artist={artist}
+                                exhibitionsList={state.exhibitionsList}
+                                compareArtist={state.compareWith}
+                                width={800}
+                                height={280}
+                                highlightedYear={state.highlightedYear}
+                                onEgoNetworkYearHighlight={state.highlightedYear}
+                                onEgoNetworkHover={(year: number | null) => {
+                                    if (year !== null) {
+                                        handleTimelineCallback(year);
+                                    } else {
+                                        handleTimelineMouseOut();
+                                    }
+                                }}
+                                onYearHover={(year: number, exhibitions: any[]) => {
+                                    handleTimelineCallback(year);
+                                }}
+                                className="w-full h-full"
+                            />
+                        </div>
                     </div>
-                </div>
 
-                {/* Table Section */}
-                <div className="table-section lg:col-span-2">
-                    <h2 className="text-xl font-semibold mb-4">Exhibition Details</h2>
-                    <div className="overflow-auto max-h-96 border rounded">
-                        <TableComponent
-                            baseId={Number(artist.id)}
-                            compareWith={state.compareWith}
-                            exhibitions={state.exhibitionsList}
-                            query={GET_EXHIBITION}
-                        />
+                    {/* Area Chart Section */}
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '120px' }}>
+                        <div id="area-chart-container-mobile" className="w-full h-full">
+                            <AreaChartComponent
+                                links={state.links}
+                                colors={state.colors}
+                                stacked={true}
+                                groupBy={state.groupBy}
+                                coExhibitionCount={state.coExhibitionCount}
+                                onclick={handleGroupSelection}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="table-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div className="h-full">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Network Section */}
+                    <div className="network-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div id="ego-net-container-mobile" className="h-full">
+                            {state.baseNode.id ? (
+                                <div className="h-full">
+                                    <EgoNetworkComponent
+                                        baseNode={state.baseNode}
+                                        links={state.links}
+                                        colors={state.colors}
+                                        coExhibitionCount={state.coExhibitionCount}
+                                        groupBy={state.groupBy}
+                                        orderBy={state.orderBy}
+                                        selectedGroup={state.selectedGroup}
+                                        highlightedYear={state.highlightedYear}
+                                        initCallBack={handleNetworkReady}
+                                        requestNode={(node?: number) => handleArtistChange(node || null)}
+                                        mouseOverCallBack={handleTimelineCallback}
+                                        mouseOutCallBack={handleTimelineMouseOut}
+                                        arcClickCallback={handleGroupSelection}
+                                        syncColors={() => handleColorSync(state.colors)}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-gray-500">
+                                    Loading network...
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

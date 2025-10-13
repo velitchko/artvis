@@ -55,6 +55,11 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         artists: Artist[];
     } | null>(null);
     const [totalContentHeight, setTotalContentHeight] = useState(0);
+    const [isAnimationMode, setIsAnimationMode] = useState(false);
+    const [animationProgress, setAnimationProgress] = useState(0);
+    const [dotPositions, setDotPositions] = useState<{[id: string]: {x: number, y: number}} | null>(null);
+    const [dotLayoutReady, setDotLayoutReady] = useState(false);
+    const [dotColors, setDotColors] = useState<{[id: string]: string}>({});
     
     // Virtualization settings - Use dynamic height based on available space
     const HEADER_HEIGHT = 64; // Match pt-16 (64px) from parent component
@@ -98,6 +103,35 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         return () => resizeObserver.disconnect();
     }, []);
 
+    // Animation toggle function
+    const toggleAnimationMode = () => {
+        const startTime = Date.now();
+        const duration = 300; // 0.3 seconds
+        const startProgress = animationProgress;
+        const targetProgress = isAnimationMode ? 0 : 1;
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Use easeInOutCubic for smooth animation
+            const eased = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            const currentProgress = startProgress + (targetProgress - startProgress) * eased;
+            setAnimationProgress(currentProgress);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                setIsAnimationMode(!isAnimationMode);
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    };
+
     // Debug logging
     useEffect(() => {
         console.log('ArtistCanvasGrid - Artists received:', artists.length);
@@ -123,20 +157,16 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         let year: number = NaN;
                         
                         try {
-                            if (exhibition.startdate instanceof Date) {
-                                year = exhibition.startdate.getFullYear();
+                            // Convert to string and parse year
+                            const dateStr = String(exhibition.startdate);
+                            
+                            // Try to extract 4-digit year from string
+                            const yearMatch = dateStr.match(/(\d{4})/);
+                            if (yearMatch) {
+                                year = parseInt(yearMatch[1]);
                             } else {
-                                // Convert to string first to handle any type
-                                const dateStr = String(exhibition.startdate);
-                                
-                                // Try to extract 4-digit year from string
-                                const yearMatch = dateStr.match(/(\d{4})/);
-                                if (yearMatch) {
-                                    year = parseInt(yearMatch[1]);
-                                } else {
-                                    // Try direct conversion
-                                    year = parseInt(dateStr);
-                                }
+                                // Try direct conversion
+                                year = parseInt(dateStr);
                             }
                         } catch (e) {
                             console.warn('Failed to parse date:', exhibition.startdate, e);
@@ -242,20 +272,16 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         let year: number = NaN;
                         
                         try {
-                            if (exhibition.startdate instanceof Date) {
-                                year = exhibition.startdate.getFullYear();
+                            // Convert to string and parse year
+                            const dateStr = String(exhibition.startdate);
+                            
+                            // Try to extract 4-digit year from string
+                            const yearMatch = dateStr.match(/(\d{4})/);
+                            if (yearMatch) {
+                                year = parseInt(yearMatch[1]);
                             } else {
-                                // Convert to string first to handle any type
-                                const dateStr = String(exhibition.startdate);
-                                
-                                // Try to extract 4-digit year from string
-                                const yearMatch = dateStr.match(/(\d{4})/);
-                                if (yearMatch) {
-                                    year = parseInt(yearMatch[1]);
-                                } else {
-                                    // Try direct conversion
-                                    year = parseInt(dateStr);
-                                }
+                                // Try direct conversion
+                                year = parseInt(dateStr);
                             }
                         } catch (e) {
                             // Silently handle parsing errors
@@ -385,6 +411,36 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Clear canvas with transparent background
         ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
 
+        // DOT MODE: render all dots in canvas view, skip per-item rendering
+        if (animationProgress >= 0.66 && dotPositions) {
+            Object.entries(dotPositions).forEach(([id, pos]) => {
+                if (
+                    pos.x >= 0 && pos.x <= canvasSize.width &&
+                    pos.y >= 0 && pos.y <= canvasSize.height
+                ) {
+                    // Color transition: interpolate from black to color
+                    const color = dotColors[id] || '#000';
+                    const t = (animationProgress - 0.66) / 0.34;
+                    // Interpolate color (simple linear RGB)
+                    function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+                    function hexToRgb(hex: string) {
+                        const m = hex.match(/^#([0-9a-f]{6})$/i);
+                        if (!m) return [0,0,0];
+                        const n = parseInt(m[1], 16);
+                        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+                    }
+                    const rgb0 = [0,0,0];
+                    const rgb1 = hexToRgb(color);
+                    const rgb = rgb0.map((c, i) => Math.round(lerp(c, rgb1[i], t)));
+                    ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+            return; // Skip visibleItems.forEach in dot mode
+        }
+
         const { yearExtent, countExtent } = getExtents(artists);
         
         // Create scales for timeline
@@ -412,14 +468,23 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             const isHovered = hoveredArtist === uniqueId;
             const isSearchHighlighted = searchArtistId !== undefined && searchArtistId === artist.id;
 
+            // --- ANIMATION LOGIC ---
+            // animationProgress: 0 = normal, 0.33 = fade text, 0.66 = morph to straight, 1 = shrink to circles
+            const textAlpha = animationProgress < 0.33 ? 1 - (animationProgress / 0.33) : 0;
+            const morphToStraight = animationProgress >= 0.33 && animationProgress < 0.66 ? (animationProgress - 0.33) / 0.33 : (animationProgress >= 0.66 ? 1 : 0);
+            const shrinkToCircle = animationProgress >= 0.66 ? (animationProgress - 0.66) / 0.34 : 0;
+
+            // Only show highlight if not in dots view
+            const showHighlight = shrinkToCircle === 0;
+
             // Draw yellow highlight background for hover
-            if (isHovered && !isSearchHighlighted) {
+            if (showHighlight && isHovered && !isSearchHighlighted) {
                 ctx.fillStyle = '#fde047'; // Bright yellow background for hover
                 ctx.fillRect(x, y, width, height);
             }
 
             // Draw dashed yellow stroke for search highlight
-            if (isSearchHighlighted) {
+            if (showHighlight && isSearchHighlighted) {
                 ctx.strokeStyle = '#eab308'; // Darker yellow for better visibility
                 ctx.lineWidth = 3;
                 ctx.setLineDash([8, 4]); // Dashed pattern: 8px dash, 4px gap
@@ -429,7 +494,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
 
             // Draw dashed yellow stroke for similarity base artist highlight
             const isSimilarityBase = similarityBaseArtist?.id === artist.id;
-            if (isSimilarityBase && !isSearchHighlighted) {
+            if (showHighlight && isSimilarityBase && !isSearchHighlighted) {
                 ctx.strokeStyle = '#eab308'; // Same yellow as search
                 ctx.lineWidth = 3;
                 ctx.setLineDash([5, 3]); // Different dashing pattern to distinguish from search
@@ -437,107 +502,118 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                 ctx.setLineDash([]); // Reset line dash for other drawing
             }
 
+            // --- ANIMATION LOGIC ---
+            // Remove duplicate declarations here, only declare once per loop iteration
+
             // Draw timeline in the upper portion of the card, well above text
             if (timelineData.length > 1) {
-                const timelineY = y + 3; // Start timeline very close to top
-                
-                // Create y-scale based on scaling mode
+                const timelineY = y + 3;
                 let yScale: d3.ScaleLinear<number, number>;
                 if (timelineScaling === 'absolute') {
-                    // Use global scale for absolute scaling
                     yScale = globalYScale;
                 } else {
-                    // Create relative scale using this artist's data extent
                     const artistMaxCount = d3.max(timelineData, d => d.count) || 1;
                     yScale = d3.scaleLinear()
                         .domain([0, artistMaxCount])
                         .range([CHART_HEIGHT - CHART_MARGIN.bottom, CHART_MARGIN.top]);
                 }
-                
-                // Improve line rendering quality
+                ctx.save();
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
-                ctx.lineCap = 'round'; // Smoother line endings
-                ctx.lineJoin = 'round'; // Smoother line joins
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
                 ctx.beginPath();
-                
-                // Prepare valid points for rendering
-                const validPoints: Array<{ x: number; y: number }> = [];
-                timelineData.forEach((d, i) => {
+                const validPoints = timelineData.map((d, i) => {
                     const chartX = x + xScale(d.year);
                     const chartY = timelineY + yScale(d.count);
-                    
-                    // Round coordinates for crisp rendering
-                    const roundedX = Math.round(chartX) + 0.5;
-                    const roundedY = Math.round(chartY) + 0.5;
-                    
-                    // Check if the coordinates are valid
-                    if (!isNaN(roundedX) && !isNaN(roundedY) && isFinite(roundedX) && isFinite(roundedY)) {
-                        validPoints.push({ x: roundedX, y: roundedY });
-                    }
+                    return { x: Math.round(chartX) + 0.5, y: Math.round(chartY) + 0.5 };
                 });
-                
-                if (validPoints.length > 0) {
+                if (shrinkToCircle > 0 && dotPositions && dotPositions[uniqueId]) {
+                    // Animate dot movement to non-overlapping layout
+                    const first = validPoints[0];
+                    const target = dotPositions[uniqueId];
+                    const interpX = first.x + (target.x - first.x) * shrinkToCircle;
+                    const interpY = first.y + (target.y - first.y) * shrinkToCircle;
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(interpX, interpY, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else if (shrinkToCircle > 0) {
+                    // Fallback: shrink to original position
+                    const first = validPoints[0];
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(first.x, first.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else if (morphToStraight > 0) {
+                    // Step 2: Morph curves/polylines into straight lines
+                    const first = validPoints[0];
+                    const last = validPoints[validPoints.length - 1];
+                    const straightPoints = validPoints.map((pt, i) => {
+                        const t = i / (validPoints.length - 1);
+                        return {
+                            x: first.x + (last.x - first.x) * t,
+                            y: first.y + (last.y - first.y) * t
+                        };
+                    });
+                    const morphed = validPoints.map((pt, i) => ({
+                        x: pt.x + (straightPoints[i].x - pt.x) * morphToStraight,
+                        y: pt.y + (straightPoints[i].y - pt.y) * morphToStraight
+                    }));
+                    ctx.moveTo(morphed[0].x, morphed[0].y);
+                    for (let i = 1; i < morphed.length; i++) {
+                        ctx.lineTo(morphed[i].x, morphed[i].y);
+                    }
+                    ctx.stroke();
+                } else {
+                    // Step 1: Normal rendering (curves or polylines)
                     if (curveRendering === 'smooth' && validPoints.length > 2) {
-                        // Smooth curve using quadratic bezier curves
                         ctx.moveTo(validPoints[0].x, validPoints[0].y);
-                        
                         for (let i = 1; i < validPoints.length - 1; i++) {
                             const currentPoint = validPoints[i];
                             const nextPoint = validPoints[i + 1];
-                            
-                            // Calculate control point for smooth curves
                             const controlX = currentPoint.x;
                             const controlY = currentPoint.y;
                             const endX = (currentPoint.x + nextPoint.x) / 2;
                             const endY = (currentPoint.y + nextPoint.y) / 2;
-                            
                             ctx.quadraticCurveTo(controlX, controlY, endX, endY);
                         }
-                        
-                        // Draw line to the last point
                         if (validPoints.length > 1) {
                             const lastPoint = validPoints[validPoints.length - 1];
                             ctx.lineTo(lastPoint.x, lastPoint.y);
                         }
                     } else {
-                        // Jagged/sharp lines (original behavior)
                         ctx.moveTo(validPoints[0].x, validPoints[0].y);
                         for (let i = 1; i < validPoints.length; i++) {
                             ctx.lineTo(validPoints[i].x, validPoints[i].y);
                         }
                     }
-                    
                     ctx.stroke();
                 }
+                ctx.restore();
             }
-
             // Draw artist info below the timeline with adequate spacing to prevent overlap
-            const textStartY = y + CHART_HEIGHT + 10; // Increased spacing to clear timeline base
-            
-            // Calculate rank based on actual position in the sorted list
+            const textStartY = y + CHART_HEIGHT + 10;
             const originalIndex = gridItems.findIndex(gridItem => gridItem.artist.id === artist.id);
             const rank = originalIndex + 1;
-            
-            // Draw artist name with rank in bold
+            ctx.save();
+            ctx.globalAlpha = textAlpha;
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 9px Arial';
             ctx.textAlign = 'left';
-            
             const artistName = `${artist.firstname || ''} ${artist.lastname || ''}`.trim();
             const rankedName = `${rank}. ${artistName}`;
-            ctx.fillText(truncateText(ctx, rankedName, width - 30), x + 2, textStartY);
-            
-            // Draw country and life years in regular font - closer spacing
-            ctx.font = '8px Arial';
-            const lifeSpan = `(${artist.country || '?'}) ${artist.birthyear || '?'}-${artist.deathyear || '?'}`;
-            ctx.fillText(truncateText(ctx, lifeSpan, width - 30), x + 2, textStartY + 8);
-
-            // Note: Use Ctrl+Click to open artist detail page in new tab
+            if (textAlpha > 0) {
+                ctx.fillText(truncateText(ctx, rankedName, width - 30), x + 2, textStartY);
+                ctx.font = '8px Arial';
+                const lifeSpan = `(${artist.country || '?'}) ${artist.birthyear || '?'}-${artist.deathyear || '?'}`;
+                ctx.fillText(truncateText(ctx, lifeSpan, width - 30), x + 2, textStartY + 8);
+            }
+            ctx.restore();
         });
         
         console.log('Canvas render complete');
-    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling]);
+    }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling, animationProgress, dotPositions]);
 
     // Helper function to truncate text
     const truncateText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string => {
@@ -566,7 +642,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         const hoveredItem = gridItems.find(item => {
             const itemScreenY = item.y - scrollTop;
             
-            // Stricter bounds checking with small margin to prevent edge cases
+             // Stricter bounds checking with small margin to prevent edge cases
             const margin = 1;
             const isInHorizontalBounds = mouseX >= (item.x + margin) && mouseX <= (item.x + item.width - margin);
             const isInVerticalBounds = mouseY >= (itemScreenY + margin) && mouseY <= (itemScreenY + item.height - margin);
@@ -640,8 +716,55 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         setScrollTop(newScrollTop);
     };
 
+    // Compute random dot positions for all gridItems when entering dots mode
+    useEffect(() => {
+        if (animationProgress < 0.66 || dotLayoutReady) return;
+        // Use all gridItems, not just visible
+        const pos: {[id: string]: {x: number, y: number}} = {};
+        const margin = 12;
+        for (const item of gridItems) {
+            pos[item.uniqueId] = {
+                x: Math.random() * (canvasSize.width - 2 * margin) + margin,
+                y: Math.random() * (canvasSize.height - 2 * margin) + margin
+            };
+        }
+        setDotPositions(pos);
+        setDotLayoutReady(true);
+    }, [animationProgress, gridItems, canvasSize, dotLayoutReady]);
+
+    // Reset dot layout when leaving dots mode
+    useEffect(() => {
+        if (animationProgress < 0.66 && dotLayoutReady) {
+            setDotPositions(null);
+            setDotLayoutReady(false);
+        }
+    }, [animationProgress, dotLayoutReady]);
+
+    // Assign random categorical color to each artist on mount or when gridItems change
+    useEffect(() => {
+        if (!gridItems.length) return;
+        const palette = [
+            '#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00',
+            '#ffff33', '#a65628', '#f781bf', '#999999', '#66c2a5',
+            '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
+            '#e5c494', '#b3b3b3'
+        ];
+        const colors: {[id: string]: string} = {};
+        gridItems.forEach((item, i) => {
+            colors[item.uniqueId] = palette[Math.floor(Math.random() * palette.length)];
+        });
+        setDotColors(colors);
+    }, [gridItems]);
+
     return (
-        <div ref={containerRef} className="flex justify-center w-full px-2">
+        <div ref={containerRef} className="flex flex-col items-center w-full px-2">
+            <button
+                className="mb-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                onClick={toggleAnimationMode}
+                disabled={animationProgress !== 0 && animationProgress !== 1}
+            >
+                {isAnimationMode ? 'Restore Text & Lines' : 'Compound to Dots & Fade Text'}
+            </button>
             {!isReady || !gridItems.length ? (
                 <div className="p-8 text-gray-500">
                     <p>Loading artists... ({artists.length} artists received)</p>

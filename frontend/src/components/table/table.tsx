@@ -103,7 +103,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
                 // sort exhibitions by startyear
                 exhibitions.forEach((e: Exhibition) => {
                     e.startyear = +e.startyear
-                    e.endyear = +e.endyear
+                    if (e.endyear) e.endyear = +e.endyear
                     e.id = +e.id
                 });
                 
@@ -115,7 +115,7 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
 
                 exhibitions.forEach((exhibition: Exhibition) => {
                     // if startyear is less than 1905 or enddate is greater than 1915 skip
-                    if(exhibition.startyear < 1905 || exhibition.endyear > 1915) return;
+                    if(exhibition.startyear < 1905 || (exhibition.endyear && exhibition.endyear > 1915)) return;
                     
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
@@ -210,8 +210,10 @@ class TableComponent extends React.Component<{ query: DocumentNode, baseId: numb
             id: -1,
             place: "\\N",
             name: `NA`,
-            place_tgn: `NA`,
+            place_tgn: 0,
             type: `NA`,
+            status: 0,
+            flags: 0,
             heldExhibitions: []
         }
 

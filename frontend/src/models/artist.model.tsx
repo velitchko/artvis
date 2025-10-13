@@ -1,35 +1,43 @@
 
 import { Exhibition } from './exhibition.model';
 import { Item } from './item.model';
+import { Group } from './group.model';
 
 export type Artist = {
-    // FROM THE SCHEMA
 	id: number;
-	firstname: string;
+	firstname?: string;
 	lastname: string;
-	birthdate?: Date;
-	birthyear: number;
+	birthdate?: string;
+	birthyear?: number;
 	birthplace?: string;
-	birthplace_tgn: string;
-	collective: string;
+	birthplace_tgn?: string;
+	collective?: string;
 	country?: string;
-	deathdate?: Date;
-	deathyear: number;
+	deathdate?: string;
+	deathyear?: number;
 	deathplace?: string;
-	deathplace_tgn: string;
+	deathplace_tgn?: string;
+	exile?: string;
 	sex?: string;
-	title?: string;
-	name_variant: string;
-	occupation: string;
-	pnd: string;
-	ulan: string;
-	profession: string;
+	name_variant?: string;
+	occupation?: string;
+	organization?: string;
+	pnd?: string;
+	ulan?: string;
+	urlan?: string;
+	profession?: string;
 	sortname: string;
-	study: string;
-    artistsCoExhibited: Array<Artist>; // IN Direction
-	artistsCoExhibitedTotal: Array<Artist>; // IN Direction
-	coExhibitedArtists?: Array<Artist>; // OUT Direction
-	coExhibitedTotalArtists?: Array<Artist>; // OUT Direction
-	createdItems?: Array<Item>;
-	exhibitedAtExhibitions?: Array<Exhibition>;
+	status?: number;
+	study?: string;
+	wikidata?: string;
+	numCities?: number;
+	numCountries?: number;
+	numVenues?: number;
+	artistsCoExhibited: Array<Artist>;
+	artistsCoExhibitedTotal: Array<Artist>;
+	coExhibitedArtists: Array<Artist>;
+	coExhibitedTotalArtists: Array<Artist>;
+	createdItems: Array<Item>;
+	exhibitedAtExhibitions: Array<Exhibition>;
+	memberOfGroups: Array<Group>;
 };

@@ -48,9 +48,6 @@ const ArtistDetailPage = () => {
     return (
         <>
             <React.StrictMode>
-                <NavigationComponent showHeading={ true } />
-                {/* wait to load then rneder artists component  */}
-                <div className="h-[80px]"></div>
                 { !loading ? (
                     <>
                         <ArtistDetailComponent artist={artist} loadCallback={load}/> 
