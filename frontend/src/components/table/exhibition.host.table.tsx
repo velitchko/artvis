@@ -6,8 +6,20 @@ import { Exhibition } from '../../models/exhibition.model';
 import { Artist } from '../../models/artist.model';
 import { Item } from '../../models/item.model';
 import { Venue } from '../../models/venue.model';
-import { Host } from '../../models/host.model';
 import { Location } from '../../models/location.model';
+
+// Simplified host interface for table display
+interface TableHost {
+    id: number;
+    country: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    place: string;
+    place_tgn: number;
+    type: string;
+    exhibitionsTookPlaceIn: Exhibition[];
+}
 
 type IResults = {
     artists?: Array<any>,
@@ -122,7 +134,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
                     //console.log("exhibitions " + exhibition.tookPlaceInHosts[0]);
 
                     // if startdate is less than 1905 or enddate is greater than 1915 skip
-                    if (exhibition.startyear < 1905 || exhibition.endyear > 1915) return;
+                    if (exhibition.startyear < 1905 || (exhibition.endyear || exhibition.startyear) > 1915) return;
 
                     const metaExhibition: MetaExhibition = { ...exhibition, isCommon: false, percentBase: 0, percentCompare: 0 };
                     metaExhibitions.push(metaExhibition);
@@ -210,7 +222,7 @@ class EHTableComponent extends React.Component<{ query: DocumentNode, baseId: nu
     }
 
     /** Checks if there is a host, otherwise returns dummy host (for filling the table with data) */
-    checkForHost(hosts: Location[]): Host {
+    checkForHost(hosts: Location[]): TableHost {
         if (hosts[0]) {
             return {
                 id: hosts[0].id,

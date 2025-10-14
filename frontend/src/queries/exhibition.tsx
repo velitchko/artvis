@@ -10,8 +10,11 @@ query Exhibitions($where: ExhibitionWhere) {
         type,
         exhibitsItems {
             id,
+            title,
             artistsCreated {
-                id
+                id,
+                firstname,
+                lastname
             }
         }
         tookPlaceAtLocations {

@@ -9,7 +9,6 @@ import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 //import data from '../../resources/map.geo.json';
 import data from '../../resources/complete-map.geo.json';
-import { Host } from '../../models/host.model';
 import { Item } from '../../models/item.model';
 import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 

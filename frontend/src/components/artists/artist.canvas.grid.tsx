@@ -157,20 +157,16 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         let year: number = NaN;
                         
                         try {
-                            if (exhibition.startdate instanceof Date) {
-                                year = exhibition.startdate.getFullYear();
+                            // Convert to string and parse year
+                            const dateStr = String(exhibition.startdate);
+                            
+                            // Try to extract 4-digit year from string
+                            const yearMatch = dateStr.match(/(\d{4})/);
+                            if (yearMatch) {
+                                year = parseInt(yearMatch[1]);
                             } else {
-                                // Convert to string first to handle any type
-                                const dateStr = String(exhibition.startdate);
-                                
-                                // Try to extract 4-digit year from string
-                                const yearMatch = dateStr.match(/(\d{4})/);
-                                if (yearMatch) {
-                                    year = parseInt(yearMatch[1]);
-                                } else {
-                                    // Try direct conversion
-                                    year = parseInt(dateStr);
-                                }
+                                // Try direct conversion
+                                year = parseInt(dateStr);
                             }
                         } catch (e) {
                             console.warn('Failed to parse date:', exhibition.startdate, e);
@@ -276,20 +272,16 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         let year: number = NaN;
                         
                         try {
-                            if (exhibition.startdate instanceof Date) {
-                                year = exhibition.startdate.getFullYear();
+                            // Convert to string and parse year
+                            const dateStr = String(exhibition.startdate);
+                            
+                            // Try to extract 4-digit year from string
+                            const yearMatch = dateStr.match(/(\d{4})/);
+                            if (yearMatch) {
+                                year = parseInt(yearMatch[1]);
                             } else {
-                                // Convert to string first to handle any type
-                                const dateStr = String(exhibition.startdate);
-                                
-                                // Try to extract 4-digit year from string
-                                const yearMatch = dateStr.match(/(\d{4})/);
-                                if (yearMatch) {
-                                    year = parseInt(yearMatch[1]);
-                                } else {
-                                    // Try direct conversion
-                                    year = parseInt(dateStr);
-                                }
+                                // Try direct conversion
+                                year = parseInt(dateStr);
                             }
                         } catch (e) {
                             // Silently handle parsing errors

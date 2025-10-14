@@ -17,10 +17,22 @@ import GET_EXHIBITIONS_BY_ARTIST from '../../queries/exhibitionsByArtist';
 import ExhibitionMapComponent from '../map/exhibition.map';
 import GET_EXHIBITIONS_AND_HOSTS from '../../queries/exhibitonsAndHosts';
 import { Item } from '../../models/item.model';
-import { Host } from '../../models/host.model';
 import ExhibitionLinechartComponent from '../linechart/exhibition.linechart';
 import GET_ARTIST_AND_CATALOGUES from '../../queries/artistWithCatalogues';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
+
+// Simplified host interface for table display
+interface TableHost {
+    id: number;
+    country: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    place: string;
+    place_tgn: number;
+    type: string;
+    exhibitionsTookPlaceIn: Exhibition[];
+}
 
 type MetaExhibition = Exhibition & { isCommon: boolean, artworksTotal: number, artworksBase: number, percentCompare: number, percentBase: number };
 
@@ -319,7 +331,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 
 
 					//console.log("map value foreach");
-					let hosts: Host[] = [];
+					let hosts: TableHost[] = [];
 
 					//if the exhibition already has hosts, set them as hosts
 					if (item.exhibition.tookPlaceAtLocations[0]) {
@@ -342,7 +354,7 @@ class ExhibitionsComponent extends React.Component<{ artist: Artist }, { artist:
 					}
 					//if the exhibition does not have hosts, insert a dummy host
 					else {
-						const noHost: Host = {
+						const noHost: TableHost = {
 							id: -1,
 							country: "Unknown",
 							name: 'Unknown	',

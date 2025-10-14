@@ -236,12 +236,10 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         ).forEach(exhibition => {
             let year: number;
             try {
-                // Handle different date formats
-                if (exhibition.startdate instanceof Date) {
-                    year = exhibition.startdate.getFullYear();
-                } else if (typeof exhibition.startdate === 'string') {
-                    const yearMatch = (exhibition.startdate as string).match(/(\d{4})/);
-                    year = yearMatch ? parseInt(yearMatch[1]) : parseInt(exhibition.startdate as string);
+                // Handle string date formats
+                if (typeof exhibition.startdate === 'string') {
+                    const yearMatch = exhibition.startdate.match(/(\d{4})/);
+                    year = yearMatch ? parseInt(yearMatch[1]) : parseInt(exhibition.startdate);
                 } else {
                     year = +exhibition.startdate;
                 }

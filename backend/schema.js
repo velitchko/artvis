@@ -12,13 +12,18 @@ export const schema = `type Artist {
 	createdItems: [Item!]! @relationship(type: "CREATED", direction: OUT)
 	deathdate: String
 	deathplace: String
+	deathplace_tgn: String
 	deathyear: BigInt
 	exhibitedAtExhibitions: [Exhibition!]! @relationship(type: "EXHIBITED_AT", direction: OUT, properties: "ExhibitedAtProperties")
 	exile: String
 	firstname: String
 	id: BigInt
 	lastname: String!
+	memberOfGroups: [Group!]! @relationship(type: "MEMBER_OF", direction: OUT)
 	name_variant: String
+	numCities: BigInt
+	numCountries: BigInt
+	numVenues: BigInt
 	occupation: String
 	organization: String
 	pnd: String
@@ -75,12 +80,17 @@ type Geoname {
 	name: String!
 	name_alternate: String
 	parent_path: String!
+	latitude: Float!
+	longitude: Float!
 	status: BigInt!
 	tgn: BigInt!
 	tgn_parent: BigInt
 	type: String!
-	latitude: Float
-	longitude: Float
+}
+
+type Group {
+	artistsMemberOf: [Artist!]! @relationship(type: "MEMBER_OF", direction: IN)
+	name: String!
 }
 
 interface HeldProperties @relationshipProperties {

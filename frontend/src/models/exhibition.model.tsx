@@ -6,24 +6,23 @@ import { Location } from "./location.model";
 
 export type Exhibition = {
 	id: number;
-	startdate: Date;
+	startdate: string;
 	startyear: number;
-	enddate: Date;
-	endyear: number;
-	displaydate: string,
-	organizer: string;
-	organizer_type: string;
-	organizing_committee: string;
-	price: string;
+	enddate?: string;
+	endyear?: number;
+	displaydate?: string;
+	organizer?: string;
+	organizer_type?: string;
+	organizing_committee?: string;
+	price?: string;
 	status: number;
 	title: string;
-	title_short: string;
-	title_alternate: string;
+	title_short?: string;
+	title_alternate?: string;
 	type: string;
 	tookPlaceAtLocations: Array<Location>;
 	venuesHeld: Array<Venue>;
 	artistsExhibitedAt: Array<Artist>;
-	organizersOrganizedBy: Array<Organizer>;
+	organizersOrganized: Array<Organizer>;
 	exhibitsItems: Array<Item>;
-	exhibitsItemsAggregate: { count: number };
 };
