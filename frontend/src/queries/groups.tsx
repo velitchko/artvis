@@ -8,6 +8,13 @@ query Groups {
         artistsMemberOfAggregate {
             count
         }
+        artistsMemberOf {
+            id
+            exhibitedAtExhibitions {
+                id
+                startyear
+            }
+        }
     }
 }
 `;

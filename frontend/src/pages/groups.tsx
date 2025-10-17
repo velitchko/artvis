@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import client from '../components/apollo/client';
 import GET_GROUPS from '../queries/groups';
 import LoadingComponent from '../components/loading/loading';
-import { Link } from 'react-router-dom';
+import GroupCard from '../components/groups/group.card';
 
 interface GroupListItem {
     id: number;
@@ -10,6 +10,13 @@ interface GroupListItem {
     artistsMemberOfAggregate: {
         count: number;
     };
+    artistsMemberOf?: Array<{
+        id: number;
+        exhibitedAtExhibitions?: Array<{
+            id: number;
+            startyear: number;
+        }>;
+    }>;
 }
 
 const GroupsPage = () => {
@@ -17,6 +24,8 @@ const GroupsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const [order, setOrder] = useState('name'); // 'name' or 'members'
 
     useEffect(() => {
         client.query({
@@ -33,9 +42,29 @@ const GroupsPage = () => {
         });
     }, []);
 
-    const filteredGroups = groups.filter(group => 
-        group.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
+        setShowSearchResults(term.length >= 2);
+    };
+
+    const clearSearch = () => {
+        setSearchTerm('');
+        setShowSearchResults(false);
+    };
+
+    // Filter and sort groups
+    const filteredAndSortedGroups = groups
+        .filter(group => 
+            group.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (order === 'name') {
+                return a.name.localeCompare(b.name);
+            } else if (order === 'members') {
+                return b.artistsMemberOfAggregate.count - a.artistsMemberOfAggregate.count;
+            }
+            return 0;
+        });
 
     if (loading) {
         return (
@@ -60,64 +89,85 @@ const GroupsPage = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b-2 border-black">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
+            {/* Integrated Header */}
+            <nav className="bg-white border-b-2 border-black sticky top-0 z-50">
+                <div className="flex items-center justify-between px-4 py-2">
+                    {/* Logo Section */}
+                    <div className="flex-shrink-0">
                         <a href="/" className="flex items-center">
                             <h1 className="text-xl font-extrabold tracking-tight leading-none text-gray-900 md:text-2xl lg:text-3xl">
                                 Art
                                 <span className="font-face-kolker md:text-4xl lg:text-5xl">Vis</span>
                             </h1>
                         </a>
-                        <h2 className="text-2xl font-bold">Artist Groups</h2>
+                    </div>
+
+                    <div className="h-8 w-px bg-gray-300 mx-4"></div>
+
+                    <h2 className="text-lg font-bold text-gray-900">Artist Groups</h2>
+
+                    {/* Toolbar Section */}
+                    <div className="flex items-center gap-2 flex-1 justify-end">
+                        {/* Order By Control */}
+                        <div className="flex items-center gap-2">
+                            <label className="text-black font-bold text-xs whitespace-nowrap">Order by:</label>
+                            <select 
+                                className="bg-white border-2 border-black text-black font-bold px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                                value={order}
+                                onChange={(e) => setOrder(e.target.value)}
+                            >
+                                <option value="name">Alphabetically</option>
+                                <option value="members">Member Count</option>
+                            </select>
+                        </div>
+
+                        {/* Search Control */}
+                        <div className="flex items-center gap-2 relative">
+                            <label className="text-black font-bold text-xs whitespace-nowrap">Find:</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search groups..."
+                                    className="w-48 bg-white border-2 border-black text-black font-bold px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black"
+                                    value={searchTerm}
+                                    onChange={(e) => handleSearch(e.target.value)}
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={clearSearch}
+                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-black font-bold hover:bg-gray-100 px-1"
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </nav>
 
             {/* Content */}
             <div className="container mx-auto px-4 py-8">
-                {/* Search */}
-                <div className="mb-6">
-                    <input
-                        type="text"
-                        placeholder="Search groups..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                {/* Results count */}
+                <div className="mb-4 text-sm text-gray-600">
+                    Showing {filteredAndSortedGroups.length} of {groups.length} groups
                 </div>
 
-                {/* Group List */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredGroups.map(group => (
-                        <Link
-                            key={group.id}
-                            to={`/group/${group.id}`}
-                            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-                        >
-                            <h3 className="text-xl font-bold mb-2">{group.name}</h3>
-                            <p className="text-gray-600">
-                                {group.artistsMemberOfAggregate.count} 
-                                {group.artistsMemberOfAggregate.count === 1 ? ' member' : ' members'}
-                            </p>
-                        </Link>
+                {/* Group Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredAndSortedGroups.map(group => (
+                        <GroupCard key={group.id} group={group} />
                     ))}
                 </div>
 
                 {/* No results */}
-                {filteredGroups.length === 0 && (
+                {filteredAndSortedGroups.length === 0 && (
                     <div className="text-center py-12">
                         <p className="text-gray-600 text-lg">
                             {searchTerm ? 'No groups found matching your search.' : 'No groups available.'}
                         </p>
                     </div>
                 )}
-
-                {/* Results count */}
-                <div className="mt-6 text-center text-gray-600">
-                    Showing {filteredGroups.length} of {groups.length} groups
-                </div>
             </div>
         </div>
     );
