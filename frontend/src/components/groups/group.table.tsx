@@ -9,23 +9,10 @@ interface GroupTableProps {
 const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
     const [sortField, setSortField] = useState<'year' | 'title' | 'members' | 'artworks'>('year');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-    const [filterText, setFilterText] = useState('');
 
-    // Sort and filter exhibitions
+    // Sort exhibitions
     const sortedExhibitions = useMemo(() => {
-        let filtered = exhibitions;
-
-        // Apply text filter
-        if (filterText) {
-            const lowerFilter = filterText.toLowerCase();
-            filtered = exhibitions.filter(ex => 
-                ex.title.toLowerCase().includes(lowerFilter) ||
-                ex.exhibitingMembers.some(m => m.sortname.toLowerCase().includes(lowerFilter))
-            );
-        }
-
-        // Sort
-        return [...filtered].sort((a, b) => {
+        return [...exhibitions].sort((a, b) => {
             let comparison = 0;
 
             switch (sortField) {
@@ -47,7 +34,7 @@ const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
 
             return sortDirection === 'asc' ? comparison : -comparison;
         });
-    }, [exhibitions, sortField, sortDirection, filterText]);
+    }, [exhibitions, sortField, sortDirection]);
 
     const handleSort = (field: typeof sortField) => {
         if (sortField === field) {
@@ -58,88 +45,103 @@ const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
         }
     };
 
-    const getSortIcon = (field: typeof sortField) => {
-        if (sortField !== field) return '↕';
-        return sortDirection === 'asc' ? '↑' : '↓';
-    };
-
     return (
-        <div className="w-full">
-            {/* Filter */}
-            <div className="mb-4">
-                <input
-                    type="text"
-                    placeholder="Filter exhibitions..."
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-
+        <div className="table-container h-full flex flex-col">
             {/* Table */}
-            <div className="overflow-x-auto border border-gray-200 rounded">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            <div 
+                className="flex-1 overflow-y-scroll border border-gray-300 rounded"
+                style={{
+                    minHeight: 0,
+                    maxHeight: '100%'
+                }}
+            >
+                <table className="w-full text-left text-black">
+                    <thead className="text-xs bg-black text-white uppercase sticky top-0 z-10">
                         <tr>
                             <th
-                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                scope="col"
+                                className="px-2 py-2 border-r border-gray-300 cursor-pointer hover:bg-gray-800"
                                 onClick={() => handleSort('year')}
                             >
-                                Year {getSortIcon('year')}
+                                <div className="flex items-center justify-between">
+                                    Year
+                                    <span className="ml-1">
+                                        {sortField === 'year' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                </div>
                             </th>
                             <th
-                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                scope="col"
+                                className="px-2 py-2 border-r border-gray-300 cursor-pointer hover:bg-gray-800"
                                 onClick={() => handleSort('title')}
                             >
-                                Title {getSortIcon('title')}
+                                <div className="flex items-center justify-between">
+                                    Title
+                                    <span className="ml-1">
+                                        {sortField === 'title' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                </div>
                             </th>
                             <th
-                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                scope="col"
+                                className="px-2 py-2 border-r border-gray-300 cursor-pointer hover:bg-gray-800"
                                 onClick={() => handleSort('members')}
                             >
-                                Members {getSortIcon('members')}
+                                <div className="flex items-center justify-between">
+                                    Members
+                                    <span className="ml-1">
+                                        {sortField === 'members' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                </div>
                             </th>
                             <th
-                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                scope="col"
+                                className="px-2 py-2 border-r border-gray-300 cursor-pointer hover:bg-gray-800"
                                 onClick={() => handleSort('artworks')}
                             >
-                                Artworks {getSortIcon('artworks')}
+                                <div className="flex items-center justify-between">
+                                    Artworks
+                                    <span className="ml-1">
+                                        {sortField === 'artworks' && (sortDirection === 'asc' ? '↑' : '↓')}
+                                    </span>
+                                </div>
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {sortedExhibitions.map(exhibition => (
-                            <tr key={exhibition.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <tbody>
+                        {sortedExhibitions.map((exhibition, index) => (
+                            <tr 
+                                key={exhibition.id} 
+                                className={`border-b ${
+                                    index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                                } hover:bg-blue-50 transition-colors`}
+                            >
+                                <td className="px-2 py-2 border-r border-gray-300 text-sm whitespace-nowrap">
                                     {exhibition.startyear}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-900">
+                                <td className="px-2 py-2 border-r border-gray-300 text-sm">
                                     {exhibition.title}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
+                                <td className="px-2 py-2 border-r border-gray-300 text-sm">
                                     <div className="flex flex-wrap gap-1">
-                                        {exhibition.exhibitingMembers.map((member, idx) => (
+                                        {exhibition.exhibitingMembers.map((member) => (
                                             <span
                                                 key={member.id}
-                                                className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                                                className="inline-block px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded cursor-pointer hover:bg-blue-200"
+                                                onClick={() => window.location.href = `/artist/${member.id}`}
                                             >
                                                 {member.sortname}
                                             </span>
                                         ))}
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-2 py-2 border-r border-gray-300 text-sm whitespace-nowrap">
                                     {exhibition.exhibitsItems?.length || 0}
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-            </div>
-
-            {/* Results count */}
-            <div className="mt-2 text-sm text-gray-600">
-                Showing {sortedExhibitions.length} of {exhibitions.length} exhibitions
             </div>
         </div>
     );

@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Group } from '../../models/group.model';
 import GroupDetailHeader from './group.detail.header';
 import GroupTimeline from './group.timeline';
 import GroupNetwork from './group.network';
 import GroupTable from './group.table';
+import GroupAreaChart from './group.area.chart';
 import {
     calculateGroupStatistics,
-    generateGroupNetworkData,
     getAllGroupExhibitions
 } from '../../utils/groupUtils';
 
@@ -38,32 +38,27 @@ const GroupDetailComponent: React.FC<GroupDetailProps> = ({
         return calculateGroupStatistics(group);
     }, [group]);
 
-    // Generate network data
-    const networkLinks = useMemo(() => {
-        return generateGroupNetworkData(group);
-    }, [group]);
-
     // Get all exhibitions with member info
     const exhibitions = useMemo(() => {
         return getAllGroupExhibitions(group);
     }, [group]);
 
     // Update handlers
-    const handleCoExhibitionCountChange = (count: number) => {
+    const handleCoExhibitionCountChange = useCallback((count: number) => {
         setState(prev => ({ ...prev, coExhibitionCount: count }));
-    };
+    }, []);
 
-    const handleGroupByChange = (groupBy: string) => {
+    const handleGroupByChange = useCallback((groupBy: string) => {
         setState(prev => ({ ...prev, groupBy }));
-    };
+    }, []);
 
-    const handleOrderByChange = (orderBy: string) => {
+    const handleOrderByChange = useCallback((orderBy: string) => {
         setState(prev => ({ ...prev, orderBy }));
-    };
+    }, []);
 
-    const handleYearHover = (year: number | null) => {
+    const handleYearHover = useCallback((year: number | null) => {
         setState(prev => ({ ...prev, highlightedYear: year }));
-    };
+    }, []);
 
     // Notify parent of loading state
     useEffect(() => {
@@ -73,170 +68,127 @@ const GroupDetailComponent: React.FC<GroupDetailProps> = ({
     }, [loadCallback]);
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <GroupDetailHeader
-                group={group}
-                totalMembers={statistics.totalMembers}
-                totalExhibitions={statistics.totalExhibitions}
-                totalArtworks={statistics.totalArtworks}
-                dateRange={statistics.dateRange}
-                coExhibitionCount={state.coExhibitionCount}
-                onCoExhibitionCountChange={handleCoExhibitionCountChange}
-                groupBy={state.groupBy}
-                onGroupByChange={handleGroupByChange}
-                orderBy={state.orderBy}
-                onOrderByChange={handleOrderByChange}
-            />
+        <div className="artist-detail-container h-screen flex flex-col overflow-hidden">
+            {/* Group Detail Header */}
+            <div className="flex-shrink-0">
+                <GroupDetailHeader
+                    group={group}
+                    totalMembers={statistics.totalMembers}
+                    totalExhibitions={statistics.totalExhibitions}
+                    totalArtworks={statistics.totalArtworks}
+                    dateRange={statistics.dateRange}
+                    coExhibitionCount={state.coExhibitionCount}
+                    onCoExhibitionCountChange={handleCoExhibitionCountChange}
+                    groupBy={state.groupBy}
+                    onGroupByChange={handleGroupByChange}
+                    orderBy={state.orderBy}
+                    onOrderByChange={handleOrderByChange}
+                />
+            </div>
 
-            {/* Main Content */}
-            <div className="container mx-auto px-4 py-8">
-                {/* Group Info Section */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <h3 className="text-xl font-bold mb-4">Group Overview</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <p className="text-sm text-gray-600">Members</p>
-                            <p className="text-2xl font-bold">{statistics.totalMembers}</p>
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Desktop: 2x2 Grid Layout matching artist detail */}
+                <div className="hidden lg:flex lg:flex-col lg:h-full lg:gap-1">
+                    {/* Top Row: Timeline + (Empty space for symmetry) - Compact height */}
+                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 20%' }}>
+                        {/* Timeline Section - Top Left */}
+                        <div className="timeline-section h-full">
+                            <div id="timeline-container" className="w-full h-full">
+                                <GroupTimeline
+                                    group={group}
+                                    highlightedYear={state.highlightedYear}
+                                    onYearHover={handleYearHover}
+                                    onEgoNetworkHover={handleYearHover}
+                                    className="w-full h-full"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Exhibitions</p>
-                            <p className="text-2xl font-bold">{statistics.totalExhibitions}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Artworks</p>
-                            <p className="text-2xl font-bold">{statistics.totalArtworks}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Active Period</p>
-                            <p className="text-2xl font-bold">
-                                {statistics.dateRange.min}–{statistics.dateRange.max}
-                            </p>
+
+                        {/* Area Chart Section - Top Right */}
+                        <div className="area-chart-section h-full">
+                            <div id="area-chart-container" className="w-full h-full">
+                                <GroupAreaChart
+                                    group={group}
+                                    groupBy={state.groupBy}
+                                    stacked={true}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Member List */}
-                    <div className="mt-6">
-                        <h4 className="text-lg font-semibold mb-2">Group Members</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {group.artistsMemberOf.map(member => (
-                                <a
-                                    key={member.id}
-                                    href={`/artist/${member.id}`}
-                                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
-                                >
-                                    {member.sortname}
-                                </a>
-                            ))}
+                    {/* Bottom Row: Table + Network */}
+                    <div className="bottom-row grid grid-cols-2 gap-2 flex-1 min-h-0">
+                        {/* Table Section - Bottom Left */}
+                        <div className="table-section h-full overflow-hidden">
+                            <div className="h-full overflow-auto">
+                                <GroupTable exhibitions={exhibitions} />
+                            </div>
+                        </div>
+
+                        {/* Network Section - Bottom Right */}
+                        <div className="network-section h-full">
+                            <div id="ego-net-container" className="h-full">
+                                <GroupNetwork
+                                    group={group}
+                                    groupBy={state.groupBy}
+                                    highlightedYear={state.highlightedYear}
+                                    onYearHover={handleYearHover}
+                                    onYearMouseOut={() => handleYearHover(null)}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Timeline Section */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <h3 className="text-xl font-bold mb-4">Exhibition Timeline</h3>
-                    <div style={{ height: '250px' }}>
-                        <GroupTimeline
-                            group={group}
-                            highlightedYear={state.highlightedYear}
-                            onYearHover={handleYearHover}
-                        />
-                    </div>
-                </div>
-
-                {/* Network and Stats Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    {/* Network Section */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h3 className="text-xl font-bold mb-4">Member Co-Exhibition Network</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                            Shows connections between group members based on shared exhibitions
-                        </p>
-                        <div style={{ height: '500px' }}>
-                            <GroupNetwork
+                {/* Mobile: Linear Stacked Layout with Scroll */}
+                <div className="lg:hidden flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4">
+                    {/* Timeline Section */}
+                    <div className="timeline-section flex-shrink-0" style={{ height: '200px' }}>
+                        <div id="timeline-container-mobile" className="w-full h-full">
+                            <GroupTimeline
                                 group={group}
-                                links={networkLinks}
-                                coExhibitionCount={state.coExhibitionCount}
-                                groupBy={state.groupBy}
+                                width={800}
+                                height={200}
                                 highlightedYear={state.highlightedYear}
+                                onYearHover={handleYearHover}
+                                onEgoNetworkHover={handleYearHover}
+                                className="w-full h-full"
                             />
                         </div>
                     </div>
 
-                    {/* Statistics Section */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h3 className="text-xl font-bold mb-4">Group Statistics</h3>
-                        
-                        <div className="space-y-4">
-                            {/* Members by Country */}
-                            <div>
-                                <h4 className="font-semibold mb-2">Members by Country</h4>
-                                <div className="space-y-1">
-                                    {Object.entries(
-                                        group.artistsMemberOf.reduce((acc, member) => {
-                                            const country = member.country || 'Unknown';
-                                            acc[country] = (acc[country] || 0) + 1;
-                                            return acc;
-                                        }, {} as Record<string, number>)
-                                    )
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([country, count]) => (
-                                        <div key={country} className="flex justify-between">
-                                            <span className="text-sm">{country}</span>
-                                            <span className="text-sm font-medium">{count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Members by Sex */}
-                            <div>
-                                <h4 className="font-semibold mb-2">Members by Sex</h4>
-                                <div className="space-y-1">
-                                    {Object.entries(
-                                        group.artistsMemberOf.reduce((acc, member) => {
-                                            const sex = member.sex || 'Unknown';
-                                            acc[sex] = (acc[sex] || 0) + 1;
-                                            return acc;
-                                        }, {} as Record<string, number>)
-                                    )
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([sex, count]) => (
-                                        <div key={sex} className="flex justify-between">
-                                            <span className="text-sm">{sex}</span>
-                                            <span className="text-sm font-medium">{count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Network Statistics */}
-                            <div>
-                                <h4 className="font-semibold mb-2">Network Statistics</h4>
-                                <div className="space-y-1">
-                                    <div className="flex justify-between">
-                                        <span className="text-sm">Total Connections</span>
-                                        <span className="text-sm font-medium">{networkLinks.length}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm">Avg Co-exhibitions</span>
-                                        <span className="text-sm font-medium">
-                                            {networkLinks.length > 0
-                                                ? (networkLinks.reduce((sum, link) => 
-                                                    sum + (link.props?.data?.count || 0), 0) / networkLinks.length).toFixed(1)
-                                                : '0'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    {/* Area Chart Section */}
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '150px' }}>
+                        <div id="area-chart-container-mobile" className="w-full h-full">
+                            <GroupAreaChart
+                                group={group}
+                                groupBy={state.groupBy}
+                                stacked={true}
+                            />
                         </div>
                     </div>
-                </div>
 
-                {/* Table Section */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h3 className="text-xl font-bold mb-4">All Group Exhibitions</h3>
-                    <GroupTable exhibitions={exhibitions} />
+                    {/* Table Section */}
+                    <div className="table-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div className="h-full overflow-auto">
+                            <GroupTable exhibitions={exhibitions} />
+                        </div>
+                    </div>
+
+                    {/* Network Section */}
+                    <div className="network-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div id="ego-net-container-mobile" className="h-full">
+                            <GroupNetwork
+                                group={group}
+                                width={400}
+                                height={400}
+                                groupBy={state.groupBy}
+                                highlightedYear={state.highlightedYear}
+                                onYearHover={handleYearHover}
+                                onYearMouseOut={() => handleYearHover(null)}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

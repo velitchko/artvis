@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
 
 const GET_GROUP = gql`
-query Group ($searchId: ID!) { 
+query Group ($searchId: BigInt!) { 
     groups(where: { id: $searchId }) {
         id,
         name,

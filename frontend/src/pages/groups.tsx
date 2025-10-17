@@ -5,7 +5,7 @@ import LoadingComponent from '../components/loading/loading';
 import { Link } from 'react-router-dom';
 
 interface GroupListItem {
-    id: string;
+    id: number;
     name: string;
     artistsMemberOfAggregate: {
         count: number;
