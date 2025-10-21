@@ -107,6 +107,7 @@ const HomePage = (props: any) => {
                             <a href="/about" className="hover:text-gray-900 transition-colors">About</a>
                             <a href="/network" className="hover:text-gray-900 transition-colors">Network</a>
                             <a href="/artists" className="hover:text-gray-900 transition-colors">Browse Artists</a>
+                            <a href="/groups" className="hover:text-gray-900 transition-colors">Artist Groups</a>
                             <a href="/exhibitions" className="hover:text-gray-900 transition-colors">Exhibitions</a>
                             <span className="hidden sm:inline text-gray-400">|</span>
                             <a href="/publications" className="hover:text-gray-900 transition-colors">Publications</a>
