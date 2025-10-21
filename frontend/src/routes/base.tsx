@@ -9,6 +9,8 @@ import ArtistDetailPage from "../pages/artist.detail";
 import ArtistDetailTestPage from "../pages/artist.detail.test";
 import ExhibitionsPage from "../pages/exhibitions";
 import AboutPage from "../pages/about";
+import GroupsPage from "../pages/groups";
+import GroupDetailPage from "../pages/group.detail";
 
 
 export default function Base() {
@@ -24,6 +26,8 @@ export default function Base() {
                 <Route path="/artist/" element={<ArtistDetailPage />} />
                 <Route path="/artists-test/:id" element={<ArtistDetailTestPage />} />
                 <Route path="/exhibitions/:artist" element={<ExhibitionsPage />} />
+                <Route path="/groups" element={<GroupsPage />} />
+                <Route path="/group/:id" element={<GroupDetailPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
         </React.StrictMode>

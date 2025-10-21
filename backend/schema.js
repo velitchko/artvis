@@ -89,6 +89,7 @@ type Geoname {
 }
 
 type Group {
+	id: BigInt!
 	artistsMemberOf: [Artist!]! @relationship(type: "MEMBER_OF", direction: IN)
 	name: String!
 }
