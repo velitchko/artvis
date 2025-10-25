@@ -103,11 +103,30 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
         return dataPoints;
     }, [group, groupBy]);
 
-    // Calculate members sorted by name for consistent positioning
+    // Precompute total exhibitions per member (within YEAR_RANGE) so we can order by activity
+    const memberTotalsMap = useMemo(() => {
+        const m = new Map<number, number>();
+        group.artistsMemberOf.forEach(member => {
+            const total = (member.exhibitedAtExhibitions || [])
+                .filter(ex => ex && ex.startyear && ex.startyear >= YEAR_RANGE.min && ex.startyear <= YEAR_RANGE.max)
+                .length;
+            m.set(member.id, total);
+        });
+        return m;
+    }, [group]);
+
+    // Calculate members sorted by group size (desc) and then by exhibition count (desc) within each group
     const sortedMembers = useMemo(() => {
         const groupKey = groupBy === 'sex' ? 'sex' : 'country';
-        return _.orderBy(group.artistsMemberOf, [groupKey, 'sortname'], ['asc', 'asc']);
-    }, [group, groupBy]);
+        const grouped = _.groupBy(group.artistsMemberOf, groupKey);
+        const sortedGroups = _.orderBy(Object.entries(grouped), ([g, members]) => members.length, ['desc']);
+        const result: typeof group.artistsMemberOf = [];
+        for (const [, members] of sortedGroups) {
+            const sortedMembersInGroup = _.orderBy(members, [m => memberTotalsMap.get(m.id) ?? 0, 'sortname'], ['desc', 'asc']);
+            result.push(...sortedMembersInGroup);
+        }
+        return result;
+    }, [group, groupBy, memberTotalsMap]);
 
     // Map member id -> index in sortedMembers so all drawing uses the same ordering
     const memberIndexMap = useMemo(() => {

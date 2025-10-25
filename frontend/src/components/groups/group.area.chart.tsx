@@ -188,6 +188,12 @@ const GroupAreaChart: React.FC<GroupAreaChartProps> = ({
         const innerWidth = width - MARGINS.left - MARGINS.right;
         const innerHeight = height - MARGINS.top - MARGINS.bottom;
 
+        // sort chartData by total count (ascending) to produce a stable stacking order
+        const sortedChartData = [...chartData].sort((a, b) => {
+            const aSum = a.data.reduce((acc, cur) => acc + cur.count, 0);
+            const bSum = b.data.reduce((acc, cur) => acc + cur.count, 0);
+            return aSum - bSum;
+        });
         // Create main group
         const g = svg
             .append('g')
@@ -214,16 +220,20 @@ const GroupAreaChart: React.FC<GroupAreaChartProps> = ({
             .range([innerHeight, 0])
             .nice();
 
-        // Stack generator for stacked area
+        // Determine ordered keys (by ascending total) for stacking
+        const orderedKeys = sortedChartData.map(d => d.group);
+
+        // Stack generator for stacked area using explicit key order
         const stack = d3.stack<any>()
-            .keys(chartData.map(d => d.group))
+            .keys(orderedKeys)
             .value((d: any, key: string) => d[key] || 0);
 
         // Prepare data for stacking
         const stackData: any[] = [];
         for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
             const dataPoint: any = { year };
-            chartData.forEach(series => {
+            // respect ordered keys when populating the stack data
+            sortedChartData.forEach(series => {
                 const count = series.data.find(d => d.year === year)?.count || 0;
                 dataPoint[series.group] = count;
             });
@@ -329,8 +339,11 @@ const GroupAreaChart: React.FC<GroupAreaChartProps> = ({
             .attr('class', 'legend')
             .attr('transform', `translate(0, -35)`);
 
+        // Legend should reflect the same ordering but display largest groups last
+        const legendOrder = [...sortedChartData].reverse();
+
         const legendItems = legend.selectAll('.legend-item')
-            .data(chartData)
+            .data(legendOrder)
             .enter()
             .append('g')
             .attr('class', 'legend-item')
