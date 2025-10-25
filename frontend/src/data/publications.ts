@@ -1,0 +1,281 @@
+import { Publication } from "../models/publication.model";
+export const publications: Publication[] = [
+  {
+    id: "10.2312:visgames.20252015",
+    title: "EuroVis Workshop on Visualization Play, Games, and Activitie 2025: Frontmatter",
+    authors: ["Stoiber, C.", "Boucher, M.", "Keck, M.", "Amabili, L.", "Raidou, R.", "Filipov, V.", "Oliveira, V.", "Schetinger, V.", "Aigner, W."],
+    venue: "EuroVis Workshop on Visualization Play, Games, and Activities",
+    year: 2025,
+    type: "Conference",
+    doi: "10.2312/visgames.20252015",
+    url: "https://doi.org/10.2312/visgames.20252015",
+    bibtex: "@inproceedings{10.2312:visgames.20252015,\r\n\ttitle        = {{EuroVis Workshop on Visualization Play, Games, and Activitie 2025: Frontmatter}},\r\n\tauthor       = {Stoiber,Christina and Boucher,Magdalena and Keck,Mandy and Amabili,Lorenzo and Raidou,Renata G. and Filipov,Velitchko and Oliveira,Victor and Schetinger,Victor and Aigner,Wolfgang},\r\n\tyear         = 2025,\r\n\tbooktitle    = {EuroVis Workshop on Visualization Play, Games, and Activities},\r\n\tpublisher    = {The Eurographics Association},\r\n\tdoi          = {10.2312/visgames.20252015},\r\n\tisbn         = {978-3-03868-290-5},\r\n\teditor       = {Stoiber,Christina and Boucher,Magdalena and Keck,Mandy and Amabili,Lorenzo and Raidou,Renata G. and Filipov,Velitchko and Oliveira,Victor and Schetinger,Victor and Aigner,Wolfgang}\r\n}"
+  },
+  {
+    id: "10787140",
+    title: "TimeLighting: Guided Exploration of 2D Temporal Network Projections",
+    authors: ["Filipov, V.", "Ceneda, D.", "Archambault, D.", "Arleo, A."],
+    venue: "IEEE Transactions on Visualization and Computer Graphics",
+    year: 2025,
+    type: "Journal",
+    doi: "10.1109/TVCG.2024.3514858",
+    url: "https://doi.org/10.1109/TVCG.2024.3514858",
+    bibtex: "@article{10787140,\r\n\ttitle        = {TimeLighting: Guided Exploration of 2D Temporal Network Projections},\r\n\tauthor       = {Filipov, Velitchko and Ceneda, Davide and Archambault, Daniel and Arleo, Alessio},\r\n\tyear         = 2025,\r\n\tjournal      = {IEEE Transactions on Visualization and Computer Graphics},\r\n\tvolume       = 31,\r\n\tnumber       = 3,\r\n\tpages        = {1932--1944},\r\n\tdoi          = {10.1109/TVCG.2024.3514858},\r\n\tkeywords     = {Event detection;Visual analytics;Layout;Animation;Trajectory;Human-centered computing–visualization–graph drawings;empirical studies in visualization}\r\n}"
+  },
+  {
+    id: "https://doi.org/10.1111/cgf.70140",
+    title: "NODKANT: Exploring Constructive Network Physicalization",
+    authors: ["Pahr, D.", "Di Bartolomeo, S.", "Ehlers, H.", "Filipov, V.", "Stoiber, C.", "Aigner, W.", "Wu, H.", "Raidou, R."],
+    venue: "Computer Graphics Forum",
+    year: 2025,
+    type: "Journal",
+    doi: "https://doi.org/10.1111/cgf.70140",
+    url: "https://doi.org/https://doi.org/10.1111/cgf.70140",
+    bibtex: "@article{https://doi.org/10.1111/cgf.70140,\r\n\ttitle        = {NODKANT: Exploring Constructive Network Physicalization},\r\n\tauthor       = {Pahr, D. and Di Bartolomeo, S. and Ehlers, H. and Filipov, V. A. and Stoiber, C. and Aigner, W. and Wu, H.-Y. and Raidou, R. G.},\r\n\tyear         = 2025,\r\n\tjournal      = {Computer Graphics Forum},\r\n\tvolume       = 44,\r\n\tnumber       = 3,\r\n\tpages        = {e70140},\r\n\tdoi          = {https://doi.org/10.1111/cgf.70140},\r\n\turl          = {https://onlinelibrary.wiley.com/doi/abs/10.1111/cgf.70140},\r\n\tkeywords     = {CCS Concepts, • Human-centered computing → Visualization application domains, Empirical studies in visualization},\r\n\teprint       = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/cgf.70140},\r\n\tabstract     = {Abstract Physicalizations, which combine perceptual and sensorimotor interactions, offer an immersive way to comprehend complex data visualizations by stimulating active construction and manipulation. This study investigates the impact of personal construction on the comprehension of physicalized networks. We propose a physicalization toolkit—NODKANT—for constructing modular node-link diagrams consisting of a magnetic surface, 3D printable and stackable node labels, and edges of adjustable length. In a mixed-methods between-subject lab study with 27 participants, three groups of people used NODKANT to complete a series of low-level analysis tasks in the context of an animal contact network. The first group was tasked with freely constructing their network using a sorted edge list, the second group received step-by-step instructions to create a predefined layout, and the third group received a pre-constructed representation. While free construction proved on average more time-consuming, we show that users extract more insights from the data during construction and interact with their representation more frequently, compared to those presented with step-by-step instructions. Interestingly, the increased time demand cannot be measured in users' subjective task load. Finally, our findings indicate that participants who constructed their own representations were able to recall more detailed insights after a period of 10–14 days compared to those who were given a pre-constructed network physicalization. All materials, data, code for generating instructions, and 3D printable meshes are available on https://osf.io/tk3g5/.}\r\n}"
+  },
+  {
+    id: "doi:10.2352/J.Percept.Imaging.2025.8.000401",
+    title: "Time-Dependent Route Planning on Maps: A User Study",
+    authors: ["Bonerath, A.", "Carbon, C.", "Miksch, S.", "Patrignani, M.", "Tappini, A."],
+    venue: "Journal of Perceptual Imaging",
+    year: 2025,
+    type: "Journal",
+    doi: "10.2352/J.Percept.Imaging.2025.8.000401",
+    url: "https://doi.org/10.2352/J.Percept.Imaging.2025.8.000401",
+    bibtex: "@article{doi:10.2352/J.Percept.Imaging.2025.8.000401,\r\n\ttitle        = {Time-Dependent Route Planning on Maps: A User Study},\r\n\tauthor       = {Annika Bonerath and Claus-Christian Carbon and Silvia Miksch and Maurizio Patrignani and Alessandra Tappini},\r\n\tyear         = 2025,\r\n\tjournal      = {Journal of Perceptual Imaging},\r\n\tvolume       = 8,\r\n\tnumber       = {0},\r\n\tpages        = {1--1},\r\n\tdoi          = {10.2352/J.Percept.Imaging.2025.8.000401},\r\n\turl          = {https://library.imaging.org/jpi/articles/8/0/000401},\r\n\tkeywords     = {spatio-temporal networks, route planning, user study, complexity, navigation},\r\n\tabstract     = {Abstract Routing through a dynamic environment is mostly carried out by using maps that integrate information about time-dependent parameters, such as traffic conditions and spatial constraints, which is a challenging and cumbersome task. We address the complex scenario where a user has to plan a route on a network that is dynamic with respect to edges that change their congestion through time. We perform an experimental user study where we compare interactive and non-interactive interfaces, the complexity levels of the map structures (number of nodes and edges) and of the paths (number of nodes that need to be visited), and the effects of familiarity with the map. The results of our study indicate that an interactive interface is more beneficial than a non-interactive interface for more complex paths, while a non-interactive interface is more beneficial than an interactive interface for less complex paths. In detail, while the number of nodes and edges of the network had no effect on the performance, we observed that (not surprisingly) the more complex the path, the longer the processing time and the lower the correctness. We tested the familiarity with a test&#x2013;retest design, where we organized a second session of tests, labeled T2, after the first session T1. We observed a familiarization effect in&#xA0;T2, that is, the participants&#x2019; performance improved for the networks known from&#xA0;T1.}\r\n}"
+  },
+  {
+    id: "ivapp25",
+    title: "HoloGraphs: An Interactive Physicalization for Dynamic Graphs",
+    authors: ["Pahr, D.", "Ehlers, H.", "Filipov, V."],
+    venue: "Proceedings of the 20th International Joint Conference on Computer Vision, Imaging and Computer Graphics Theory and Applications - IVAPP",
+    year: 2025,
+    type: "Conference",
+    doi: "10.5220/0013116000003912",
+    url: "https://doi.org/10.5220/0013116000003912",
+    bibtex: "@conference{ivapp25,\r\n\ttitle        = {HoloGraphs: An Interactive Physicalization for Dynamic Graphs},\r\n\tauthor       = {Daniel Pahr and Henry Ehlers and Velitchko Filipov},\r\n\tyear         = 2025,\r\n\tbooktitle    = {Proceedings of the 20th International Joint Conference on Computer Vision, Imaging and Computer Graphics Theory and Applications - IVAPP},\r\n\tpublisher    = {SciTePress},\r\n\tpages        = {859--866},\r\n\tdoi          = {10.5220/0013116000003912},\r\n\tisbn         = {978-989-758-728-3},\r\n\tissn         = {2184-4321},\r\n\torganization = {INSTICC}\r\n}"
+  },
+  {
+    id: "https://doi.org/10.1111/cgf.70154",
+    title: "Nodes, Edges, and Artistic Wedges: A Survey on Network Visualization in Art History",
+    authors: ["Tuscher, M.", "Filipov, V.", "Kamencek, T.", "Rosenberg, R.", "Miksch, S."],
+    venue: "Computer Graphics Forum",
+    year: 2025,
+    type: "Journal",
+    doi: "https://doi.org/10.1111/cgf.70154",
+    url: "https://doi.org/https://doi.org/10.1111/cgf.70154",
+    bibtex: "@article{https://doi.org/10.1111/cgf.70154,\r\n\ttitle        = {Nodes, Edges, and Artistic Wedges: A Survey on Network Visualization in Art History},\r\n\tauthor       = {Tuscher, Michaela and Filipov, Velitchko and Kamencek, Teresa and Rosenberg, Raphael and Miksch, Silvia},\r\n\tyear         = 2025,\r\n\tjournal      = {Computer Graphics Forum},\r\n\tvolume       = 44,\r\n\tnumber       = 3,\r\n\tpages        = {e70154},\r\n\tdoi          = {https://doi.org/10.1111/cgf.70154},\r\n\turl          = {https://onlinelibrary.wiley.com/doi/abs/10.1111/cgf.70154},\r\n\tkeywords     = {CCS Concepts, • Human-centered computing → Information visualization, Graph drawings, • Applied computing → Fine arts},\r\n\teprint       = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/cgf.70154},\r\n\tabstract     = {Abstract Art history traditionally relies on qualitative methods. However, the increasing availability of digitized archives has opened new possibilities for research by integrating visual analytics. This survey presents a comprehensive review of the intersection between art history and visual analytics, focusing on network visualization and how it supports researchers in analyzing and understanding complex art historical relationships through nodes (e.g., artists, artworks, institutions) and edges (the relationships between them). We explore how these approaches enable dynamic analysis, offering novel perspectives on artistic influence, stylistic evolution, and social interactions within the art world. Through this, we also examine wedges, a metaphor for the friction often present in art history between individuals and institutions. These tensions, which have historically played a pivotal role in shaping artistic movements, are now better understood through the lens of network visualization, revealing how conflicts and power dynamics influenced the development of art. Through a hierarchical categorization of the literature, we outline saturated problems and research areas as well as ongoing challenges in art historical research. Furthermore, we highlight the potential of visual analytics to bridge the gap between traditional qualitative research and modern computational analysis, offering interactive exploration, temporal analysis, and complex network visualization. We provide a structured foundation for future research in art history, emphasizing the value of network visualization in enriching the understanding of art history.}\r\n}"
+  },
+  {
+    id: "10.2312:visgames.20251161",
+    title: "BattleGraphs: Forge, Fortify, and Fight in the Network Arena",
+    authors: ["Ehlers, H.", "Pahr, D.", "di Bartolomeo, S.", "Stoiber, C.", "Filipov, V."],
+    venue: "EuroVis Workshop on Visualization Play, Games, and Activities",
+    year: 2025,
+    type: "Conference",
+    doi: "10.2312/visgames.20251161",
+    url: "https://doi.org/10.2312/visgames.20251161",
+    bibtex: "@inproceedings{10.2312:visgames.20251161,\r\n\ttitle        = {{BattleGraphs: Forge, Fortify, and Fight in the Network Arena}},\r\n\tauthor       = {Ehlers, Henry and Pahr, Daniel and di Bartolomeo, Sara and Stoiber, Christina and Filipov, Velitchko},\r\n\tyear         = 2025,\r\n\tbooktitle    = {EuroVis Workshop on Visualization Play, Games, and Activities},\r\n\tpublisher    = {The Eurographics Association},\r\n\tdoi          = {10.2312/visgames.20251161},\r\n\tisbn         = {978-3-03868-290-5},\r\n\teditor       = {Stoiber,Christina and Boucher,Magdalena and Keck,Mandy and Amabili,Lorenzo and Raidou,Renata G. and Filipov,Velitchko and Oliveira,Victor and Schetinger,Victor and Aigner,Wolfgang}\r\n}"
+  },
+  {
+    id: "10.2312:eurova.20251100",
+    title: "Towards Integrating Visual Analytics in Multi-Perspective Conformance Checking: A Call to Action",
+    authors: ["Linden, S.", "Filipov, V.", "Pufahl, L.", "Miksch, S.", "Elzen, S."],
+    venue: "EuroVis Workshop on Visual Analytics (EuroVA)",
+    year: 2025,
+    type: "Conference",
+    doi: "10.2312/eurova.20251100",
+    url: "https://doi.org/10.2312/eurova.20251100",
+    bibtex: "@inproceedings{10.2312:eurova.20251100,\r\n\ttitle        = {{Towards Integrating Visual Analytics in Multi-Perspective Conformance Checking: A Call to Action}},\r\n\tauthor       = {Linden, Sanne van der and Filipov, Velitchko Andreev and Pufahl, Luise and Miksch, Silvia and Elzen, Stef van den},\r\n\tyear         = 2025,\r\n\tbooktitle    = {EuroVis Workshop on Visual Analytics (EuroVA)},\r\n\tpublisher    = {The Eurographics Association},\r\n\tdoi          = {10.2312/eurova.20251100},\r\n\tisbn         = {978-3-03868-283-7},\r\n\tissn         = {2664-4487},\r\n\teditor       = {Schulz, Hans-Jörg and Villanova, Anna}\r\n}"
+  },
+  {
+    id: "EHLERS2025104290",
+    title: "Wiggle! Wiggle! Wiggle! Visualizing uncertainty in node attributes in straight-line node-link diagrams using animated wiggliness",
+    authors: ["Ehlers, H.", "Pahr, D.", "Bartolomeo}, S.", "Filipov, V.", "Wu, H.", "Raidou, R."],
+    venue: "Computers & Graphics",
+    year: 2025,
+    type: "Journal",
+    doi: "https://doi.org/10.1016/j.cag.2025.104290",
+    url: "https://doi.org/https://doi.org/10.1016/j.cag.2025.104290",
+    bibtex: "@article{EHLERS2025104290,\r\n\ttitle        = {Wiggle! Wiggle! Wiggle! Visualizing uncertainty in node attributes in straight-line node-link diagrams using animated wiggliness},\r\n\tauthor       = {Henry Ehlers and Daniel Pahr and Sara {di Bartolomeo} and Velitchko Filipov and Hsiang-Yun Wu and Renata G. Raidou},\r\n\tyear         = 2025,\r\n\tjournal      = {Computers & Graphics},\r\n\tvolume       = 131,\r\n\tpages        = 104290,\r\n\tdoi          = {https://doi.org/10.1016/j.cag.2025.104290},\r\n\tissn         = {0097-8493},\r\n\turl          = {https://www.sciencedirect.com/science/article/pii/S0097849325001311},\r\n\tkeywords     = {Network visualization, Uncertainty visualization, Animation, Fuzziness, Enclosure, Saturation},\r\n\tabstract     = {Uncertainty is common to most types of data, from meteorology to the biomedical sciences. Here, we are interested in the visualization of uncertainty within the context of multivariate graphs, specifically the visualization of uncertainty attached to node attributes. Many visual channels offer themselves up for the visualization of node attributes and their uncertainty. One controversial and relatively under-explored channel, however, is animation, despite its conceptual advantages. In this paper, we investigate node “wiggliness”, i.e. uncertainty-dependent pseudo-random motion of nodes, as a potential new visual channel with which to communicate node attribute uncertainty. To study wiggliness’ effectiveness, we compare it against three other visual channels identified from a thorough review of uncertainty visualization literature—namely node enclosure, node fuzziness, and node color saturation. In a larger-scale, mixed method, Prolific-crowd-sourced, online user study of 160 participants, we quantitatively and qualitatively compare these four uncertainty encodings across eight low-level graph analysis tasks that probe participants’ abilities to parse the presented networks both on an attribute and topological level. We ultimately conclude that all four uncertainty encodings appear comparably useful—as opposed to previous findings. Wiggliness may be a suitable and effective visual channel with which to communicate node attribute uncertainty, at least for the kinds of data and tasks considered in our study.}\r\n}"
+  },
+  {
+    id: "10.1007/978-3-031-49272-3_16",
+    title: "TimeLighting: Guidance-Enhanced Exploration of 2D Projections of Temporal Graphs",
+    authors: ["Filipov, V.", "Ceneda, D.", "Archambault, D.", "Arleo, A."],
+    venue: "Graph Drawing and Network Visualization",
+    year: 2023,
+    type: "Conference",
+    bibtex: "@inproceedings{10.1007/978-3-031-49272-3_16,\r\n\ttitle        = {TimeLighting: Guidance-Enhanced Exploration of 2D Projections of Temporal Graphs},\r\n\tauthor       = {Filipov, Velitchko and Ceneda, Davide and Archambault, Daniel and Arleo, Alessio},\r\n\tyear         = 2023,\r\n\tbooktitle    = {Graph Drawing and Network Visualization},\r\n\tpublisher    = {Springer Nature Switzerland},\r\n\taddress      = {Cham},\r\n\tpages        = {231--245},\r\n\tisbn         = {978-3-031-49272-3},\r\n\teditor       = {Bekos, Michael A. and Chimani, Markus},\r\n\tabstract     = {In temporal (or event-based) networks, time is a continuous axis, with real-valued time coordinates for each node and edge. Computing a layout for such graphs means embedding the node trajectories and edge surfaces over time in a {\\$}{\\$}2D + t{\\$}{\\$}2D+tspace, known as the space-time cube. Currently, these space-time cube layouts are visualized through animation or by slicing the cube at regular intervals. However, both techniques present problems ranging from sub-par performance on some tasks to loss of precision. In this paper, we present TimeLighting, a novel visual analytics approach to visualize and explore temporal graphs embedded in the space-time cube. Our interactive approach highlights the node trajectories and their mobility over time, visualizes node ``aging'', and provides guidance to support users during exploration. We evaluate our approach through two case studies, showing the system's efficacy in identifying temporal patterns and the role of the guidance features in the exploration process.}\r\n}"
+  },
+  {
+    id: "10294308",
+    title: "Visual Analytics for Understanding Draco's Knowledge Base",
+    authors: ["Schmidt, J.", "Pointner, B.", "Miksch, S."],
+    venue: "IEEE Transactions on Visualization and Computer Graphics",
+    year: 2024,
+    type: "Journal",
+    doi: "10.1109/TVCG.2023.3326912",
+    url: "https://doi.org/10.1109/TVCG.2023.3326912",
+    bibtex: "@article{10294308,\r\n\ttitle        = {Visual Analytics for Understanding Draco's Knowledge Base},\r\n\tauthor       = {Schmidt, Johanna and Pointner, Bernhard and Miksch, Silvia},\r\n\tyear         = 2024,\r\n\tjournal      = {IEEE Transactions on Visualization and Computer Graphics},\r\n\tvolume       = 30,\r\n\tnumber       = 1,\r\n\tpages        = {392--402},\r\n\tdoi          = {10.1109/TVCG.2023.3326912},\r\n\tkeywords     = {Data visualization;Aggregates;Task analysis;Recommender systems;Costs;Bars;Visual analytics;Visual Analytics;Hypergraph visualization;Rule-based recommendation systems}\r\n}"
+  },
+  {
+    id: "herl_et_al:LIPIcs.GD.2024.46",
+    title: "AdMaTilE: Visualizing Event-Based Adjacency Matrices in a Multiple-Coordinated-Views System",
+    authors: ["Herl, N.", "Filipov, V."],
+    venue: "32nd International Symposium on Graph Drawing and Network Visualization (GD 2024)",
+    year: 2024,
+    type: "Conference",
+    doi: "10.4230/LIPIcs.GD.2024.46",
+    url: "https://doi.org/10.4230/LIPIcs.GD.2024.46",
+    bibtex: "@inproceedings{herl_et_al:LIPIcs.GD.2024.46,\r\n\ttitle        = {{AdMaTilE: Visualizing Event-Based Adjacency Matrices in a Multiple-Coordinated-Views System}},\r\n\tauthor       = {Herl, Nikolaus-Mathias and Filipov, Velitchko},\r\n\tyear         = 2024,\r\n\tbooktitle    = {32nd International Symposium on Graph Drawing and Network Visualization (GD 2024)},\r\n\tpublisher    = {Schloss Dagstuhl -- Leibniz-Zentrum f{\\\"u}r Informatik},\r\n\taddress      = {Dagstuhl, Germany},\r\n\tseries       = {Leibniz International Proceedings in Informatics (LIPIcs)},\r\n\tvolume       = 320,\r\n\tpages        = {46:1--46:3},\r\n\tdoi          = {10.4230/LIPIcs.GD.2024.46},\r\n\tisbn         = {978-3-95977-343-0},\r\n\tissn         = {1868-8969},\r\n\turl          = {https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.GD.2024.46},\r\n\teditor       = {Felsner, Stefan and Klein, Karsten},\r\n\turn          = {urn:nbn:de:0030-drops-213307},\r\n\tannote       = {Keywords: Event-based, Temporal Graphs, Adjacency Matrix, Network Visualization}\r\n}"
+  },
+  {
+    id: "10.2312:evs.20241063",
+    title: "Mapping the Avantgarde: Visualizing Modern Artists' Exhibition Activity",
+    authors: ["Tuscher, M.", "Filipov, V.", "Kamencek, T.", "Rosenberg, R.", "Miksch, S."],
+    venue: "EuroVis 2024 - Short Papers",
+    year: 2024,
+    type: "Conference",
+    doi: "10.2312/evs.20241063",
+    url: "https://doi.org/10.2312/evs.20241063",
+    bibtex: "@inproceedings{10.2312:evs.20241063,\r\n\ttitle        = {{Mapping the Avantgarde: Visualizing Modern Artists' Exhibition Activity}},\r\n\tauthor       = {Tuscher, Michaela and Filipov, Velitchko and Kamencek, Teresa and Rosenberg, Raphael and Miksch, Silvia},\r\n\tyear         = 2024,\r\n\tbooktitle    = {EuroVis 2024 - Short Papers},\r\n\tpublisher    = {The Eurographics Association},\r\n\tdoi          = {10.2312/evs.20241063},\r\n\tisbn         = {978-3-03868-251-6},\r\n\teditor       = {Tominski, Christian and Waldner, Manuela and Wang, Bei}\r\n}"
+  },
+  {
+    id: "20.500.12708_197713",
+    title: "Dynamic Perspectives: Visualizing Time and Networks for Analytical Insights",
+    authors: ["Filipov, V."],
+    venue: "Shonan Seminar on Advancing Visual Computing in Materials Science No.189, Japan",
+    year: 2024,
+    type: "Preprint",
+    doi: "10.34726/6362",
+    url: "https://doi.org/10.34726/6362",
+    bibtex: "@misc{20.500.12708_197713,\r\n\ttitle        = {Dynamic Perspectives: Visualizing Time and Networks for Analytical Insights},\r\n\tauthor       = {Velitchko Filipov},\r\n\tyear         = 2024,\r\n\tdoi          = {10.34726/6362},\r\n\tvenue        = {Shonan Seminar on Advancing Visual Computing in Materials Science No.189, Japan},\r\n\tabstract     = {Dynamic networks are structures where the graph's nodes and/or edges can appear or disappear over discrete or continuous intervals of time. The visualization and analysis of dynamic networks play an essential role in understanding the structural evolution of a network. The main goals are to support a better overview of the network's evolution and to identify patterns or behaviors. Dynamic networks are most commonly represented as node-link diagrams with the temporal dimension being depicted using animated approaches. In this talk, I present a number of different and alternative methods for visualizing and interacting with a network and its temporal dimension and discuss the most pressing challenges currently faced. Furthermore, possible intersections with the Materials Sciences domain are discussed to understand how dynamic network visualization can complement the current state-of-the-art in this domain, provide different perspectives, and facilitate new insights into the data.},\r\n\tkeywords     = {Dynamic Network Visualization; Visual Analytics},\r\n\tinvited      = {true}\r\n}"
+  },
+  {
+    id: "20.500.12708_198095",
+    title: "Networks in time and space: visual analytics of dynamic network representations",
+    authors: ["Filipov, V."],
+    venue: "TU Wien",
+    year: 2024,
+    type: "Conference",
+    doi: "10.34726/hss.2024.123022",
+    url: "https://doi.org/10.34726/hss.2024.123022",
+    bibtex: "@phdthesis{20.500.12708_198095,\r\n\ttitle        = {Networks in time and space: visual analytics of dynamic network representations},\r\n\tauthor       = {Velitchko Filipov},\r\n\tyear         = 2024,\r\n\taddress      = {Wien},\r\n\tdoi          = {10.34726/hss.2024.123022},\r\n\tvenue        = {TU Wien},\r\n\tabstract     = {Networks are abstract and flexible data structures that model entities and relationships between them. Network visualization encompasses techniques, designed to produce aesthetic and scalable layouts of such data. In real-world applications data changes over time and investigating and analyzing these dynamics is of interest, motivating the study of dynamic network visualization. Dynamic network visualization explores how networks evolve and how these changes can be effectively conveyed. The goal is to construct representations depicting both structural and temporal information in a readable manner. This is a challenging task and current approaches often optimize standard network representations (i.e., node-link diagrams) to simultaneously portray topology and dynamics using animation. Alternative visualization modalities are seldom explored, presenting an interesting research direction. As network connectivity can be cumbersome to visualize, approaches make use of space to improve readability and implement aesthetic criteria, often presenting scalability concerns. These limitations pose interesting research questions that are investigated in this dissertation. Namely, how can we augment standard network visualization techniques to convey dynamics, which techniques are appropriate, effective, and avoid information overload, and are alternative visualization metaphors for dynamic networks useful? We contribute to dynamic network visualization by formally evaluating the design space and investigating novel dynamic network visualization approaches. Our results show promise for alternative visualization modalities and our evaluation of structural and temporal encodings highlights the usefulness of under-investigated combinations in related literature. Furthermore, we outline research challenges that present future work opportunities and provide recommendations to support researchers in developing dynamic network visualization approaches.},\r\n\tkeywords     = {Networks; Graphs; Dynamic Networks; Dynamic Network Visualization; Time-oriented Data; Information Visualization; Visual Analytics},\r\n\tschool       = {Technische Universität Wien}\r\n}"
+  },
+  {
+    id: "EHLERS2024104123",
+    title: "Me! Me! Me! Me! A study and comparison of ego network representations",
+    authors: ["Ehlers, H.", "Pahr, D.", "Filipov, V.", "Wu, H.", "Raidou, R."],
+    venue: "Computers & Graphics",
+    year: 2024,
+    type: "Journal",
+    doi: "https://doi.org/10.1016/j.cag.2024.104123",
+    url: "https://doi.org/https://doi.org/10.1016/j.cag.2024.104123",
+    bibtex: "@article{EHLERS2024104123,\r\n\ttitle        = {Me! Me! Me! Me! A study and comparison of ego network representations},\r\n\tauthor       = {Henry Ehlers and Daniel Pahr and Velitchko Filipov and Hsiang-Yun Wu and Renata G. Raidou},\r\n\tyear         = 2024,\r\n\tjournal      = {Computers & Graphics},\r\n\tvolume       = 125,\r\n\tpages        = 104123,\r\n\tdoi          = {https://doi.org/10.1016/j.cag.2024.104123},\r\n\tissn         = {0097-8493},\r\n\turl          = {https://www.sciencedirect.com/science/article/pii/S0097849324002589},\r\n\tkeywords     = {Ego network visualization, User study, Adjacency matrix, Straight-line node-link diagram, Layered node-link diagram, Radial node-link diagram},\r\n\tabstract     = {From social networks to brain connectivity, ego networks are a simple yet powerful approach to visualizing parts of a larger graph, i.e. those related to a selected focal node — the so-called “ego”. While surveys and comparisons of general graph visualization approaches exist in the literature, we note (i) the many conflicting results of comparisons of adjacency matrices and node-link diagrams, thus motivating further study, as well as (ii) the absence of such systematic comparisons for ego networks specifically. In this paper, we propose the development of empirical recommendations for ego network visualization strategies. First, we survey the literature across application domains and collect examples of network visualizations to identify the most common visual encodings, namely straight-line, radial, and layered node-link diagrams, as well as adjacency matrices. These representations are then applied to a representative, intermediate-sized network and subsequently compared in a large-scale, crowd-sourced user study in a mixed-methods analysis setup to investigate their impact on both user experience and performance. Within the limits of this study, and contrary to previous comparative investigations of adjacency matrices and node-link diagrams (outside of ego networks specifically), participants performed systematically worse when using adjacency matrices than those using node-link diagrammatic representations. Similar to previous comparisons of different node-link diagrams, we do not detect any notable differences in participant performance between the three node-link diagrams. Lastly, our quantitative and qualitative results indicate that participants found adjacency matrices harder to learn, use, and understand than node-link diagrams. We conclude that in terms of both participant experience and performance, a layered node-link diagrammatic representation appears to be the most preferable for ego network visualization purposes.}\r\n}"
+  },
+  {
+    id: "10832435",
+    title: "Visual Analytics Meets Process Mining: Challenges and Opportunities",
+    authors: ["Miksch, S.", "Di Ciccio, C.", "Soffer, P.", "Weber, B."],
+    venue: "IEEE Computer Graphics and Applications",
+    year: 2024,
+    type: "Journal",
+    doi: "10.1109/MCG.2024.3456916",
+    url: "https://doi.org/10.1109/MCG.2024.3456916",
+    bibtex: "@article{10832435,\r\n\ttitle        = {Visual Analytics Meets Process Mining: Challenges and Opportunities},\r\n\tauthor       = {Miksch, Silvia and Di Ciccio, Claudio and Soffer, Pnina and Weber, Barbara},\r\n\tyear         = 2024,\r\n\tjournal      = {IEEE Computer Graphics and Applications},\r\n\tvolume       = 44,\r\n\tnumber       = 6,\r\n\tpages        = {132--141},\r\n\tdoi          = {10.1109/MCG.2024.3456916},\r\n\tkeywords     = {Process mining;Computers;Data analysis;Visual analytics;Knowledge discovery;Human in the loop;Cognition;Monitoring}\r\n}"
+  },
+  {
+    id: "10.1007/978-3-031-22203-0_20",
+    title: "On Time and Space: An Experimental Study on Graph Structural and Temporal Encodings",
+    authors: ["Filipov, V.", "Arleo, A.", "B{\\\"o}gl, M.", "Miksch, S."],
+    venue: "Graph Drawing and Network Visualization",
+    year: 2023,
+    type: "Conference",
+    bibtex: "@inproceedings{10.1007/978-3-031-22203-0_20,\r\n\ttitle        = {On Time and Space: An Experimental Study on Graph Structural and Temporal Encodings},\r\n\tauthor       = {Filipov, Velitchko and Arleo, Alessio and B{\\\"o}gl, Markus and Miksch, Silvia},\r\n\tyear         = 2023,\r\n\tbooktitle    = {Graph Drawing and Network Visualization},\r\n\tpublisher    = {Springer International Publishing},\r\n\taddress      = {Cham},\r\n\tpages        = {271--288},\r\n\tisbn         = {978-3-031-22203-0},\r\n\teditor       = {Angelini, Patrizio and von Hanxleden, Reinhard},\r\n\tabstract     = {Dynamic networks reflect temporal changes occurring to the graph's structure and are used to model a wide variety of problems in many application fields. We investigate the design space of dynamic graph visualization along two major dimensions: the network structural and temporal representation. Significant research has been conducted evaluating the benefits and drawbacks of different structural representations for static graphs, however, few extend this comparison to a dynamic network setting. We conduct a study where we assess the participants' response times, accuracy, and preferences for different combinations of the graph's structural and temporal representations on typical dynamic network exploration tasks, with and without support of common interaction methods. Our results suggest that matrices provide better support for tasks on lower-level entities and basic interactions require longer response times while increasing accuracy. Node-link with auto animation proved to be the quickest and most accurate combination overall, while animation with playback control the most preferred temporal encoding.}\r\n}"
+  },
+  {
+    id: "https://doi.org/10.1111/cgf.14794",
+    title: "Are We There Yet? A Roadmap of Network Visualization from Surveys to Task Taxonomies",
+    authors: ["Filipov, V.", "Arleo, A.", "Miksch, S."],
+    venue: "Computer Graphics Forum",
+    year: 2023,
+    type: "Journal",
+    doi: "https://doi.org/10.1111/cgf.14794",
+    url: "https://doi.org/https://doi.org/10.1111/cgf.14794",
+    bibtex: "@article{https://doi.org/10.1111/cgf.14794,\r\n\ttitle        = {Are We There Yet? A Roadmap of Network Visualization from Surveys to Task Taxonomies},\r\n\tauthor       = {Filipov, Velitchko and Arleo, Alessio and Miksch, Silvia},\r\n\tyear         = 2023,\r\n\tjournal      = {Computer Graphics Forum},\r\n\tvolume       = 42,\r\n\tnumber       = 6,\r\n\tpages        = {e14794},\r\n\tdoi          = {https://doi.org/10.1111/cgf.14794},\r\n\turl          = {https://onlinelibrary.wiley.com/doi/abs/10.1111/cgf.14794},\r\n\tkeywords     = {information visualization, network visualization, visual analytics},\r\n\teprint       = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/cgf.14794},\r\n\tabstract     = {Abstract Networks are abstract and ubiquitous data structures, defined as a set of data points and relationships between them. Network visualization provides meaningful representations of these data, supporting researchers in understanding the connections, gathering insights, and detecting and identifying unexpected patterns. Research in this field is focusing on increasingly challenging problems, such as visualizing dynamic, complex, multivariate, and geospatial networked data. This ever-growing, and widely varied, body of research led to several surveys being published, each covering one or more disciplines of network visualization. Despite this effort, the variety and complexity of this research represents an obstacle when surveying the domain and building a comprehensive overview of the literature. Furthermore, there exists a lack of clarification and uniformity between the terminology used in each of the surveys, which requires further effort when mapping and categorizing the plethora of different visualization techniques and approaches. In this paper, we aim at providing researchers and practitioners alike with a “roadmap” detailing the current research trends in the field of network visualization. We design our contribution as a meta-survey where we discuss, summarize, and categorize recent surveys and task taxonomies published in the context of network visualization. We identify more and less saturated disciplines of research and consolidate the terminology used in the surveyed literature. We also survey the available task taxonomies, providing a comprehensive analysis of their varying support to each network visualization discipline and by establishing and discussing a classification for the individual tasks. With this combined analysis of surveys and task taxonomies, we provide an overarching structure of the field, from which we extrapolate the current state of research and promising directions for future work.}\r\n}"
+  },
+  {
+    id: "Aigner2023Visualization",
+    title: "Visualization of Time-Oriented Data",
+    authors: ["Aigner, W.", "Miksch, S.", "Schumann, H.", "Tominski, C."],
+    venue: "Springer Nature Link",
+    year: 2023,
+    type: "Conference",
+    doi: "10.1007/978-1-4471-7527-8",
+    url: "https://doi.org/10.1007/978-1-4471-7527-8",
+    bibtex: "@book{Aigner2023Visualization,\r\n\ttitle        = {Visualization of Time-Oriented Data},\r\n\tauthor       = {Wolfgang Aigner and Silvia Miksch and Heidrun Schumann and Christian Tominski},\r\n\tyear         = 2023,\r\n\tpublisher    = {Springer London},\r\n    venue        = {Springer Nature Link},\r\n\tseries       = {Human--Computer Interaction Series},\r\n\tpages        = {XIX, 441},\r\n\tdoi          = {10.1007/978-1-4471-7527-8},\r\n\tisbn         = {978-1-4471-7527-8},\r\n\turl          = {https://doi.org/10.1007/978-1-4471-7527-8},\r\n\tedition      = 2\r\n}"
+  },
+  {
+    id: "https://doi.org/10.1111/cgf.14841",
+    title: "Doom or Deliciousness: Challenges and Opportunities for Visualization in the Age of Generative Models",
+    authors: ["Schetinger, V.", "Di Bartolomeo, S.", "El-Assady, M.", "McNutt, A.", "Miller, M.", "Passos, J.", "Adams, J."],
+    venue: "Computer Graphics Forum",
+    year: 2023,
+    type: "Journal",
+    doi: "https://doi.org/10.1111/cgf.14841",
+    url: "https://doi.org/https://doi.org/10.1111/cgf.14841",
+    bibtex: "@article{https://doi.org/10.1111/cgf.14841,\r\n\ttitle        = {Doom or Deliciousness: Challenges and Opportunities for Visualization in the Age of Generative Models},\r\n\tauthor       = {Schetinger, V. and Di Bartolomeo, S. and El-Assady, M. and McNutt, A. and Miller, M. and Passos, J. P. A. and Adams, J. L.},\r\n\tyear         = 2023,\r\n\tjournal      = {Computer Graphics Forum},\r\n\tvolume       = 42,\r\n\tnumber       = 3,\r\n\tpages        = {423--435},\r\n\tdoi          = {https://doi.org/10.1111/cgf.14841},\r\n\turl          = {https://onlinelibrary.wiley.com/doi/abs/10.1111/cgf.14841},\r\n\teprint       = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/cgf.14841},\r\n\tabstract     = {Abstract Generative text-to-image models (as exemplified by DALL-E, MidJourney, and Stable Diffusion) have recently made enormous technological leaps, demonstrating impressive results in many graphical domains—from logo design to digital painting to photographic composition. However, the quality of these results has led to existential crises in some fields of art, leading to questions about the role of human agency in the production of meaning in a graphical context. Such issues are central to visualization, and while these generative models have yet to be widely applied in visualization, it seems only a matter of time until their integration is manifest. Seeking to circumvent similar ponderous dilemmas, we attempt to understand the roles that generative models might play across visualization. We do so by constructing a framework that characterizes what these technologies offer at various stages of the visualization workflow, augmented and analyzed through semi-structured interviews with 21 experts from related domains. Through this work, we map the space of opportunities and risks that might arise in this intersection, identifying doomsday prophecies and delicious low-hanging fruits that are ripe for research.}\r\n}"
+  },
+  {
+    id: "10234572",
+    title: "On Network Structural and Temporal Encodings: A Space and Time Odyssey",
+    authors: ["Filipov, V.", "Arleo, A.", "Bögl, M.", "Miksch, S."],
+    venue: "IEEE Transactions on Visualization and Computer Graphics",
+    year: 2024,
+    type: "Journal",
+    doi: "10.1109/TVCG.2023.3310019",
+    url: "https://doi.org/10.1109/TVCG.2023.3310019",
+    bibtex: "@article{10234572,\r\n\ttitle        = {On Network Structural and Temporal Encodings: A Space and Time Odyssey},\r\n\tauthor       = {Filipov, Velitchko and Arleo, Alessio and Bögl, Markus and Miksch, Silvia},\r\n\tyear         = 2024,\r\n\tjournal      = {IEEE Transactions on Visualization and Computer Graphics},\r\n\tvolume       = 30,\r\n\tnumber       = 8,\r\n\tpages        = {5847--5860},\r\n\tdoi          = {10.1109/TVCG.2023.3310019},\r\n\tkeywords     = {Task analysis;Encoding;Animation;Layout;Visualization;Time factors;Topology;Human-centered computing–visualization–graph drawings;empirical studies in visualization}\r\n}"
+  },
+  {
+    id: "10251911",
+    title: "Grand Challenges in Visual Analytics Applications",
+    authors: ["Wu, A.", "Deng, D.", "Chen, M.", "Liu, S.", "Keim, D.", "Maciejewski, R.", "Miksch, S.", "Strobelt, H.", "Viégas, F.", "Wattenberg, M."],
+    venue: "IEEE Computer Graphics and Applications",
+    year: 2023,
+    type: "Journal",
+    doi: "10.1109/MCG.2023.3284620",
+    url: "https://doi.org/10.1109/MCG.2023.3284620",
+    bibtex: "@article{10251911,\r\n\ttitle        = {Grand Challenges in Visual Analytics Applications},\r\n\tauthor       = {Wu, Aoyu and Deng, Dazhen and Chen, Min and Liu, Shixia and Keim, Daniel and Maciejewski, Ross and Miksch, Silvia and Strobelt, Hendrik and Viégas, Fernanda and Wattenberg, Martin},\r\n\tyear         = 2023,\r\n\tjournal      = {IEEE Computer Graphics and Applications},\r\n\tvolume       = 43,\r\n\tnumber       = 5,\r\n\tpages        = {83--90},\r\n\tdoi          = {10.1109/MCG.2023.3284620},\r\n\tkeywords     = {Visual analytics;Ecosystems;Bioinformatics;Artificial intelligence;Research and development}\r\n}"
+  },
+  {
+    id: "Filipov2023BackToGraphs",
+    title: "Back to the Graphs: A Collection of Datasets and Quality Criteria for Temporal Networks Layout and Visualization",
+    authors: ["Filipov, V.", "Arleo, A.", "Landesberger, T.", "Archambault, D."],
+    venue: "IEEE VIS 2023, Melbourne, Australia",
+    year: 2023,
+    type: "Preprint",
+    doi: "10.34726/5451",
+    url: "https://doi.org/10.34726/5451",
+    bibtex: "@misc{Filipov2023BackToGraphs,\r\n\ttitle        = {Back to the Graphs: A Collection of Datasets and Quality Criteria for Temporal Networks Layout and Visualization},\r\n\tauthor       = {Velitchko Filipov and Alessio Arleo and Tatiana von Landesberger and Daniel Archambault},\r\n\tyear         = 2023,\r\n\tmonth        = {October},\r\n\tday          = 21,\r\n\tdoi          = {10.34726/5451},\r\n    venue        = {IEEE VIS 2023, Melbourne, Australia},\r\n\turl          = {http://hdl.handle.net/20.500.12708/193846},\r\n\tnote         = {Presented at IEEE VIS 2023, Melbourne, Australia, October 22–27, 2023},\r\n\thowpublished = {Poster Presentation}\r\n}"
+  },
+  {
+    id: "Kamencek2023TimeScapes",
+    title: "TimeScapes: Towards a Visual Characterization of Modern Artist’ Exhibition Activity",
+    authors: ["Kamencek, T.", "Filipov, V.", "Schetinger, V.", "Miksch, S.", "Rosenberg, R."],
+    venue: "CUDAN23: Cultural Data Analytics, Tallinn, Estonia",
+    year: 2023,
+    type: "Preprint",
+    bibtex: "@misc{Kamencek2023TimeScapes,\r\n\ttitle        = {TimeScapes: Towards a Visual Characterization of Modern Artist’ Exhibition Activity},\r\n\tauthor       = {Teresa Kamencek and Velitchko Filipov and Victor Schetinger and Silvia Miksch and Raphael Rosenberg},\r\n\tyear         = 2023,\r\n\tmonth        = {December},\r\n\tday          = 16,\r\n    venue        = {CUDAN23: Cultural Data Analytics, Tallinn, Estonia},\r\n\turl          = {http://hdl.handle.net/20.500.12708/193549},\r\n\tnote         = {Invited presentation at CUDAN23: Cultural Data Analytics, Tallinn, Estonia, December 14–16, 2023},\r\n\thowpublished = {Poster Presentation}\r\n}"
+  },
+  {
+    id: "Filipov2023ChroniclesWorkshop",
+    title: "Chronicles of Artist Exhibitions: Exploring Temporal Patterns in Artists' Co-Exhibition Activity Using Visual Analytics",
+    authors: ["Filipov, V.", "Kamencek, T.", "Schetinger, V.", "Rosenberg, R.", "Miksch, S."],
+    venue: "AustroVis 2023 Workshop, Vienna, Austria",
+    year: 2023,
+    type: "Preprint",
+    bibtex: "@misc{Filipov2023ChroniclesWorkshop,\r\n\ttitle        = {Chronicles of Artist Exhibitions: Exploring Temporal Patterns in Artists' Co-Exhibition Activity Using Visual Analytics},\r\n\tauthor       = {Velitchko Filipov and Teresa Kamencek and Victor Schetinger and Raphael Rosenberg and Silvia Miksch},\r\n\tyear         = 2023,\r\n\tmonth        = {October},\r\n    venue        = {AustroVis 2023 Workshop, Vienna, Austria},\r\n\turl          = {http://hdl.handle.net/20.500.12708/190421},\r\n\tnote         = {Presented at AustroVis 2023 Workshop, Vienna, Austria, October 16, 2023},\r\n\thowpublished = {AustroVis Workshop Talk}\r\n}"
+  },
+];

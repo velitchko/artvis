@@ -9,16 +9,12 @@ import client from '../components/apollo/client';
 const HomePage = (props: any) => {
     const navigate = useNavigate();
     const [showScrollToTop, setShowScrollToTop] = useState(false);
-
     const title = {
         maintitle: 'Art Vis',
         subtitle: 'Art History Visualized'
     };
 
     const handleClick = (id: string) => {
-        console.log('navigating to ' + id);
-        // go to the artist detail page 
-
         navigate('/artist/' + id);
     }
 
@@ -44,7 +40,6 @@ const HomePage = (props: any) => {
             navigate('/artists');
         }
     };
-
     // Show/hide scroll to top button based on scroll position
     useEffect(() => {
         const handleScroll = () => {
@@ -53,7 +48,6 @@ const HomePage = (props: any) => {
             const threshold = window.innerWidth < 640 ? 200 : 300;
             setShowScrollToTop(scrollTop > threshold);
         };
-
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -70,22 +64,45 @@ const HomePage = (props: any) => {
     return (
         <React.StrictMode>
             <ParticlesComponent />
-            
+            {/* Top navigation buttons - minimalist aesthetic */}
+            <div className="w-full flex justify-center pt-8 pb-2 z-20 absolute top-0 left-0">
+                <div className="flex space-x-4">
+                    <a
+                        href="/artists"
+                        className="px-6 py-2 text-base font-semibold text-white bg-black border border-black rounded-full shadow-sm hover:bg-gray-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                        style={{letterSpacing: '0.01em'}}
+                    >
+                        Browse Artists
+                    </a>
+                    <a
+                        href="/groups"
+                        className="px-6 py-2 text-base font-semibold text-white bg-black border border-black rounded-full shadow-sm hover:bg-gray-900 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                        style={{letterSpacing: '0.01em'}}
+                    >
+                        Artist Groups
+                    </a>
+                    <span
+                        className="px-6 py-2 text-base font-semibold text-gray-400 bg-gray-200 border border-gray-300 rounded-full shadow-sm cursor-not-allowed flex items-center gap-2 select-none relative"
+                        aria-disabled="true"
+                        title="In progress"
+                        style={{letterSpacing: '0.01em'}}
+                    >
+                        Exhibition Explorer
+                        <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-gray-300 text-gray-600 rounded-full">In Progress</span>
+                    </span>
+                </div>
+            </div>
             {/* Google-inspired centered layout with footer in view */}
             <div className="w-full h-screen flex flex-col px-6 py-8 relative z-10">
-                
                 {/* Spacer for top */}
                 <div className="flex-1"></div>
-                
                 {/* Logo section - perfectly centered */}
                 <div className="text-center mb-8 sm:mb-12">
                     <HeadingComponent {...title} />
                 </div>
-                
                 {/* Search section - Google-style positioning */}
                 <div className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto">
                     <SearchComponent query={GET_EVERYTHING} onClick={handleClick} />
-                    
                     {/* I'm Feeling Artsy Button */}
                     <div className="flex justify-center mt-6">
                         <button
@@ -96,19 +113,13 @@ const HomePage = (props: any) => {
                         </button>
                     </div>
                 </div>
-                
                 {/* Spacer for bottom */}
                 <div className="flex-1"></div>
-                
                 {/* Minimal Footer - now in main view */}
                 <footer className="w-full py-4 border-t border-gray-200">
                     <div className="max-w-4xl mx-auto">
                         <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6 text-xs sm:text-sm text-gray-600">
                             <a href="/about" className="hover:text-gray-900 transition-colors">About</a>
-                            <a href="/network" className="hover:text-gray-900 transition-colors">Network</a>
-                            <a href="/artists" className="hover:text-gray-900 transition-colors">Browse Artists</a>
-                            <a href="/groups" className="hover:text-gray-900 transition-colors">Artist Groups</a>
-                            <a href="/exhibitions" className="hover:text-gray-900 transition-colors">Exhibitions</a>
                             <span className="hidden sm:inline text-gray-400">|</span>
                             <a href="/publications" className="hover:text-gray-900 transition-colors">Publications</a>
                             <a href="/data" className="hover:text-gray-900 transition-colors">Data Sources</a>
@@ -125,9 +136,7 @@ const HomePage = (props: any) => {
                         </div>
                     </div>
                 </footer>
-                
             </div>
-
             {/* Minimal Scroll to Top Button */}
             {showScrollToTop && (
                 <button

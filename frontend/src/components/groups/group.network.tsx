@@ -445,7 +445,7 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
             if (normalizedAngle < 0) normalizedAngle += 360;
             const textAnchor = (normalizedAngle > 90 && normalizedAngle < 270) ? 'end' : 'start';
 
-            const lastName = member.sortname.split(' ').pop() || member.sortname;
+            const lastName = (member.sortname || '').trim().split(' ')[0] || member.sortname;
             
             memberGroup.append('text')
                 .attr('class', 'member-label')

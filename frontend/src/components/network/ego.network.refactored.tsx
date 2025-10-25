@@ -1032,12 +1032,8 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                     .attr('id', `artist-label-${d.target.id}`)
                     .style('pointer-events', 'none') // Let group handle clicks
                     .text(() => {
-                        const name = d.target.name;
-                        const parts = name.split(' ');
-                        if (parts.length > 1) {
-                            return parts[parts.length - 1];
-                        }
-                        return name;
+                        const lastName = (d.target.name || '').trim().split(' ')[0] || d.target.name;
+                        return lastName;
                     })
                     .attr('x', x2)
                     .attr('y', y2)
