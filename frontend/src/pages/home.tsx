@@ -120,8 +120,6 @@ const HomePage = (props: any) => {
                     <div className="max-w-4xl mx-auto">
                         <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6 text-xs sm:text-sm text-gray-600">
                             <a href="/about" className="hover:text-gray-900 transition-colors">About</a>
-                            <a href="/network" className="hover:text-gray-900 transition-colors">Network</a>
-                            <a href="/exhibitions" className="hover:text-gray-900 transition-colors">Exhibitions</a>
                             <span className="hidden sm:inline text-gray-400">|</span>
                             <a href="/publications" className="hover:text-gray-900 transition-colors">Publications</a>
                             <a href="/data" className="hover:text-gray-900 transition-colors">Data Sources</a>
