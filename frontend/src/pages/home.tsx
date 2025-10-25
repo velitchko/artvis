@@ -81,6 +81,15 @@ const HomePage = (props: any) => {
                     >
                         Artist Groups
                     </a>
+                    <span
+                        className="px-6 py-2 text-base font-semibold text-gray-400 bg-gray-200 border border-gray-300 rounded-full shadow-sm cursor-not-allowed flex items-center gap-2 select-none relative"
+                        aria-disabled="true"
+                        title="In progress"
+                        style={{letterSpacing: '0.01em'}}
+                    >
+                        Exhibition Explorer
+                        <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-gray-300 text-gray-600 rounded-full">In Progress</span>
+                    </span>
                 </div>
             </div>
             {/* Google-inspired centered layout with footer in view */}
