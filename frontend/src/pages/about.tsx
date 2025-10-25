@@ -2,6 +2,11 @@ import React from 'react';
 import NavigationComponent from '../components/navigation/navigation';
 import FooterComponent from '../components/footer/footer';
 import ParticlesTransparentComponent from '../components/particles/particles-transparent';
+import tuLogo from '../assets/tu.png';
+import univieLogo from '../assets/uniwien.png';
+import fwfLogo from '../assets/fwf.png';
+import cvastLogo from '../assets/cvast.png';
+import creaLogo from '../assets/crea.jpg';
 
 const AboutPage = () => {
     return (
@@ -72,24 +77,24 @@ const AboutPage = () => {
                     <div className="grid md:grid-cols-3 gap-8 mb-8">
                         {/* TU Wien Logo */}
                         <div className="text-center">
-                            <div className="h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-2 border-2 border-dashed border-gray-300">
-                                <span className="text-gray-500 text-sm">TU Wien Logo</span>
+                            <div className="h-20 rounded-lg flex items-center justify-center mb-2">
+                                <img src={tuLogo} alt="TU Wien Logo" className="h-3/4 object-contain" />
                             </div>
-                            <p className="text-sm text-gray-600">Vienna University of Technology</p>
+                            <p className="text-sm text-gray-600">TU Wien</p>
                         </div>
                         
                         {/* University of Vienna Logo */}
                         <div className="text-center">
-                            <div className="h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-2 border-2 border-dashed border-gray-300">
-                                <span className="text-gray-500 text-sm">UniVie Logo</span>
+                            <div className="h-20 rounded-lg flex items-center justify-center mb-2">
+                                <img src={univieLogo} alt="University of Vienna` Logo" className="h-3/4 object-contain" />
                             </div>
                             <p className="text-sm text-gray-600">University of Vienna</p>
                         </div>
                         
                         {/* FWF Logo */}
                         <div className="text-center">
-                            <div className="h-20 bg-gray-100 rounded-lg flex items-center justify-center mb-2 border-2 border-dashed border-gray-300">
-                                <span className="text-gray-500 text-sm">FWF Logo</span>
+                            <div className="h-20 rounded-lg flex items-center justify-center mb-2">
+                                <img src={fwfLogo} alt="FWF Logo" className="h-3/4 object-contain" />
                             </div>
                             <p className="text-sm text-gray-600">Austrian Science Fund</p>
                         </div>
@@ -98,16 +103,16 @@ const AboutPage = () => {
                     <div className="grid md:grid-cols-2 gap-8">
                         {/* CVAST Logo */}
                         <div className="text-center">
-                            <div className="h-16 bg-gray-100 rounded-lg flex items-center justify-center mb-2 border-2 border-dashed border-gray-300">
-                                <span className="text-gray-500 text-sm">CVAST Logo</span>
+                            <div className="h-16 rounded-lg flex items-center justify-center mb-2">
+                                <img src={cvastLogo} alt="CVAST Logo" className="h-3/4 object-contain" />
                             </div>
                             <p className="text-sm text-gray-600">Center for Visual Analytics Science and Technology</p>
                         </div>
                         
                         {/* Department Logo */}
                         <div className="text-center">
-                            <div className="h-16 bg-gray-100 rounded-lg flex items-center justify-center mb-2 border-2 border-dashed border-gray-300">
-                                <span className="text-gray-500 text-sm">Art History Dept. Logo</span>
+                            <div className="h-16 rounded-lg flex items-center justify-center mb-2">
+                                <img src={creaLogo} alt="CREA Logo" className="h-3/4 object-contain" />
                             </div>
                             <p className="text-sm text-gray-600">Department of Art History</p>
                         </div>
