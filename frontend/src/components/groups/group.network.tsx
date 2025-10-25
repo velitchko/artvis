@@ -149,6 +149,18 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
             .domain([0, d3.max(exhibitionData, d => d.count) || 10])
             .range([2, 8]);
 
+        // Fixed visual radius for nodes (we encode count via opacity instead)
+        const fixedNodeRadius = 4; //Math.max(3, minDimension * 0.01);
+
+        // Opacity scale maps exhibition counts -> opacity (low = more transparent, high = more opaque)
+        const counts = exhibitionData.map(d => d.count);
+        const minCount = d3.min(counts) ?? 0;
+        const maxCount = d3.max(counts) ?? 1;
+        const opacityScale = d3.scaleLinear()
+            .domain([minCount, Math.max(maxCount, minCount + 1)])
+            .range([0.35, 0.95])
+            .clamp(true);
+
         // Main container (will be transformed by zoom)
         const g = svg.append('g')
             .attr('id', 'everything')
@@ -178,9 +190,10 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 .attr('class', 'circle-line')
                 .attr('r', radiusScale(year))
                 .attr('fill', 'none')
-                .attr('stroke', '#e3e3e3')
-                .attr('stroke-width', 1)
-                .attr('opacity', 1);
+                // de-emphasized: lighter, thinner and semi-transparent
+                .attr('stroke', '#e9e9e9')
+                .attr('stroke-width', 0.8)
+                .attr('opacity', 0.55);
         });
 
         // Draw radial grid lines (one per member)
@@ -193,9 +206,10 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 .attr('y1', getY(YEAR_RANGE.min, angle))
                 .attr('x2', getX(YEAR_RANGE.max, angle))
                 .attr('y2', getY(YEAR_RANGE.max, angle))
-                .attr('stroke', '#e3e3e3')
-                .attr('stroke-width', 1)
-                .attr('opacity', 1);
+                // de-emphasized: lighter, thinner and semi-transparent like timeline
+                .attr('stroke', '#e9e9e9')
+                .attr('stroke-width', 0.6)
+                .attr('opacity', 0.45);
         });
 
         // Draw central group node
@@ -306,10 +320,18 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                         <div style="margin-top: 5px; font-size: 10px; opacity: 0.8;">Click to filter by group</div>
                     `);
 
-                // Highlight arc
-                d3.select(this)
-                    .attr('stroke-width', 3)
-                    .attr('stroke', '#ff6b35');
+                // Highlight arc using group color (darker shade)
+                try {
+                    const col = d3.color(getColor(d.group));
+                    const strokeCol = col ? col.darker(1).formatHex ? col.darker(1).formatHex() : col.darker(1).toString() : '#ff6b35';
+                    d3.select(this)
+                        .attr('stroke-width', 3)
+                        .attr('stroke', strokeCol);
+                } catch (e) {
+                    d3.select(this)
+                        .attr('stroke-width', 3)
+                        .attr('stroke', '#ff6b35');
+                }
             })
             .on('mouseout', function() {
                 // Remove tooltip
@@ -334,8 +356,9 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                         .attr('stroke', 'white')
                         .attr('stroke-width', 1);
                     
+                    // Reset node opacities based on their counts
                     nodesGroup.selectAll('.exhibition-node')
-                        .attr('opacity', 0.75);
+                        .attr('opacity', (d: any) => opacityScale(d.count));
                     
                     outerGroup.selectAll('.member-bar')
                         .attr('opacity', 0.75);
@@ -350,16 +373,27 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                         .attr('stroke', 'white')
                         .attr('stroke-width', 1);
                     
-                    d3.select(this)
-                        .attr('opacity', 1)
-                        .attr('data-selected', 'true')
-                        .attr('stroke', '#ff6b35')
-                        .attr('stroke-width', 2);
+                    // Use the group's darker color for selected stroke
+                    try {
+                        const col = d3.color(getColor(d.group));
+                        const strokeCol = col ? col.darker(1).formatHex ? col.darker(1).formatHex() : col.darker(1).toString() : '#ff6b35';
+                        d3.select(this)
+                            .attr('opacity', 1)
+                            .attr('data-selected', 'true')
+                            .attr('stroke', strokeCol)
+                            .attr('stroke-width', 2);
+                    } catch (e) {
+                        d3.select(this)
+                            .attr('opacity', 1)
+                            .attr('data-selected', 'true')
+                            .attr('stroke', '#ff6b35')
+                            .attr('stroke-width', 2);
+                    }
                     
-                    // Highlight matching nodes
+                    // Highlight matching nodes: keep their base opacity while dimming others
                     nodesGroup.selectAll('.exhibition-node')
                         .attr('opacity', (nodeData: any) => 
-                            nodeData.group === d.group ? 0.75 : 0.15
+                            nodeData.group === d.group ? opacityScale(nodeData.count) : opacityScale(nodeData.count) * 0.2
                         );
                     
                     // Highlight matching outer elements
@@ -386,6 +420,56 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 d3.selectAll('.donut-tooltip').remove();
             });
 
+        // Legend for opacity mapping (few -> many exhibitions)
+        // Create defs for gradient (grayscale) appended to the root SVG so it is not affected by zoom
+        const defs = svg.append('defs');
+        const grad = defs.append('linearGradient')
+            .attr('id', 'opacityLegendGrad')
+            .attr('x1', '0%')
+            .attr('x2', '100%')
+            .attr('y1', '0%')
+            .attr('y2', '0%');
+
+        // Grayscale gradient: light (more transparent) -> dark (more opaque)
+        grad.append('stop').attr('offset', '0%').attr('stop-color', '#f5f5f5').attr('stop-opacity', 0.35);
+        grad.append('stop').attr('offset', '100%').attr('stop-color', '#333333').attr('stop-opacity', 0.95);
+
+        // Compute legend size and position it in the top-left of the SVG (outside zoom group)
+        const legendWidth = Math.max(80, minDimension * 0.12);
+        const legendHeight = 12;
+        const legendPadding = 12;
+
+        const legend = svg.append('g')
+            .attr('id', 'legend')
+            .attr('transform', `translate(${legendPadding}, ${legendPadding})`)
+            .style('pointer-events', 'none');
+
+        legend.append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', legendWidth)
+            .attr('height', legendHeight)
+            .attr('rx', 2)
+            .attr('ry', 2)
+            .attr('fill', 'url(#opacityLegendGrad)')
+            .attr('stroke', '#ddd')
+            .attr('stroke-width', 0.5);
+
+        legend.append('text')
+            .attr('x', 0)
+            .attr('y', legendHeight + 14)
+            .attr('font-size', '11px')
+            .attr('fill', '#666')
+            .text('Few');
+
+        legend.append('text')
+            .attr('x', legendWidth)
+            .attr('y', legendHeight + 14)
+            .attr('font-size', '11px')
+            .attr('fill', '#666')
+            .attr('text-anchor', 'end')
+            .text('Many');
+
         // Draw exhibition nodes (dots at year-member intersections)
         const nodesGroup = g.append('g').attr('id', 'nodes');
         
@@ -402,11 +486,11 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 const idx = memberIndexMap.get(d.memberId) ?? d.memberIndex;
                 return getY(d.year, getAngle(idx));
             })
-            .attr('r', d => nodeSizeScale(d.count))
-            .attr('fill', 'transparent')
-            .attr('stroke', d => getColor(d.group))
-            .attr('stroke-width', 2)
-            .attr('opacity', 0.75)
+            .attr('r', () => fixedNodeRadius)
+            .attr('fill', d => getColor(d.group))
+            .attr('stroke', 'white')
+            .attr('stroke-width', 0.8)
+            .attr('opacity', d => opacityScale(d.count))
             .style('cursor', 'pointer');
 
         // Draw outer member labels and bars
@@ -533,12 +617,24 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                     onYearHover(d.year);
                 }
 
-                // Enlarge node
-                d3.select(this)
-                    .transition()
-                    .duration(200)
-                    .attr('r', nodeSizeScale(d.count) + 3)
-                    .attr('stroke-width', 3);
+                // Enlarge node and add highlight stroke (darker variant of group color)
+                try {
+                    const nodeCol = d3.color(getColor(d.group));
+                    const strokeCol = nodeCol ? (nodeCol.darker(1).formatHex ? nodeCol.darker(1).formatHex() : nodeCol.darker(1).toString()) : '#ff6b35';
+                    d3.select(this)
+                        .transition()
+                        .duration(120)
+                        .attr('r', fixedNodeRadius + 2)
+                        .attr('stroke-width', 2)
+                        .attr('stroke', strokeCol);
+                } catch (e) {
+                    d3.select(this)
+                        .transition()
+                        .duration(120)
+                        .attr('r', fixedNodeRadius + 2)
+                        .attr('stroke-width', 2)
+                        .attr('stroke', '#ff6b35');
+                }
 
                 // Show tooltip
                 d3.select('body').append('div')
@@ -567,21 +663,24 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
             .on('mouseout', function(event: any, d: MemberExhibitionPoint) {
                 // Reset year ring
                 d3.selectAll('.circle-line')
-                    .attr('stroke', '#e3e3e3')
-                    .attr('stroke-width', 1)
-                    .attr('stroke-dasharray', 'none');
+                    .attr('stroke', '#e9e9e9')
+                    .attr('stroke-width', 0.8)
+                    .attr('stroke-dasharray', 'none')
+                    .attr('opacity', 0.55);
 
                 // Notify parent to clear highlightedYear (which removes gridline in timeline)
                 if (onYearMouseOut) {
                     onYearMouseOut();
                 }
 
-                // Reset node
+                // Reset node size and stroke to base values
                 d3.select(this)
                     .transition()
-                    .duration(200)
-                    .attr('r', nodeSizeScale(d.count))
-                    .attr('stroke-width', 2);
+                    .duration(120)
+                    .attr('r', fixedNodeRadius)
+                    .attr('stroke-width', 0.8)
+                    .attr('stroke', 'white')
+                    .attr('opacity', opacityScale(d.count));
 
                 // Remove tooltip
                 d3.selectAll('.node-tooltip').remove();
