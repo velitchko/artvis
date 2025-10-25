@@ -8,6 +8,7 @@ import ExplorerPage from "../pages/explorer";
 import ArtistDetailPage from "../pages/artist.detail";
 import ExhibitionsPage from "../pages/exhibitions";
 import AboutPage from "../pages/about";
+import PublicationsPage from "../pages/publications";
 import GroupsPage from "../pages/groups";
 import GroupDetailPage from "../pages/group.detail";
 
@@ -18,6 +19,7 @@ export default function Base() {
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/about" element={<AboutPage />} />
+                <Route path="/publications" element={<PublicationsPage />} />
                 <Route path="/artists" element={<ArtistPage />} />
                 <Route path="/artist/:id" element={<ArtistDetailPage />} />
                 <Route path="/artist/" element={<ArtistDetailPage />} />
