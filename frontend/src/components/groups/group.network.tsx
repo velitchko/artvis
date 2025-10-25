@@ -231,13 +231,8 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 .attr('opacity', 0.45);
         });
 
-        // Draw central group node
+        // Draw central group node (label only — no surrounding circle)
         const groupNode = g.append('g').attr('id', 'group-node');
-        groupNode.append('circle')
-            .attr('r', 30)
-            .attr('fill', 'transparent')
-            .attr('stroke', '#1a1a1a')
-            .attr('stroke-width', 4);
 
         // Group name (split into lines if needed)
         const nameParts = group.name.split(' ');
