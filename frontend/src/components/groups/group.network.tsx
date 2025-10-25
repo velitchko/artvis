@@ -105,8 +105,16 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
 
     // Calculate members sorted by name for consistent positioning
     const sortedMembers = useMemo(() => {
-        return _.orderBy(group.artistsMemberOf, ['sortname'], ['asc']);
-    }, [group]);
+        const groupKey = groupBy === 'sex' ? 'sex' : 'country';
+        return _.orderBy(group.artistsMemberOf, [groupKey, 'sortname'], ['asc', 'asc']);
+    }, [group, groupBy]);
+
+    // Map member id -> index in sortedMembers so all drawing uses the same ordering
+    const memberIndexMap = useMemo(() => {
+        const m = new Map<number, number>();
+        sortedMembers.forEach((mem, idx) => m.set(mem.id, idx));
+        return m;
+    }, [sortedMembers]);
 
     // Get color for a group value
     const getColor = (groupValue: string): string => {
@@ -386,8 +394,14 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
             .enter()
             .append('circle')
             .attr('class', 'exhibition-node')
-            .attr('cx', d => getX(d.year, getAngle(d.memberIndex)))
-            .attr('cy', d => getY(d.year, getAngle(d.memberIndex)))
+            .attr('cx', d => {
+                const idx = memberIndexMap.get(d.memberId) ?? d.memberIndex;
+                return getX(d.year, getAngle(idx));
+            })
+            .attr('cy', d => {
+                const idx = memberIndexMap.get(d.memberId) ?? d.memberIndex;
+                return getY(d.year, getAngle(idx));
+            })
             .attr('r', d => nodeSizeScale(d.count))
             .attr('fill', 'transparent')
             .attr('stroke', d => getColor(d.group))
