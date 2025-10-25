@@ -704,9 +704,10 @@ const GroupNetwork: React.FC<GroupNetworkProps> = ({
                 .attr('stroke-dasharray', '8,4');
         } else {
             d3.selectAll('.circle-line')
-                .attr('stroke', '#e3e3e3')
-                .attr('stroke-width', 1)
-                .attr('stroke-dasharray', 'none');
+                .attr('stroke', '#e9e9e9')
+                .attr('stroke-width', 0.8)
+                .attr('stroke-dasharray', 'none')
+                .attr('opacity', 0.55);
         }
     }, [highlightedYear]);
 
