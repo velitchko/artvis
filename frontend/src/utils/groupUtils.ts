@@ -30,6 +30,8 @@ export const calculateGroupStatistics = (group: Group): GroupStatistics => {
     const uniqueExhibitions = new Set<number>();
     const exhibitionsPerYear = new Map<number, Set<number>>();
     const itemsPerYear = new Map<number, number>();
+    // Map exhibitionId -> set of itemIds that are created by group members
+    const exhibitionItemsByExhibition = new Map<number, Set<number>>();
     let totalArtworks = 0;
     let minYear = 1905;
     let maxYear = 1915;
@@ -54,32 +56,56 @@ export const calculateGroupStatistics = (group: Group): GroupStatistics => {
             const year = +exhibition.startyear;
             const exhibitionId = +exhibition.id;
 
-            // Track unique exhibitions
+            // Track unique exhibitions (members may contribute to the same exhibition)
             uniqueExhibitions.add(exhibitionId);
 
             // Track year range
             if (year < minYear) minYear = year;
             if (year > maxYear) maxYear = year;
 
-            // Track exhibitions per year
+            // Only consider exhibitions within the configured YEAR_RANGE for per-year stats
             if (year >= YEAR_RANGE.min && year <= YEAR_RANGE.max) {
                 if (!exhibitionsPerYear.has(year)) {
                     exhibitionsPerYear.set(year, new Set());
                 }
                 exhibitionsPerYear.get(year)?.add(exhibitionId);
 
-                // Track items per year
-                const itemCount = exhibition.exhibitsItems?.length || 0;
-                itemsPerYear.set(year, (itemsPerYear.get(year) || 0) + itemCount);
-                totalArtworks += itemCount;
+                // For artwork counts: count only distinct artworks that were created by group members
+                if (!exhibitionItemsByExhibition.has(exhibitionId)) {
+                    exhibitionItemsByExhibition.set(exhibitionId, new Set<number>());
+                }
+
+                // If the exhibition has items, check each item to see if this member is listed as a creator
+                (exhibition.exhibitsItems || []).forEach(item => {
+                    const itemId = +item.id;
+                    // If the current member is one of the creators of the item, include it
+                    const isByMember = (item.artistsCreated || []).some(a => +a.id === +member.id);
+                    if (isByMember) {
+                        exhibitionItemsByExhibition.get(exhibitionId)?.add(itemId);
+                    }
+                });
             }
         });
+    });
+
+    // Now compute itemsPerYear and totalArtworks based on the collected exhibitionItemsByExhibition
+    let computedTotalArtworks = 0;
+    exhibitionsPerYear.forEach((exhibitionSet, year) => {
+        let yearCount = 0;
+        exhibitionSet.forEach(exhibitionId => {
+            const itemSet = exhibitionItemsByExhibition.get(exhibitionId);
+            if (itemSet && itemSet.size > 0) {
+                yearCount += itemSet.size;
+            }
+        });
+        itemsPerYear.set(year, yearCount);
+        computedTotalArtworks += yearCount;
     });
 
     return {
         totalMembers: group.artistsMemberOf.length,
         totalExhibitions: uniqueExhibitions.size,
-        totalArtworks,
+        totalArtworks: computedTotalArtworks,
         uniqueExhibitions,
         dateRange: { 
             min: minYear === Infinity ? YEAR_RANGE.min : minYear, 

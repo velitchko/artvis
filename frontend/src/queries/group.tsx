@@ -24,6 +24,9 @@ query Group ($searchId: BigInt!) {
                 }
                 exhibitsItems {
                     id
+                    artistsCreated {
+                        id
+                    }
                 }
             }
         }
