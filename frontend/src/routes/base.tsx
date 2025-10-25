@@ -18,8 +18,6 @@ export default function Base() {
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/about" element={<AboutPage />} />
-                <Route path="/network" element={<NetworkPage />} />
-                <Route path="/explorer" element={<ExplorerPage />} />
                 <Route path="/artists" element={<ArtistPage />} />
                 <Route path="/artist/:id" element={<ArtistDetailPage />} />
                 <Route path="/artist/" element={<ArtistDetailPage />} />
