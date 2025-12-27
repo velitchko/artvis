@@ -10,9 +10,35 @@ const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
     const [sortField, setSortField] = useState<'year' | 'title' | 'members' | 'artworks'>('year');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+    
+
+    
+
+    // Precompute per-exhibition counts of items created by the group's members
+    const exhibitionsWithMemberItemCounts = useMemo(() => {
+        return exhibitions.map(exhibition => {
+            const memberIds = new Set<number>((exhibition.exhibitingMembers || []).map(m => +m.id));
+            const items = (exhibition.exhibitsItems || []);
+            const memberItemIds = new Set<number>();
+
+            items.forEach(item => {
+                const creators = (item.artistsCreated || []).map((a: Artist) => +a.id);
+                // if any creator is in the group's member set, count the item
+                if (creators.some(id => memberIds.has(id))) {
+                    memberItemIds.add(+item.id);
+                }
+            });
+
+            return {
+                ...exhibition,
+                __memberItemsCount: memberItemIds.size
+            } as Exhibition & { exhibitingMembers: Artist[] } & { __memberItemsCount: number };
+        });
+    }, [exhibitions]);
+
     // Sort exhibitions
     const sortedExhibitions = useMemo(() => {
-        return [...exhibitions].sort((a, b) => {
+        return [...exhibitionsWithMemberItemCounts].sort((a, b) => {
             let comparison = 0;
 
             switch (sortField) {
@@ -26,15 +52,16 @@ const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
                     comparison = a.exhibitingMembers.length - b.exhibitingMembers.length;
                     break;
                 case 'artworks':
-                    const aCount = a.exhibitsItems?.length || 0;
-                    const bCount = b.exhibitsItems?.length || 0;
+                    // sort by number of items in the exhibition that were created by group members
+                    const aCount = (a as any).__memberItemsCount || 0;
+                    const bCount = (b as any).__memberItemsCount || 0;
                     comparison = aCount - bCount;
                     break;
             }
 
             return sortDirection === 'asc' ? comparison : -comparison;
         });
-    }, [exhibitions, sortField, sortDirection]);
+    }, [exhibitionsWithMemberItemCounts, sortField, sortDirection]);
 
     const handleSort = (field: typeof sortField) => {
         if (sortField === field) {
@@ -136,7 +163,8 @@ const GroupTable: React.FC<GroupTableProps> = ({ exhibitions }) => {
                                     </div>
                                 </td>
                                 <td className="px-2 py-2 border-r border-gray-300 text-sm whitespace-nowrap">
-                                    {exhibition.exhibitsItems?.length || 0}
+                                    {/* Show only items in the exhibition that were created by group members */}
+                                    {(exhibition as any).__memberItemsCount ?? ((exhibition.exhibitsItems||[]).length || 0)}
                                 </td>
                             </tr>
                         ))}

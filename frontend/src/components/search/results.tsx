@@ -25,13 +25,16 @@ const ResultsComponent = (props: any) => {
                                     <svg className="absolute w-4 h-4 left-2 top-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                                     </svg>
-                                    <span className={`px-2 py-0 mr-2 rounded-full text-white font-semibold text-sm ${colors.get(result.type)}`}>
+                                    <span className={`inline-block align-middle mr-2 bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold`} style={{ background: 'unset', color: 'unset' }}>
+                                        Example
+                                    </span>
+                                    <span className={`inline-block align-middle mr-2 rounded-full px-2 py-1 text-xs font-semibold text-white ${colors.get(result.type)}`}>
                                         {result.type}
-                                        </span>
+                                    </span>
                                         <p className="inline-block" dangerouslySetInnerHTML={{
                                             __html:
                                             result.name.replace(new RegExp(value.current, 'gi'), (match) => {
-                                                return `<span class="font-bold bg-amber-300">${match}</span>`
+                                                return `<span class=\"font-bold bg-amber-300\">${match}</span>`
                                             })
                                         }}>
                                         </p>
