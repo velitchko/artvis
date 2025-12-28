@@ -319,7 +319,8 @@ const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({
     
     // Search functionality
     const [searchArtists, { data: searchData, loading: searchLoading }] = useLazyQuery(GET_ARTIST_BY_NAME);
-    const searchTimeoutRef = useRef<NodeJS.Timeout>();
+    // Use 'any' to avoid NodeJS.Timeout vs number type error in browser
+    const searchTimeoutRef = useRef<any>();
 
     // Memoized calculations
     const timelineData = useMemo(() => {
