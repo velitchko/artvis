@@ -1494,6 +1494,17 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
                 return endAngle;
             });
 
+        // Precompute unique artists per group and total unique artists
+        const groupToUniqueArtists = new Map<string, Set<number>>();
+        uniqueNodes.forEach(node => {
+            const group = node.props.group;
+            if (!groupToUniqueArtists.has(group)) {
+                groupToUniqueArtists.set(group, new Set());
+            }
+            groupToUniqueArtists.get(group)!.add(node.targetId);
+        });
+        const totalUniqueArtists = uniqueNodes.length;
+
         // Draw donut arcs
         donut.selectAll('path')
             .data(uniqueGroups)
@@ -1510,15 +1521,17 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
             })
             .style('cursor', 'pointer')
             .on('mouseover', (event: MouseEvent, d: Link) => {
-                const groupCount = linksRef.current.filter(link => link.props.group === d.props.group).length;
-                const percentage = (groupCount / linksRef.current.length) * 100;
-                
+                // Use unique artist count for this group
+                const groupSet = groupToUniqueArtists.get(d.props.group) || new Set();
+                const groupCount = groupSet.size;
+                const percentage = totalUniqueArtists > 0 ? (groupCount / totalUniqueArtists) * 100 : 0;
+
                 // Remove any existing arc tooltip
                 d3.selectAll('.arc-tooltip').remove();
-                
+
                 // Calculate smart tooltip position
                 const tooltipPos = getTooltipPosition(event.clientX, event.clientY, 200, 120, 15, -10);
-                
+
                 // Create improved tooltip
                 d3.select('body').append('div')
                     .attr('class', 'arc-tooltip')
