@@ -12,6 +12,7 @@ import PublicationsPage from "../pages/publications";
 import GroupsPage from "../pages/groups";
 import GroupDetailPage from "../pages/group.detail";
 import DataPage from "../pages/data";
+import ContactPage from "../pages/contact";
 
 
 export default function Base() {
@@ -28,6 +29,7 @@ export default function Base() {
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/group/:id" element={<GroupDetailPage />} />
                 <Route path="/data" element={<DataPage />} />
+                <Route path="/contact" element={<ContactPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
         </React.StrictMode>
