@@ -1,1472 +1,1157 @@
-import React from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
+import _ from 'lodash';
+import { useLazyQuery } from '@apollo/client';
+import client from '../apollo/client';
 import { Artist } from '../../models/artist.model';
 import { Exhibition } from '../../models/exhibition.model';
 import { Node } from '../../models/node';
 import { Link } from '../../models/link';
-import client from '../apollo/client';
-import SearchComponent from '../search/search';
-import GET_ARTIST_BY_NAME from '../../queries/artistByName';
-import GET_ARTIST from '../../queries/artist';
 import EgoNetworkComponent from '../network/ego.network';
 import AreaChartComponent from '../linechart/area.chart';
 import TableComponent from '../table/table';
-import _ from 'lodash';
-import { countryColors } from '../../colors/colors';
-import GET_EXHIBITION from '../../queries/exhibition';
-import { Item } from '../../models/item.model';
+import ArtistTimeline from './artist.timeline';
+import ArtistDetailHeader from './artist.detail.header';
 import GET_ARTIST_EXHIBITIONS_BY_ID from '../../queries/artistExhibitionsById';
+import GET_EXHIBITION from '../../queries/exhibition';
+import GET_ARTIST_BY_NAME from '../../queries/artistByName';
+import GET_ARTIST from '../../queries/artist';
 
-// TODO: Move line chart to separate component
-class ArtistDetailComponent extends React.Component<{ artist: Artist, loadCallback: Function }, { artist: Artist, compareWith: Artist | null, exhibitionsList: Array<Exhibition>, baseNode: Node, links: Array<Link>, rendered: boolean, baseNumberOfArtworks: number, compareNumberOfArtworks: number, width: number, height: number, colors: { group: string, colors: Map<string, string> } }> {
+// Debug configuration
+const DEBUG = process.env.NODE_ENV !== 'production';
 
-    private svgTimeLineContainer: d3.Selection<any, any, any, any> | undefined;
-    private baseTimelineContainer: d3.Selection<any, any, any, any> | undefined;
-    private compareTimelineContainer: d3.Selection<any, any, any, any> | undefined;
+// Types
+interface ArtistDetailProps {
+    artist: Artist;
+    loadCallback: (loading: boolean) => void;
+}
 
-    private xAxis: d3.Selection<any, any, any, any> | undefined;
-    private yAxis: d3.Selection<any, any, any, any> | undefined;
-    private tooltip: d3.Selection<any, any, any, any> | undefined;
-    private xScale: d3.ScaleLinear<number, number, never> | undefined;
-    private yScale: d3.ScaleLinear<number, number, never> | undefined;
-    private rScale: d3.ScalePower<number, number, never> | undefined;
-    private margin: { bottom: number, left: number, right: number, top: number };
-    private baseItemCountExtentAbs: [number, number];
-    private baseItemCountExtentAvg: [number, number];
-    private compareItemCountExtentAbs: [number, number];
-    private compareItemCountExtentAvg: [number, number];
-    private width: number = 500;
-    private height: number = 0;
-    private minYear: number = 0;
-    private maxYear: number = 0;
-    private links: Array<Link>;
-    private showNetwork: boolean = false;
-    private egoNetwork = React.createRef<EgoNetworkComponent>();
-    private areaChart = React.createRef<AreaChartComponent>();
-    private table = React.createRef<TableComponent>();
-    private loaded: boolean = false;
+interface ArtistDetailState {
+    compareWith: Artist | null;
+    exhibitionsList: Exhibition[];
+    baseNode: Node;
+    links: Link[];
+    rendered: boolean;
+    baseNumberOfArtworks: number;
+    compareNumberOfArtworks: number;
+    colors: { group: string; colors: Map<string, string> };
+    dimensions: { width: number; height: number };
+    // Visualization controls
+    coExhibitionCount: number;
+    groupBy: string;
+    orderBy: string;
+    selectedGroup: string; // For cross-component group selection
+    // Timeline highlighting
+    highlightedYear: number | null;
+    // Search functionality
+    searchTerm: string;
+    searchResults: Artist[];
+    // Loading state for ego network artist selection
+    loadingCompareArtist: boolean;
+}
 
-    constructor(props: { artist: Artist, compareWith: Artist | null, baseNode: Node, links: Array<Link>, colors: { group: string, colors: Map<string, string> }, loadCallback: Function }) {
-        super(props);
+interface TimelineData {
+    year: number;
+    exhibitions: number;
+    items: number;
+}
 
-        this.state = {
-            artist: props.artist,
-            exhibitionsList: new Array<Exhibition>(),
-            baseNumberOfArtworks: 0,
-            compareNumberOfArtworks: 0,
-            width: 0,
-            height: 0,
-            compareWith: null,
-            baseNode: {} as Node,
-            links: new Array<Link>(),
-            rendered: false,
-            colors: { group: 'country', colors: new Map<string, string>() }
+interface D3Elements {
+    svg?: d3.Selection<any, any, any, any>;
+    baseTimeline?: d3.Selection<any, any, any, any>;
+    compareTimeline?: d3.Selection<any, any, any, any>;
+    xAxis?: d3.Selection<any, any, any, any>;
+    yAxis?: d3.Selection<any, any, any, any>;
+    tooltip?: d3.Selection<any, any, any, any>;
+    xScale?: d3.ScaleLinear<number, number>;
+    yScale?: d3.ScaleLinear<number, number>;
+    rScale?: d3.ScalePower<number, number>;
+}
+
+// Constants
+const YEAR_RANGE = { min: 1905, max: 1915 };
+const DEFAULT_DIMENSIONS = { width: 500, height: 250 };
+const MARGINS = { top: 30, bottom: 30, left: 30, right: 30 };
+
+// Custom hooks
+const useResizeObserver = (elementId: string) => {
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        const updateDimensions = () => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                setDimensions({
+                    width: element.clientWidth,
+                    height: element.clientHeight
+                });
+            }
         };
 
-        this.svgTimeLineContainer = undefined;
-        this.tooltip = undefined;
+        updateDimensions();
+        window.addEventListener('resize', updateDimensions);
+        return () => window.removeEventListener('resize', updateDimensions);
+    }, [elementId]);
 
-        this.links = new Array<Link>();
+    return dimensions;
+};
 
-        this.xScale = undefined;
-        this.yScale = undefined;
+// Utility functions
+const calculateAge = (birthYear: number): number => {
+    const currentYear = new Date().getFullYear();
+    return currentYear - birthYear;
+};
 
-        this.baseItemCountExtentAbs = [0, 0];
-        this.baseItemCountExtentAvg = [0, 0];
-        this.compareItemCountExtentAbs = [0, 0];
-        this.compareItemCountExtentAvg = [0, 0];
+const processExhibitionData = (exhibitions: Exhibition[]): TimelineData[] => {
+    const exhibitionsPerYear = new Map<number, Set<number>>();
+    const itemsPerYear = new Map<number, number>();
 
-        // initialize colors
-        if (this.state.colors.group === 'country') {
-            // set colors map 
-            this.state.colors.colors = countryColors;
+    exhibitions.forEach((exhibition: Exhibition) => {
+        const year = exhibition.startyear;
+        
+        if (year >= YEAR_RANGE.min && year <= YEAR_RANGE.max) {
+            if (!exhibitionsPerYear.has(year)) {
+                exhibitionsPerYear.set(year, new Set());
+            }
+            exhibitionsPerYear.get(year)?.add(exhibition.id);
+
+            const itemCount = exhibition.exhibitsItems?.length || 0;
+            itemsPerYear.set(year, (itemsPerYear.get(year) || 0) + itemCount);
+        }
+    });
+
+    const exhibitionData = Array.from(exhibitionsPerYear.entries())
+        .map(([year, set]) => ({ year, count: set.size }))
+        .sort((a, b) => a.year - b.year);
+
+    const itemsData = Array.from(itemsPerYear.entries())
+        .map(([year, count]) => ({ year, count }))
+        .sort((a, b) => a.year - b.year);
+
+    return exhibitionData.map(exhibition => {
+        const items = itemsData.find(item => item.year === exhibition.year)?.count || 0;
+        return {
+            year: exhibition.year,
+            exhibitions: exhibition.count,
+            items
         };
+    });
+};
 
-        this.width = 500;
-        this.height = 250;
-
-        this.minYear = 1905;
-        this.maxYear = 1915;
-
-        this.margin = {
-            top: 30,
-            bottom: 30,
-            left: 30,
-            right: 30
-        };
+const generateNetworkData = (artist: Artist): Link[] => {
+    if (DEBUG) {
+        console.log('Generating network data for artist:', artist.sortname);
+        console.log('coExhibitedArtists:', artist.coExhibitedArtists?.length || 0);
+        console.log('artistsCoExhibited:', artist.artistsCoExhibited?.length || 0);
     }
+    
+    const source: Node = {
+        id: artist.id,
+        name: artist.sortname,
+        type: 'artist',
+        props: { data: artist }
+    };
 
-    onClick = (event: any) => {
-        this.onArtistChange(event);
-    }
+    const links: Link[] = [];
+    const coexhibMap: Map<number, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map();
 
-    componentDidMount(): void {
-        // this.width = window.innerWidth * 0.6;
+    // Process coExhibitedArtists
+    artist.coExhibitedArtists?.forEach((coArtist: Artist) => {
+        if (DEBUG) {
+            console.log('Processing coExhibitedArtist:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
+        coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
+            // Check if source artist also exhibited in this exhibition
+            const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
 
-        // get ego-net-container element width and height and set state
-        const width = document.getElementById('timeline-container')?.clientWidth;
-        const height = document.getElementById('timeline-container')?.clientHeight;
+            if (!sourceExhibition) return;
 
-        if (!width || !height) return;
+            const year = +exhibition.startyear;
+            const key = coArtist.id;
 
-        this.getNumberOfArtworks(true);
+            if (coexhibMap.has(key)) {
+                const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
+                const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
 
-        this.setState(prevState => ({ width: width, height: height }), () => {
-            this.init();
+                if (yearData) {
+                    yearData.exhibitionIds.add(exhibition.id);
+                } else {
+                    value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
+                }
+            } else {
+                coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
+            }
         });
+    });
 
-        // set resize handler to window
-        // window.addEventListener('resize', this.onResize);
-    }
+    // Process artistsCoExhibited
+    artist.artistsCoExhibited?.forEach((coArtist: Artist) => {
+        if (DEBUG) {
+            console.log('Processing artistsCoExhibited:', coArtist.sortname, 'with', coArtist.exhibitedAtExhibitions?.length || 0, 'exhibitions');
+        }
+        coArtist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
+            // Check if source artist also exhibited in this exhibition
+            const sourceExhibition = artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
 
-    onResize = () => {
-        // get ego-net-container element width and height and set state
-        const width = document.getElementById('timeline-container')?.clientWidth;
-        const height = document.getElementById('timeline-container')?.clientHeight;
+            if (!sourceExhibition) return;
 
-        if (!width || !height) return;
+            const year = +exhibition.startyear;
+            const key = coArtist.id;
 
-        this.setState(prevState => ({ width: width, height: height - 50 }), () => {
-            this.init();
+            if (coexhibMap.has(key)) {
+                const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
+                const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
+
+                if (yearData) {
+                    yearData.exhibitionIds.add(exhibition.id);
+                } else {
+                    value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
+                }
+            } else {
+                coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
+            }
         });
+    });
+
+    if (DEBUG) {
+        console.log('CoexhibMap size:', coexhibMap.size);
     }
 
-    init() {
-        const timeline = this.svgTimeLineContainer?.select('.timeline-container');
+    // Generate links from coexhibition data
+    coexhibMap.forEach((value, key) => {
+        let found: Artist | undefined = artist.coExhibitedArtists?.find((artist: Artist) => artist.id === key);
 
-        if (timeline) return;
+        if (!found) {
+            found = artist.artistsCoExhibited?.find((artist: Artist) => artist.id === key);
+        }
 
-        this.svgTimeLineContainer = d3.select('#artist-detail-timeline')
-            .attr('width', this.state.width)
-            .attr('height', this.state.height)
-            .attr('viewBox', `0 0 ${this.state.width} ${this.state.height}`)
+        if (!found) {
+            if (DEBUG) {
+                console.log(key + ' not found');
+            }
+            return;
+        }
+
+        const target: Node = {
+            id: key,
+            name: found.sortname,
+            type: 'artist',
+            props: { data: found }
+        };
+
+        // iterate over value set
+        value.forEach((item: { year: number, exhibitionIds: Set<number> }) => {
+            const link: Link = {
+                sourceId: +source.id,
+                targetId: +target.id,
+                props: {
+                    data: {
+                        year: item.year,
+                        count: item.exhibitionIds.size
+                    }
+                },
+                source: source,
+                target: target
+            };
+
+            links.push(link);
+        });
+    });
+
+    if (DEBUG) {
+        console.log('Generated', links.length, 'links');
+    }
+    return links;
+};
+
+const createTimelineWithMissingYears = (data: TimelineData[]): TimelineData[] => {
+    const years = Array.from(
+        { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 }, 
+        (_, i) => i + YEAR_RANGE.min
+    );
+
+    return years.map(year => {
+        const existing = data.find(d => d.year === year);
+        return existing || { year, exhibitions: 0, items: 0 };
+    });
+};
+
+// Main component
+const ArtistDetailComponent: React.FC<ArtistDetailProps> = ({ 
+    artist, 
+    loadCallback 
+}) => {
+    // Refs
+    const d3ElementsRef = useRef<D3Elements>({});
+    const egoNetworkRef = useRef<HTMLDivElement>(null);
+    const areaChartRef = useRef<HTMLDivElement>(null);
+    const tableRef = useRef<HTMLDivElement>(null);
+    const isLoadedRef = useRef(false);
+    const showNetworkRef = useRef(false);
+
+    // State
+    const [state, setState] = useState<ArtistDetailState>({
+        compareWith: null,
+        exhibitionsList: [],
+        baseNode: {} as Node,
+        links: [],
+        rendered: false,
+        baseNumberOfArtworks: 0,
+        compareNumberOfArtworks: 0,
+        colors: { group: 'country', colors: new Map<string, string>() },
+        dimensions: DEFAULT_DIMENSIONS,
+        // Visualization controls
+        coExhibitionCount: 3,
+        groupBy: 'country',
+        orderBy: 'coex', 
+        selectedGroup: '', // For cross-component group selection
+        // Timeline highlighting
+        highlightedYear: null,
+        // Search functionality
+        searchTerm: '',
+        searchResults: [],
+        // Loading state for ego network artist selection
+        loadingCompareArtist: false
+    });
+
+    // Custom hooks
+    const timelineDimensions = useResizeObserver('timeline-container');
+    
+    // Search functionality
+    const [searchArtists, { data: searchData, loading: searchLoading }] = useLazyQuery(GET_ARTIST_BY_NAME);
+    // Use 'any' to avoid NodeJS.Timeout vs number type error in browser
+    const searchTimeoutRef = useRef<any>();
+
+    // Memoized calculations
+    const timelineData = useMemo(() => {
+        if (!state.exhibitionsList.length) return [];
+        return processExhibitionData(state.exhibitionsList);
+    }, [state.exhibitionsList]);
+
+    const extentData = useMemo(() => {
+        if (!timelineData.length) return {
+            baseItemCountExtentAbs: [0, 0] as [number, number],
+            baseItemCountExtentAvg: [0, 0] as [number, number]
+        };
+
+        return {
+            baseItemCountExtentAbs: d3.extent(timelineData, d => d.items) as [number, number],
+            baseItemCountExtentAvg: d3.extent(timelineData, d => d.exhibitions > 0 ? d.items / d.exhibitions : 0) as [number, number]
+        };
+    }, [timelineData]);
+
+    // Effects
+    // Initialize baseNode from artist
+    useEffect(() => {
+        if (artist && artist.id) {
+            if (DEBUG) {
+                console.log('Artist data loaded:', {
+                    id: artist.id,
+                    sortname: artist.sortname,
+                    country: artist.country,
+                    sex: artist.sex,
+                    coExhibitedArtists: artist.coExhibitedArtists?.length || 0,
+                    artistsCoExhibited: artist.artistsCoExhibited?.length || 0,
+                    exhibitedAtExhibitions: artist.exhibitedAtExhibitions?.length || 0
+                });
+            }
+
+            const baseNode: Node = {
+                id: artist.id,
+                name: artist.sortname || 'Unknown Artist',
+                type: 'artist',
+                props: {
+                    data: {
+                        birthyear: artist.birthyear,
+                        deathyear: artist.deathyear,
+                        country: artist.country,
+                        sex: artist.sex
+                    }
+                }
+            };
+
+            if (DEBUG) {
+                console.log('Created baseNode:', baseNode);
+            }
+
+            setState(prev => ({
+                ...prev,
+                baseNode
+            }));
+        }
+    }, [artist]);
+
+    // Initialize color schemes based on grouping
+    useEffect(() => {
+        if (timelineDimensions.width && timelineDimensions.height) {
+            setState(prev => ({
+                ...prev,
+                dimensions: {
+                    width: timelineDimensions.width,
+                    height: timelineDimensions.height - 50
+                }
+            }));
+        }
+    }, [timelineDimensions]);
+
+    useEffect(() => {
+        if (state.dimensions.width && state.dimensions.height && artist.id) {
+            loadCallback(true);
+            initializeTimeline();
+            fetchArtworkCounts();
+        }
+    }, [state.dimensions, artist.id, loadCallback]);
+
+    useEffect(() => {
+        if (state.exhibitionsList.length > 0 && state.dimensions.width > 0) {
+            drawTimeline();
+            loadCallback(false);
+        }
+    }, [state.exhibitionsList, state.dimensions, loadCallback]);
+
+    // Callbacks
+    const initializeTimeline = useCallback(() => {
+        const { width, height } = state.dimensions;
+        
+        // Clear existing timeline
+        d3.select('#artist-detail-timeline').selectAll('*').remove();
+
+        const svg = d3.select('#artist-detail-timeline')
+            .attr('width', width)
+            .attr('height', height)
+            .attr('viewBox', `0 0 ${width} ${height}`)
             .attr('preserveAspectRatio', 'xMinYMin meet')
             .style('overflow', 'visible');
 
-        this.svgTimeLineContainer.append('g')
+        const timelineContainer = svg.append('g')
             .attr('class', 'timeline-container')
             .append('rect')
             .attr('id', 'timeline-background')
             .attr('fill', 'transparent');
 
-        this.baseTimelineContainer = this.svgTimeLineContainer.select('.timeline-container').append('g').attr('id', 'base-timeline');
-        this.compareTimelineContainer = this.svgTimeLineContainer.select('.timeline-container').append('g').attr('id', 'compare-timeline');
+        const baseTimeline = svg.select('.timeline-container')
+            .append('g')
+            .attr('id', 'base-timeline');
+            
+        const compareTimeline = svg.select('.timeline-container')
+            .append('g')
+            .attr('id', 'compare-timeline');
 
+        // Setup scales
+        const xScale = d3.scaleLinear()
+            .range([MARGINS.left * 2, width - (MARGINS.right / 2)]);
+            
+        const yScale = d3.scaleLinear()
+            .range([height - MARGINS.top, MARGINS.top]);
+            
+        const rScale = d3.scaleSqrt()
+            .range([5, 20]);
 
-        this.xScale = d3.scaleLinear<number, number, never>().range([this.margin.left * 2, this.state.width - (this.margin.right / 2)]);
-        this.yScale = d3.scaleLinear<number, number, never>().range([this.state.height - this.margin.top, this.margin.top]);
-        this.rScale = d3.scaleSqrt<number, number, never>().range([5, 20]);
-
-        // add tooltip
-        this.tooltip = this.svgTimeLineContainer.append('g').attr('id', 'line-tooltip');
-        // add axis
-        this.xAxis = this.svgTimeLineContainer.append('g');
-        this.yAxis = this.svgTimeLineContainer.append('g');
-
-        this.xAxis
-            .attr('transform', `translate(0, ${this.state.height - this.margin.bottom})`)
+        // Setup axes
+        const xAxis = svg.append('g')
+            .attr('transform', `translate(0, ${height - MARGINS.bottom})`)
             .attr('class', 'x-axis');
 
-        this.yAxis
-            .attr('transform', `translate(${this.margin.left + 10}, 0)`)
+        const yAxis = svg.append('g')
+            .attr('transform', `translate(${MARGINS.left + 10}, 0)`)
             .attr('class', 'y-axis');
 
-        this.svgTimeLineContainer.append('text')
+        // Add axis labels
+        svg.append('text')
             .attr('class', 'x-axis-label')
-            .attr('x', this.state.width / 2)
-            .attr('y', this.state.height)
+            .attr('x', width / 2)
+            .attr('y', height)
             .attr('text-anchor', 'middle')
             .text('Year');
 
-        this.svgTimeLineContainer.append('text')
+        svg.append('text')
             .attr('class', 'y-axis-label')
-            .attr('x', -this.state.height / 2)
-            .attr('y', this.margin.left / 2)
+            .attr('x', -height / 2)
+            .attr('y', MARGINS.left / 2)
             .attr('transform', 'rotate(-90)')
             .attr('text-anchor', 'middle')
             .text('Exhibitions');
 
-        // add title
-        // this.svgTimeLineContainer.append('text')
-        //     .attr('class', 'title')
-        //     .attr('x', this.state.width / 2)
-        //     .attr('y', -2 * this.margin.top)
-        //     .attr('text-anchor', 'middle')
-        //     .text('Exhibitions over time');
+        // Setup tooltip
+        const tooltip = svg.append('g').attr('id', 'line-tooltip');
 
-        client.query({
-            query: GET_ARTIST_EXHIBITIONS_BY_ID,
-            variables: {
-                searchId: this.state.artist.id
+        // Store D3 elements
+        d3ElementsRef.current = {
+            svg,
+            baseTimeline,
+            compareTimeline,
+            xAxis,
+            yAxis,
+            tooltip,
+            xScale,
+            yScale,
+            rScale
+        };
+
+        // Fetch exhibition data
+        fetchExhibitionData();
+    }, [state.dimensions]);
+
+    const fetchExhibitionData = useCallback(async () => {
+        try {
+            if (DEBUG) {
+                console.log('=== FETCHING EXHIBITION DATA ===');
+                console.log('Artist ID:', artist.id);
+                console.log('Query:', GET_ARTIST_EXHIBITIONS_BY_ID);
             }
-        }).then(result => {
-            const exhibitions = result.data.artists[0].exhibitedAtExhibitions;
-            this.setState(prevState => ({
+            
+            loadCallback(true);
+            const result = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: artist.id }
+            });
+
+            if (DEBUG) {
+                console.log('Raw GraphQL result:', result);
+                console.log('Artists array:', result.data.artists);
+            }
+            
+            const exhibitions = result.data.artists[0]?.exhibitedAtExhibitions || [];
+            
+            if (DEBUG) {
+                console.log('Extracted exhibitions:', exhibitions);
+                console.log('Exhibition count:', exhibitions.length);
+                
+                // Log some sample exhibitions
+                if (exhibitions.length > 0) {
+                    console.log('Sample exhibitions (first 3):');
+                    exhibitions.slice(0, 3).forEach((ex: any, idx: number) => {
+                        console.log(`  ${idx + 1}. Title: "${ex.title}", Year: ${ex.startyear}, ID: ${ex.id}`);
+                        console.log(`     Items: ${ex.exhibitsItems?.length || 0}`);
+                    });
+                }
+            }
+            
+            setState(prev => ({
+                ...prev,
                 exhibitionsList: exhibitions
-            }), () => {
-                console.log('updating callback')
-                this.props.loadCallback(true);
-                this.drawTimeline();
-                this.addLegend();
-                this.drawNetwork();
-                // Turn off loading after initial drawing is complete
-                setTimeout(() => this.props.loadCallback(false), 100);
-            });
-        });
-    }
+            }));
 
-    drawTimeline(update?: { newYScale?: number, newRScale?: Array<number> }) {
-        if (!this.svgTimeLineContainer) return;
-
-        if (!this.state.artist.exhibitedAtExhibitions) return;
-
-        // draw timeline of artists and their exhibitions over time
-        // iterate over exhibitions array and calculate total amount of exhibitions per year
-        const exhibitionsPerYear = new Map<number, Set<number>>();
-        const itemsPerYear = new Map<number, number>();
-        this.state.exhibitionsList.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startyear;
-            if (exhibitionsPerYear.has(year)) {
-                exhibitionsPerYear.get(year)?.add(+exhibition.id);
-            } else {
-                exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
+            if (DEBUG) {
+                console.log('=== EXHIBITION DATA FETCH COMPLETE ===');
             }
-        });
 
-        this.state.exhibitionsList.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startyear;
-            const itemsByArtist = exhibition.exhibitsItems?.filter((item: Item) => item.artistsCreated?.find((artist: Artist) => artist.id === this.state.artist.id)).length;
-            // iterate over items
-            if (itemsPerYear.has(year)) {
-                const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + itemsByArtist);
-            } else {
-                itemsPerYear.set(year, itemsByArtist);
-            }
-        });
-        
-        // convert exhibitions by year from number, Set<string> to number, number (count)
-        const exhibitionData = [...exhibitionsPerYear].map(([year, set]) => ({ year, count: set.size })).sort((a, b) => a.year - b.year);
-
-        // convert items by year to array
-        const itemsData = [...itemsPerYear].map(([year, count]) => ({ year, count })).sort((a, b) => a.year - b.year);
-
-        // merge arrays exhibitionData and itemsData 
-        const data = exhibitionData.map((exhibition: { year: number, count: number }) => {
-            const items = itemsData.find((item: { year: number, count: number }) => item.year === exhibition.year);
-            if (items) {
-                return { year: exhibition.year, exhibitions: exhibition.count, items: items.count };
-            } else {
-                return { year: exhibition.year, exhibitions: exhibition.count, items: 0 };
-            }
-        });
-
-        this.baseItemCountExtentAbs = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.items) as [number, number];
-        this.baseItemCountExtentAvg = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.items / d.exhibitions) as [number, number];
-
-        if (!data.length) return;
-
-        this.xScale?.domain([this.minYear, this.maxYear]);
-
-        const years: Array<number> = Array.from(Array(this.maxYear - this.minYear + 1).keys()).map((i) => i + this.minYear);
-
-        const dataWithMissingYears: Array<{ year: number, exhibitions: number, items: number }> = years.map((year: number) => {
-            const yearData = data.find((d: { year: number, exhibitions: number, items: number }) => {
-                return d.year === year
-            });
-            if (yearData) {
-                return yearData;
-            } else {
-                return { year, exhibitions: 0, items: 0 };
-            }
-        });
-
-        const yExt = d3.extent(dataWithMissingYears, (d: { year: number, exhibitions: number, items: number }) => d.exhibitions);
-
-        // // this.yScale?.domain(this.state.countExtent as Array<number>);
-        update && update.newYScale ? this.yScale?.domain([0, update.newYScale]) : this.yScale?.domain([0, yExt[1] as number]);
-
-        const rExt = [Math.min(this.baseItemCountExtentAbs[0], this.baseItemCountExtentAvg[0]), Math.max(this.baseItemCountExtentAbs[1], this.baseItemCountExtentAvg[1])];
-
-        if (update && update.newRScale) {
-            this.rScale?.domain([update.newRScale[0], update.newRScale[1]])
-        } else {
-            this.rScale?.domain(rExt as Array<number>);
+        } catch (error) {
+            console.error('Error fetching exhibition data:', error);
+            loadCallback(false);
         }
+    }, [artist.id, loadCallback]);
 
-        const lineGenerator = d3.line<{ year: number, exhibitions: number, items: number }>()
+    // Generate network data after exhibitions are loaded
+    useEffect(() => {
+        if (state.exhibitionsList.length > 0 && artist.coExhibitedArtists) {
+            if (DEBUG) {
+                console.log('=== GENERATING NETWORK DATA ===');
+                console.log('Artist exhibitions loaded:', state.exhibitionsList.length);
+                console.log('Co-exhibited artists available:', artist.coExhibitedArtists?.length || 0);
+                console.log('Artists co-exhibited available:', artist.artistsCoExhibited?.length || 0);
+            }
+            
+            const links = generateNetworkData(artist);
+            
+            if (DEBUG) {
+                console.log('Generated links total:', links.length);
+                
+                // Print summary by target
+                const targetSummary = new Map();
+                links.forEach(link => {
+                    const targetId = link.targetId;
+                    const targetName = link.target?.name || 'Unknown';
+                    if (!targetSummary.has(targetId)) {
+                        targetSummary.set(targetId, { name: targetName, count: 0 });
+                    }
+                    targetSummary.get(targetId).count++;
+                });
+                
+                console.log('Unique targets:', targetSummary.size);
+                console.log('Target summary (first 5):');
+                let count = 0;
+                targetSummary.forEach((summary, targetId) => {
+                    if (count < 5) {
+                        console.log(`  ${summary.name} (ID: ${targetId}): ${summary.count} connections`);
+                        count++;
+                    }
+                });
+                console.log('=== END GENERATION DEBUG ===');
+            }
+            
+            setState(prev => ({
+                ...prev,
+                links
+            }));
+        }
+    }, [state.exhibitionsList, artist]);
+
+    const drawTimeline = useCallback(() => {
+        const { svg, baseTimeline, xScale, yScale, xAxis, yAxis } = d3ElementsRef.current;
+        
+        if (!svg || !baseTimeline || !xScale || !yScale || !xAxis || !yAxis) return;
+        if (!timelineData.length) return;
+
+        // Prepare data with missing years
+        const dataWithMissingYears = createTimelineWithMissingYears(timelineData);
+        
+        // Update scale domains
+        xScale.domain([YEAR_RANGE.min, YEAR_RANGE.max]);
+        
+        const yExtent = d3.extent(dataWithMissingYears, d => d.exhibitions);
+        yScale.domain([0, yExtent[1] || 0]);
+
+        // Create line generator
+        const lineGenerator = d3.line<TimelineData>()
             .curve(d3.curveMonotoneX)
-            .x((d: { year: number, exhibitions: number, items: number }) => {
-                return this.xScale ? this.xScale(d.year) : 0;
-            })
-            .y((d: { year: number, exhibitions: number, items: number }) => this.yScale ? this.yScale(d.exhibitions) : 0);
+            .x(d => xScale(d.year))
+            .y(d => yScale(d.exhibitions));
 
-        if (!this.baseTimelineContainer) return;
-
-        const paths = this.baseTimelineContainer.selectAll('.base-path');
-
-        paths
-            .data(dataWithMissingYears)
+        // Draw timeline path
+        baseTimeline.selectAll('.base-path')
+            .data([dataWithMissingYears])
             .join('path')
-            .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
             .attr('class', 'base-path')
             .attr('id', 'base-path')
+            .attr('d', lineGenerator)
             .attr('stroke', 'black')
             .attr('stroke-width', 2)
             .attr('stroke-opacity', 0.75)
             .attr('fill', 'none');
 
-        paths.exit().remove();
+        // Update axes
+        const xAxisGenerator = d3.axisBottom(xScale).tickFormat(d3.format('d'));
+        const yAxisGenerator = d3.axisLeft(yScale).tickFormat(d3.format('d')).ticks(5);
 
-        // add axis
-        const xAxis = d3.axisBottom(this.xScale as d3.AxisScale<number>);
-        const yAxis = d3.axisLeft(this.yScale as d3.AxisScale<number>);
+        xAxis.call(xAxisGenerator);
+        yAxis.call(yAxisGenerator);
 
-        // format ticks
-        xAxis.tickFormat(d3.format('d'));
-        yAxis.tickFormat(d3.format('d')).ticks(5);
+        // Add data points
+        drawDataPoints(dataWithMissingYears);
+    }, [timelineData]);
 
-        this.xAxis?.call(xAxis);
-        this.yAxis?.call(yAxis);
+    const drawDataPoints = useCallback((data: TimelineData[]) => {
+        const { baseTimeline, xScale, yScale, rScale } = d3ElementsRef.current;
+        
+        if (!baseTimeline || !xScale || !yScale || !rScale) return;
 
-        const absHalfCircles = this.baseTimelineContainer?.selectAll('.base-abs-half-circle');
+        // Update radius scale domain
+        const itemExtent = d3.extent(data, d => d.items);
+        rScale.domain(itemExtent as [number, number]);
 
-        absHalfCircles
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('fill', 'black')
-            .attr('fill-opacity', 1)
-            .attr('stroke', 'white')
-            .attr('stroke-opacity', 0.75)
+        // Draw circles for each data point
+        baseTimeline.selectAll('.data-point')
+            .data(data.filter(d => d.exhibitions > 0))
+            .join('circle')
+            .attr('class', 'data-point')
+            .attr('cx', d => xScale(d.year))
+            .attr('cy', d => yScale(d.exhibitions))
+            .attr('r', d => rScale(d.items))
+            .attr('fill', 'rgba(0, 0, 0, 0.6)')
+            .attr('stroke', 'black')
             .attr('stroke-width', 1)
-            .attr('class', 'base-abs-half-circle')
-            .attr('id', (d: { year: number, exhibitions: number, items: number }) => `abs-base-circle-${d.year}`)
-            .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = d.items === 0 ? 0 : this.rScale ? this.rScale(d.items) : 0;
-                return d3.arc()({
-                    innerRadius: 0,
-                    outerRadius: outerRadius,
-                    startAngle: -Math.PI,
-                    endAngle: 0
-                }) as string;
-            })
-            .on('mouseover', (event: any, d: { year: number, exhibitions: number, items: number }) => {
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const xPos = this.xScale ? this.xScale(d.year) : 0;
-                    const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.sortname} (${d.year})`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.exhibitions} exhibitions`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.items} artworks`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
-
-                this.showTimeCallBack(d.year);
-                this.highlightCircleInNetwork(d.year);
-            })
-            .attr('transform', (d: { year: number, exhibitions: number, items: number }) => {
-                return `translate(${this.xScale ? this.xScale(d.year) : 0}, ${this.yScale ? this.yScale(d.exhibitions) : 0})`;
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
-
-                this.showTimeCallBack(0);
-                this.highlightCircleInNetwork(0);
-            });
-
-        const avgHalfCircles = this.baseTimelineContainer?.selectAll('.base-avg-half-circle');
-
-        avgHalfCircles
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('fill', 'white')
-            .attr('fill-opacity', 1)
-            .attr('stroke', 'black')
-            .attr('stroke-opacity', 1)
-            .attr('stroke-width', 1)
-            .attr('class', 'base-avg-half-circle')
-            .attr('id', (d: { year: number, exhibitions: number, items: number }) => `avg-base-circle-${d.year}`)
-            .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = isNaN(d.items / d.exhibitions) ? 0 : this.rScale ? this.rScale(d.items / d.exhibitions) : 0;
-                return d3.arc()({
-                    innerRadius: 0,
-                    outerRadius: outerRadius,
-                    startAngle: Math.PI,
-                    endAngle: 0
-                }) as string;
-            })
-            .on('mouseover', (event: any, d: { year: number, exhibitions: number, items: number }) => {
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const xPos = this.xScale ? this.xScale(d.year) : 0;
-                    const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.sortname} (${d.year})`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.exhibitions} exhibitions`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.items} artworks`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
-                this.showTimeCallBack(d.year);
-                this.highlightCircleInNetwork(d.year);
-            })
-            .attr('transform', (d: { year: number, exhibitions: number, items: number }) => {
-                return `translate(${this.xScale ? this.xScale(d.year) : 0}, ${this.yScale ? this.yScale(d.exhibitions) : 0})`;
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
-
-                this.showTimeCallBack(0);
-                this.highlightCircleInNetwork(0);
-            });
-
-        absHalfCircles.exit().remove();
-        avgHalfCircles.exit().remove();
-    }
-
-    drawNetwork() {
-        const source: Node = {
-            id: this.state.artist.id,
-            name: this.state.artist.sortname,
-            type: 'artist',
-            props: { data: this.state.artist }
-        };
-
-        // string == exhib.id, 
-        let coexhibMap: Map<number, Set<{ year: number, exhibitionIds: Set<number> }>> = new Map<number, Set<{ year: number, exhibitionIds: Set<number> }>>();
-
-        // (source artist) -> (co-exhibited artist)
-        this.state.artist.coExhibitedArtists?.forEach((artist: Artist) => {
-            artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
-                // check if source artist also exhibited in this exhibition
-                const sourceExhibition = this.state.artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
-
-                if (!sourceExhibition) return;
-
-                const year = +exhibition.startyear;
-                const key = artist.id;
-
-                if (coexhibMap.has(key)) {
-                    const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
-                    const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
-
-                    if (yearData) {
-                        yearData.exhibitionIds.add(exhibition.id);
-                    } else {
-                        value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
-                    }
-                } else {
-                    coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
-                }
-            });
-        });
-
-        // (co-exhibited artist) -> (source artist)
-        this.state.artist.artistsCoExhibited?.forEach((artist: Artist) => {
-            artist.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
-                // check if source artist also exhibited in this exhibition
-                const sourceExhibition = this.state.artist.exhibitedAtExhibitions?.find((ex: Exhibition) => ex.id === exhibition.id);
-
-                if (!sourceExhibition) return;
-
-                const year = +exhibition.startyear;
-                const key = artist.id;
-
-                if (coexhibMap.has(key)) {
-                    const value = coexhibMap.get(key) as Set<{ year: number, exhibitionIds: Set<number> }>;
-                    const yearData = Array.from(value).find((d: { year: number, exhibitionIds: Set<number> }) => d.year === year);
-
-                    if (yearData) {
-                        yearData.exhibitionIds.add(exhibition.id);
-                    } else {
-                        value.add({ year, exhibitionIds: new Set<number>([exhibition.id]) });
-                    }
-                } else {
-                    coexhibMap.set(key, new Set<{ year: number, exhibitionIds: Set<number> }>([{ year, exhibitionIds: new Set<number>([exhibition.id]) }]));
-                }
-            });
-        });
-
-
-        coexhibMap.forEach((value: Set<{ year: number, exhibitionIds: Set<number> }>, key: number) => {
-            let found: Artist | undefined = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === key);
-
-            if (!found) {
-                found = this.state.artist.artistsCoExhibited?.find((artist: Artist) => artist.id === key);
-            }
-
-            // check if artist is in artistsCoExhibited array
-
-
-            if (!found) {
-                console.log(key + ' not found');
-                return;
-            }
-
-            const target: Node = {
-                id: key,
-                name: found.sortname,
-                type: 'artist',
-                props: { data: found }
-            };
-
-            // iterate over value set
-            value.forEach((item: { year: number, exhibitionIds: Set<number> }) => {
-                const link: Link = {
-                    sourceId: +source.id,
-                    targetId: +target.id,
-                    props: {
-                        data: {
-                            year: item.year,
-                            count: item.exhibitionIds.size
-                        }
-                    },
-                    source: source,
-                    target: target
-                };
-
-                this.links.push(link);
-            });
-        });
-
-        this.setState(prevState => ({ baseNode: source, links: this.links }), this.readyToDrawNetwork);
-    }
-
-    readyToDrawNetwork() {
-        this.showNetwork = true;
-        this.forceUpdate();
-    }
-
-    drawCompare() {
-        // draw bars on each year to compare with other artist
-        if (!this.svgTimeLineContainer) return;
-
-        if (!this.state.artist.exhibitedAtExhibitions) return;
-
-        if (!this.state.compareWith) return;
-
-        // const timeline = this.svgTimeLineContainer.select('.timeline-container').append('g').attr('id', 'compare-timeline');
-
-        // from this.state.compareWith artist calculate total amount of exhibitions per year
-        // iterate over exhibitions array and calculate total amount of exhibitions per year
-        const exhibitionsPerYear = new Map<number, Set<number>>();
-        const itemsPerYear = new Map<number, number>();
-
-        this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startyear;
-            if (exhibitionsPerYear.has(year)) {
-                exhibitionsPerYear.get(year)?.add(exhibition.id);
-            } else {
-                exhibitionsPerYear.set(year, new Set<number>([exhibition.id]));
-            }
-        });
-
-        this.state.compareWith?.exhibitedAtExhibitions?.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startyear;
-            // iterate over items
-            const itemCount = exhibition.exhibitsItems?.length || 0;
-            if (itemsPerYear.has(year)) {
-                const count = itemsPerYear.get(year) || 0;
-                itemsPerYear.set(year, count + itemCount);
-            } else {
-                itemsPerYear.set(year, itemCount);
-            }
-        });
-
-        // convert exhibitions by year from number, Set<string> to number, number (count)
-        const exhibitionData = [...exhibitionsPerYear].map(([year, set]) => ({ year, count: set.size })).sort((a, b) => a.year - b.year);
-
-        // convert items by year to array
-        const itemsData = [...itemsPerYear].map(([year, count]) => ({ year, count })).sort((a, b) => a.year - b.year);
-
-        // merge arrays exhibitionData and itemsData 
-        const data = exhibitionData.map((exhibition: { year: number, count: number }) => {
-            const items = itemsData.find((item: { year: number, count: number }) => item.year === exhibition.year);
-            if (items) {
-                return { year: exhibition.year, exhibitions: exhibition.count, items: items.count };
-            } else {
-                return { year: exhibition.year, exhibitions: exhibition.count, items: 0 };
-            }
-        });
-
-        const years: Array<number> = Array.from(Array(this.maxYear - this.minYear + 1).keys()).map((i) => i + this.minYear);
-
-        const dataWithMissingYears: Array<{ year: number, exhibitions: number, items: number }> = years.map((year: number) => {
-            const yearData = data.find((d: { year: number, exhibitions: number, items: number }) => {
-                return d.year === year
-            });
-            if (yearData) {
-                return yearData;
-            } else {
-                return { year, exhibitions: 0, items: 0 };
-            }
-        });
-
-        // this.yearExtent = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.year);
-        // this.exhibitionCountExtent = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.exhibitions);
-        this.compareItemCountExtentAbs = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.items) as [number, number];
-        this.compareItemCountExtentAvg = d3.extent(data, (d: { year: number, exhibitions: number, items: number }) => d.items / d.exhibitions) as [number, number];
-
-
-        // check if count is higher than base artist and draw line
-        const compareYMax = d3.max(dataWithMissingYears, (d: { year: number, exhibitions: number, items: number }) => d.exhibitions) as number;
-        const baseYMax = this.yScale?.domain()[1] as number;
-
-        let update: { newYScale?: number, newRScale?: Array<number> } | undefined = undefined;
-
-        if (compareYMax !== baseYMax) {
-            update = {};
-            update.newYScale = Math.max(compareYMax, baseYMax)
+            .on('mouseover', handleDataPointMouseOver)
+            .on('mouseout', handleDataPointMouseOut);
+    }, []);
+
+    const handleDataPointMouseOver = useCallback((event: MouseEvent, d: TimelineData) => {
+        const { tooltip } = d3ElementsRef.current;
+        if (!tooltip) return;
+
+        tooltip.style('opacity', 1)
+            .html(`Year: ${d.year}<br/>Exhibitions: ${d.exhibitions}<br/>Items: ${d.items}`)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+    }, []);
+
+    const handleDataPointMouseOut = useCallback(() => {
+        const { tooltip } = d3ElementsRef.current;
+        if (!tooltip) return;
+
+        tooltip.style('opacity', 0);
+    }, []);
+
+    const fetchArtworkCounts = useCallback(async () => {
+        // Implementation for fetching artwork counts
+        try {
+            // This would be replaced with actual GraphQL query
+            const artworkCount = artist.createdItems?.length || 0;
+            setState(prev => ({
+                ...prev,
+                baseNumberOfArtworks: artworkCount
+            }));
+        } catch (error) {
+            console.error('Error fetching artwork counts:', error);
         }
+    }, [artist]);
 
-        // if there is a difference between compare and base item count extents, update rScale
-        if (this.compareItemCountExtentAbs[0] < this.baseItemCountExtentAbs[0] ||
-            this.compareItemCountExtentAbs[1] > this.baseItemCountExtentAbs[1] ||
-            this.compareItemCountExtentAvg[0] < this.baseItemCountExtentAvg[0] ||
-            this.compareItemCountExtentAvg[1] > this.baseItemCountExtentAvg[1]) {
-
-            if (!update) update = {};
-
-            update.newRScale = [
-                Math.min(this.compareItemCountExtentAvg[0], this.baseItemCountExtentAvg[0], this.compareItemCountExtentAbs[0], this.baseItemCountExtentAbs[0]),
-                Math.max(this.compareItemCountExtentAvg[1], this.baseItemCountExtentAvg[1], this.compareItemCountExtentAbs[1], this.baseItemCountExtentAbs[1])
-            ]
-        }
-
-        if (update) {
-            this.drawTimeline(update);
-        }
-
-        const lineGenerator = d3.line<{ year: number, exhibitions: number, items: number }>()
-            .curve(d3.curveMonotoneX)
-            .x((d: { year: number, exhibitions: number, items: number }) => this.xScale ? this.xScale(d.year) : 0)
-            .y((d: { year: number, exhibitions: number, items: number }) => this.yScale ? this.yScale(d.exhibitions) : 0);
-
-        if (!this.compareTimelineContainer) return;
-
-        const commonExhibitions = this.state.compareWith.exhibitedAtExhibitions?.filter((exhibition: Exhibition) => {
-            return this.state.artist.exhibitedAtExhibitions?.find((e: Exhibition) => e.id === exhibition.id);
-        });
-
-        const uniqueCommonExhibitions = Array.from(new Set(commonExhibitions));
-
-        const commonExhibitionsPerYear = new Map<number, number>();
-
-        uniqueCommonExhibitions?.forEach((exhibition: Exhibition) => {
-            const year = +exhibition.startdate;
-            if (commonExhibitionsPerYear.has(year)) {
-                const count = commonExhibitionsPerYear.get(year) || 0;
-                commonExhibitionsPerYear.set(year, count + 1);
-            } else {
-                commonExhibitionsPerYear.set(year, 1);
-            }
-        });
-
-        // convert exhibitions by year to array
-        const commonExhibitionsData = [...commonExhibitionsPerYear].map(([year, count]) => ({ year, count })).sort((a, b) => a.year - b.year);
-
-        // fill in missing years in data with 0s
-        const commonExhibitionsDataWithMissingYears = years.map((year: number) => {
-            const yearData = commonExhibitionsData.find((d: { year: number, count: number }) => {
-                return d.year === year
-            });
-            if (yearData) {
-                return yearData;
-            } else {
-                return { year, count: 0 };
-            }
-        });
-
-        // draw rectangles for common exhibitions on timeline
-        const rects = this.compareTimelineContainer.selectAll('.common-exhibition');
-
-        rects
-            .data(commonExhibitionsDataWithMissingYears)
-            .join('rect')
-            .attr('class', 'common-exhibition')
-            .attr('x', (d: { year: number, count: number }) => this.xScale ? this.xScale(d.year) - 15 : 0)
-            .attr('y', (d: { year: number, count: number }) => this.yScale ? this.yScale(d.count) : 0)
-            .attr('width', (d: { year: number, count: number }) => {
-                return 30;
-            })
-            .attr('fill', '#FEF3C7')
-            .attr('stroke', 'black')
-            // .attr('opacity', 0.5)
-            .on('mouseover', (event: any, d: { year: number, count: number }) => {
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const xPos = this.xScale ? this.xScale(d.year) : 0;
-                    const yPos = this.yScale ? this.yScale(d.count) : 0;
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`Year: ${d.year}`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.count} co-exhibitions`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
-            })
-            .transition()
-            .duration(250)
-            .attr('height', (d: { year: number, count: number }) => {
-                return this.yScale ? this.yScale(0) - this.yScale(d.count) : 0;
-                // return y - (this.yScale ? this.yScale(d.count) : 0);
-            });
-
-        rects.lower();
-
-        rects.exit().remove();
-
-        const absHalfCircles = this.compareTimelineContainer?.selectAll('.compare-abs-half-circle');
-
-        absHalfCircles
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('fill', 'black')
-            .attr('fill-opacity', 1)
-            .attr('stroke', 'white')
-            .attr('stroke-opacity', 0.75)
-            .attr('stroke-width', 1)
-            .attr('class', 'compare-abs-half-circle')
-            .attr('id', (d: { year: number, exhibitions: number, items: number }) => `abs-compare-circle-${d.year}`)
-            .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = d.items === 0 ? 3 : this.rScale ? this.rScale(d.items) : 3;
-                return d3.arc()({
-                    innerRadius: 0,
-                    outerRadius: outerRadius,
-                    startAngle: -Math.PI,
-                    endAngle: 0
-                }) as string;
-            })
-            .on('mouseover', (event: any, d: { year: number, exhibitions: number, items: number }) => {
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const xPos = this.xScale ? this.xScale(d.year) : 0;
-                    const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${this.state.artist.sortname} (${d.year})`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.exhibitions} exhibitions`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.items} artworks`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-
-                }
-                this.showTimeCallBack(d.year);
-                this.highlightCircleInNetwork(d.year);
-            })
-            .attr('transform', (d: { year: number, exhibitions: number, items: number }) => {
-                return `translate(${this.xScale ? this.xScale(d.year) : 0}, ${this.yScale ? this.yScale(d.exhibitions) : 0})`;
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
-
-                this.showTimeCallBack(0);
-                this.highlightCircleInNetwork(0);
-            });
-
-        const avgHalfCircles = this.compareTimelineContainer?.selectAll('.compare-avg-half-circle');
-
-        avgHalfCircles
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('fill', 'white')
-            .attr('fill-opacity', 1)
-            .attr('stroke', 'black')
-            .attr('stroke-opacity', 1)
-            .attr('stroke-width', 2)
-            .attr('class', 'compare-avg-half-circle')
-            .attr('id', (d: { year: number, exhibitions: number, items: number }) => `avg-compare-circle-${d.year}`)
-            .attr('d', (d: { year: number, exhibitions: number, items: number }) => {
-                const outerRadius = isNaN(d.items / d.exhibitions) ? 3 : this.rScale ? this.rScale(d.items / d.exhibitions) : 3;
-                return d3.arc()({
-                    innerRadius: 0,
-                    outerRadius: outerRadius,
-                    startAngle: Math.PI,
-                    endAngle: 0
-                }) as string;
-            })
-            .on('mouseover', (event: any, d: { year: number, exhibitions: number, items: number }) => {
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-
-                    // this.tooltip.style('display', 'block');
-                    // set tooltip border to red and fill to white
-                    const xPos = this.xScale ? this.xScale(d.year) : 0;
-                    const yPos = this.yScale ? this.yScale(d.exhibitions) : 0;
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${this.state.compareWith?.sortname} (${d.year})`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.exhibitions} exhibitions`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`${d.items} artworks`);
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 60)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text(`average ${(d.items / d.exhibitions).toFixed(2)} artworks per exhibition`);
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
-                this.showTimeCallBack(d.year);
-                this.highlightCircleInNetwork(d.year);
-            })
-            .attr('transform', (d: { year: number, exhibitions: number, items: number }) => {
-                return `translate(${this.xScale ? this.xScale(d.year) : 0}, ${this.yScale ? this.yScale(d.exhibitions) : 0})`;
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip 
-                this.tooltip?.lower();
-
-                this.showTimeCallBack(0);
-                this.highlightCircleInNetwork(0);
-            });
-
-        absHalfCircles.exit().remove();
-        avgHalfCircles.exit().remove();
-
-        const paths = this.compareTimelineContainer.selectAll('.compare-path');
-
-        paths
-            .data(dataWithMissingYears)
-            .join('path')
-            .attr('d', lineGenerator.bind(this)(dataWithMissingYears))
-            .attr('stroke', 'black')
-            .attr('stroke-width', 2)
-            .attr('stroke-opacity', 0.75)
-            .style('stroke-dasharray', ('3, 3'))
-            .attr('fill', 'none')
-            .attr('class', 'compare-path')
-            .attr('id', 'compare-path')
-
-        paths.lower();
-        paths.exit().remove();
-
-        // push rect to bottom
-        this.svgTimeLineContainer.select('#timeline-background').lower();
-    }
-
-    addLegend() {
-        // draw legend of half circle sizes 
-        if (!this.svgTimeLineContainer) return;
-
-        const legendContainer = this.svgTimeLineContainer.append('g').attr('id', 'legend-container');
-
-        // draw 2 half circles one for average and one for absolute count with text
-        const legend = legendContainer.selectAll('.legend')
-            .data(['Total Artworks', 'Average Artworks'])
-            .join('g')
-            .attr('class', 'legend')
-            .attr('transform', (d: string, i: number) => {
-                return `translate(${i * 90}, 0)`;
-            });
-
-        // add info button to legend
-        legendContainer.append('text')
-            .attr('x', -40)
-            .attr('y', 5)
-            .attr('font-size', '18px')
-            .attr('font-weight', '700')
-            .attr('cursor', 'pointer')
-            // add ? with circle around it using unicode circle
-            .text('\u24D8')
-            .on('mouseover', (d: PointerEvent) => {
-                // add tooltip with explanation
-                if (this.tooltip) {
-                    const tooltip = this.tooltip.append('rect');
-
-                    tooltip.attr('fill', 'black')
-                        .attr('rx', 5)
-                        .attr('ry', 5);
-
-                    // grab cursor position
-                    const xPos = d.clientX;
-                    const yPos = d.clientY - (this.state.height + this.margin.bottom + 50);
-
-                    tooltip
-                        .attr('fill', 'black')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-
-                    // append text to tooltip
-                    const text = this.tooltip.append('text');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 15)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text('Black Half Circle: Total artworks exhibited by the artist.');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 30)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text('White Half Circle: Average number of artworks per exhibition by the artist.');
-
-                    text.append('tspan')
-                        .attr('x', xPos + 15)
-                        .attr('y', yPos + 45)
-                        .attr('dy', '1em')
-                        .attr('dx', '1em')
-                        .attr('font-size', '12px')
-                        .attr('fill', 'white')
-                        .attr('font-weight', 'bold')
-                        .text('The size of the half circle represents the total or average number of artworks exhibited at any year.');
-
-                    // get bbox of text
-                    const bbox = text.node()?.getBBox();
-
-                    if (bbox) {
-                        // set tooltip width and height to bbox width and height
-                        tooltip.attr('width', bbox.width + 20);
-                        tooltip.attr('height', bbox.height + 5);
-                    }
-
-                    this.tooltip.raise();
-                }
-            })
-            .on('mouseout', () => {
-                this.tooltip?.selectAll('rect').remove();
-                this.tooltip?.selectAll('text').remove();
-                // lower tooltip
-                this.tooltip?.lower();
-            });
-
-        legend.append('path')
-            .attr('fill', (d, i) => i === 0 ? 'black' : 'white')
-            .attr('fill-opacity', 1)
-            .attr('stroke', 'black')
-            .attr('stroke-opacity', 1)
-            .attr('stroke-width', 2)
-            .attr('d', (d: string, i: number) => {
-                return d3.arc()({
-                    innerRadius: 0,
-                    outerRadius: 10,
-                    startAngle: i === 0 ? -Math.PI : Math.PI,
-                    endAngle: 0
-                }) as string;
-            });
-
-        legend.append('text')
-            .attr('x', (d, i) => i === 0 ? 5 : 15)
-            .attr('y', 5)
-            .attr('font-size', '12px')
-            .text((d: string) => d);
-
-        legend.exit().remove();
-
-        // get bbox of legend
-        const bbox = legendContainer.node()?.getBBox();
-
-        if (bbox) {
-            // center legend container 
-            legendContainer.attr('transform', `translate(${this.state.width / 2 - bbox.width / 2}, 0)`);
-        }
-
-        legendContainer.raise();
-
-    }
-
-    onArtistChange(artistId: number | null) {
-        this.props.loadCallback(false);
+    const handleArtistChange = useCallback(async (artistId: number | null) => {
         if (!artistId) {
-            // clear compare timeline
-            this.compareTimelineContainer?.selectAll('.compare-abs-half-circle').remove();
-            this.compareTimelineContainer?.selectAll('.compare-avg-half-circle').remove();
-            this.compareTimelineContainer?.selectAll('.compare-path').remove();
-            // clear common exhibition bars
-            this.compareTimelineContainer?.selectAll('.common-exhibition').remove();
-
-            this.table.current?.reset();
-            this.props.loadCallback(true);
-            // Turn off loading after reset is complete
-            setTimeout(() => this.props.loadCallback(false), 50);
+            // Clear comparison if no artist ID provided
+            if (DEBUG) {
+                console.log('Clearing compare artist from ego network');
+            }
+            setState(prev => ({ ...prev, compareWith: null, loadingCompareArtist: false }));
             return;
         }
 
-        this.setState({ compareWith: null });
+        if (DEBUG) {
+            console.log('🎨 Loading artist from ego network with ID:', artistId);
+        }
 
-        const artist = this.state.artist.coExhibitedArtists?.find((artist: Artist) => artist.id === artistId);
-        
-        if (artist) {
-            // this.setState({ compareWith: artist });
-            this.setState(prevState => ({ compareWith: artist }), () => {
-                console.log('updating callback')
-                this.props.loadCallback(true);
-                this.getNumberOfArtworks(false);
-                this.drawCompare();
-                this.egoNetwork.current?.highlightArtist(this.state.compareWith);
-                // Turn off loading after compare drawing is complete
-                setTimeout(() => this.props.loadCallback(false), 100);
-            });
-            // this.drawCompare();
-        } else {
-            // convert artistId to string
-            const artistIdQuery = BigInt(artistId);
-
-            // query artist by id
-            client.query({
+        try {
+            loadCallback(true);
+            setState(prev => ({ ...prev, loadingCompareArtist: true }));
+            
+            // Fetch the artist's basic data first using GET_ARTIST query
+            const artistResult = await client.query({
                 query: GET_ARTIST,
-                variables: {
-                    searchId: `${artistIdQuery}`
-                }
-            }).then(result => {
-                this.setState(prevState => ({ compareWith: result.data.artists[0] }), () => {
-                    console.log('updating callback')
-                    this.props.loadCallback(true);
-                    this.getNumberOfArtworks(false);
-                    this.drawCompare();
-                    this.egoNetwork.current?.highlightArtist(this.state.compareWith);
-                    // Turn off loading after async compare drawing is complete
-                    setTimeout(() => this.props.loadCallback(false), 100);
-                });
+                variables: { searchId: String(artistId) }
             });
-        }
-    }
 
-    showTimeCallBack(year: number) {
-        if (!this.svgTimeLineContainer) return;
-
-        if (year === 0) {
-            // remove vertical line
-            this.svgTimeLineContainer
-                .select('#timeline-vertical-line')
-                .remove();
-        } else {
-            // draw vertical line on timeline with x = year and y = 0, height = max y
-            this.svgTimeLineContainer
-                .append('line')
-                .attr('id', 'timeline-vertical-line')
-                .attr('x1', this.xScale ? this.xScale(year) : 0)
-                .attr('y1', 0)
-                .attr('x2', this.xScale ? this.xScale(year) : 0)
-                .attr('y2', this.state.height - this.margin.bottom)
-                .attr('stroke', 'orange')
-                .attr('stroke-width', 3)
-                .attr('stroke-opacity', 0.75)
-                .attr('stroke-dasharray', ('3, 3'))
-                .attr('fill', 'none');
-        }
-    }
-
-    getUniqueExhibitions(exhibitions?: Array<Exhibition>): number {
-        if (!exhibitions) return 0;
-
-        const uniqueExhibitions = Array.from(new Set(exhibitions));
-
-        return uniqueExhibitions.length;
-    }
-
-    getNumberOfArtworks(base: boolean = true): void {
-        client.query({
-            query: GET_ARTIST_EXHIBITIONS_BY_ID,
-            variables: {
-                searchId: base ? this.state.artist.id : this.state.compareWith?.id
+            const selectedArtist = artistResult.data.artists[0];
+            
+            if (!selectedArtist) {
+                console.warn('❌ Artist not found for ID:', artistId);
+                setState(prev => ({ ...prev, loadingCompareArtist: false }));
+                loadCallback(false);
+                return;
             }
-        }).then(result => {
-            let numberOfArtworks = 0;
 
-            result.data.artists[0].exhibitedAtExhibitions
-                .forEach((exhibition: Exhibition) => {
-                    exhibition.exhibitsItems.forEach((i: Item) => {
-                        numberOfArtworks += i.artistsCreated.filter((artist: Artist) => artist.id === (base ? this.state.artist.id : this.state.compareWith?.id)).length;
-                    })
-                });
-
-            if(base) {
-                this.setState({ baseNumberOfArtworks: numberOfArtworks });
-            } else {
-                this.setState({ compareNumberOfArtworks: numberOfArtworks });
+            if (DEBUG) {
+                console.log('✅ Found artist from API:', selectedArtist.sortname);
             }
+
+            // Now fetch their full exhibition data using the same query as search
+            const exhibitionResult = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: String(artistId) }
+            });
+
+            const fullArtistData = exhibitionResult.data.artists[0];
+            
+            if (DEBUG) {
+                console.log('📊 Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+            }
+            
+            // Merge the full exhibition data with the original artist data
+            // This is exactly what handleArtistSelect does
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...(fullArtistData || {}),
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            if (DEBUG) {
+                console.log('🔄 Setting enhanced compare artist from ego network:', enhancedCompareArtist.sortname);
+            }
+            
+            // Update state exactly like handleArtistSelect does
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: selectedArtist.sortname || '',
+                searchResults: [],
+                loadingCompareArtist: false
+            }));
+            
+            loadCallback(false);
+            
+        } catch (error) {
+            console.error('❌ Error loading artist from ego network:', error);
+            setState(prev => ({ ...prev, loadingCompareArtist: false }));
+            loadCallback(false);
+        }
+    }, [loadCallback]);
+
+    const handleTimelineCallback = useCallback((year: number) => {
+        // Set the highlighted year for timeline visualization
+        setState(prev => ({ ...prev, highlightedYear: year }));
+        if (DEBUG) {
+            console.log('Timeline callback for year:', year);
+        }
+    }, []);
+
+    const handleTimelineMouseOut = useCallback(() => {
+        // Clear the highlighted year when mouse leaves
+        setState(prev => ({ ...prev, highlightedYear: null }));
+        if (DEBUG) {
+            console.log('Timeline callback cleared');
+        }
+    }, []);
+
+    const handleNetworkReady = useCallback(() => {
+        showNetworkRef.current = true;
+        setState(prev => ({ ...prev, rendered: true }));
+    }, []);
+
+    const handleColorSync = useCallback((colors: { group: string; colors: Map<string, string> }) => {
+        setState(prev => ({ ...prev, colors }));
+    }, []);
+
+    const handleGroupSelection = useCallback((selectedGroup?: string) => {
+        if (DEBUG) {
+            console.log('Group selection from area chart:', selectedGroup);
+        }
+        const normalizedGroup = selectedGroup || '';
+        setState(prev => ({ ...prev, selectedGroup: normalizedGroup }));
+    }, []);
+
+    // Visualization control handlers
+    const handleCoExhibitionCountChange = useCallback((coExhibitionCount: number) => {
+        setState(prev => ({ ...prev, coExhibitionCount }));
+        // This filtering affects both ego network and area chart
+        // The components will react to the updated state
+    }, []);
+
+    const handleGroupByChange = useCallback((groupBy: string) => {
+        setState(prev => ({ ...prev, groupBy }));
+        // GroupBy affects both ego network (coloring) and area chart (grouping)
+        // The color generation will be handled by the individual components
+        // but we update the colors structure to reflect the new grouping
+        setState(prevState => ({ 
+            ...prevState, 
+            groupBy,
+            colors: { ...prevState.colors, group: groupBy }
+        }));
+    }, []);
+
+    const handleOrderByChange = useCallback((orderBy: string) => {
+        setState(prev => ({ ...prev, orderBy }));
+        // OrderBy only affects the ego network layout
+    }, []);
+
+    const handleSearchChange = useCallback((searchTerm: string) => {
+        setState(prev => ({ ...prev, searchTerm }));
+        
+        // Clear results if search term is too short
+        if (searchTerm.length < 2) {
+            setState(prev => ({ ...prev, searchResults: [] }));
+            // Clear any pending search
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+            return;
+        }
+        
+        // Clear existing timeout to debounce
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // Trigger search immediately for responsive feedback
+        if (DEBUG) {
+            console.log('Searching for:', searchTerm);
+        }
+        searchArtists({
+            variables: { value: searchTerm }
         });
-    }
+        
+        // Set up debounce for subsequent rapid changes (150ms)
+        searchTimeoutRef.current = setTimeout(() => {
+            if (DEBUG) {
+                console.log('Debounced search for:', searchTerm);
+            }
+            searchArtists({
+                variables: { value: searchTerm }
+            });
+        }, 150);
+    }, [searchArtists]);
 
-    getArtistAge(artist: Artist): number {
-        if (!artist.birthyear) return 0;
-        return (artist.deathyear ? artist.deathyear : new Date().getFullYear()) - artist.birthyear;
-    }
+    // Handle search results
+    useEffect(() => {
+        if (searchData?.artists) {
+            if (DEBUG) {
+                console.log('Search results received:', searchData.artists);
+            }
+            setState(prev => ({ 
+                ...prev, 
+                searchResults: searchData.artists 
+            }));
+        }
+    }, [searchData]);
 
-    nodeClickedCallback(id: number) {
-        this.onArtistChange(id);
-    }
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
-    onSyncColors(colors: { group: string, colors: Map<string, string> }) {
-        this.setState({ colors: colors });
-        // pass to area chart
-        this.areaChart.current?.updateColors(colors);
-    }
+    const handleArtistSelect = useCallback(async (selectedArtist: Artist) => {
+        // Set selected artist as compare artist and load their data
+        if (DEBUG) {
+            console.log('Selected artist for comparison:', selectedArtist);
+        }
+        
+        try {
+            loadCallback(true);
+            
+            // Fetch the selected artist's full exhibition data
+            const result = await client.query({
+                query: GET_ARTIST_EXHIBITIONS_BY_ID,
+                variables: { searchId: selectedArtist.id }
+            });
 
-    onAreaChartClick(group: string) {
-        // highlight nodes in ego network with country
-        this.egoNetwork.current?.highlightGroup(group);
-    }
+            const fullArtistData = result.data.artists[0];
+            
+            if (DEBUG) {
+                console.log('Compare artist exhibitions loaded:', fullArtistData?.exhibitedAtExhibitions?.length || 0);
+                console.log('Compare artist full data:', fullArtistData);
+                console.log('Compare artist ID:', fullArtistData?.id, 'Type:', typeof fullArtistData?.id);
+            }
+            
+            // Merge the full exhibition data with the original artist data to preserve other fields
+            const enhancedCompareArtist = {
+                ...selectedArtist,
+                ...(fullArtistData || {}),
+                exhibitedAtExhibitions: fullArtistData?.exhibitedAtExhibitions || []
+            };
+            
+            if (DEBUG) {
+                console.log('Enhanced compare artist:', enhancedCompareArtist);
+            }
+            
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: enhancedCompareArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            
+            loadCallback(false);
+        } catch (error) {
+            console.error('Error loading compare artist data:', error);
+            // Fallback: just set the artist without full exhibition data
+            setState(prev => ({ 
+                ...prev, 
+                compareWith: selectedArtist,
+                searchTerm: `${selectedArtist.firstname || ''} ${selectedArtist.lastname || ''}`.trim(),
+                searchResults: []
+            }));
+            loadCallback(false);
+        }
+    }, [loadCallback]);
 
-    onGroupByChange() {
-        // notify area chart to update groupBy
-        const group = this.egoNetwork.current?.state.groupBy;
-        const coEx = this.egoNetwork.current?.state.coEx;
-        this.areaChart.current?.update(group, coEx);
-    }
+    const handleClearComparison = useCallback(() => {
+        if (DEBUG) {
+            console.log('Clearing comparison');
+        }
+        setState(prev => ({ 
+            ...prev, 
+            compareWith: null,
+            searchTerm: '' // Also clear search term for clean state
+        }));
+    }, []);
 
-    highlightCircleInNetwork(year: number) {
-        this.egoNetwork.current?.highlightCircle(year);
-    }
-
-    egoNetworkReady() {
-        this.setState({ rendered: true });
-    }
-
-    groupSelected(group: string) {
-        this.areaChart.current?.highlightGroup(group);
-    }
-
-    filterUpdate() {
-        const group = this.egoNetwork.current?.state.groupBy;
-        const coEx = this.egoNetwork.current?.state.coEx;
-        this.areaChart.current?.updateCoEx(group, coEx);
-    }
-
-    render() {
-        return (
-            <>
-                <div className="absolute top-4 left-48 w-[88%] z-50 m-auto">
-                    <SearchComponent query={GET_ARTIST_BY_NAME} onClick={this.onClick}></SearchComponent>
-                </div>
-                {this.state.artist && 
-                    <div className="grid gap-y-10 gap-x-0 lg:grid-cols-5 lg:grid-rows-5 gap-1 pt-2 sm:grid-cols-1 md:grid-rows-3 w-full h-[92vh]">
-                        <div className="row-span-1 col-span-2 z-40">
-                            <div className="w-full h-[80%]" id="timeline-container">
-                                <div className="float-left text-left pl-2">
-                                    <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-solid">{this.state.artist.sortname} ({this.getArtistAge(this.state.artist)}, {this.state.artist.country})</h1>
-                                    <h2 className="lg:text-md sm:text-sm font-medium">{this.state.artist.birthyear} ({this.state.artist.birthplace}) - {this.state.artist.deathyear} ({this.state.artist.deathplace})</h2>
-                                    <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.artist.exhibitedAtExhibitions?.length} exhibitions | {this.state.baseNumberOfArtworks} artworks</h3>
-                                </div>
-                                {this.state.compareWith &&
-                                    <div className="float-right text-right pr-2">
-                                        <h1 className="lg:text-xl sm:text-md font-semibold border-b-2 border-gray-500 border-dashed">{this.state.compareWith.sortname} ({this.getArtistAge(this.state.compareWith)}, {this.state.compareWith.country})</h1>
-                                        <h2 className="lg:text-md sm:text-sm font-medium">{this.state.compareWith.birthyear} ({this.state.compareWith.birthplace}) - {this.state.compareWith.deathyear} ({this.state.compareWith.deathplace})</h2>
-                                        <h3 className="lg:text-sm sm:text-xs font-normal text-gray">{this.state.compareWith.exhibitedAtExhibitions?.length} exhibitions | {this.state.compareNumberOfArtworks} artworks</h3>
-                                    </div>
-                                }
-                                <svg id="artist-detail-timeline"></svg>
+    return (
+        <div className="artist-detail-container h-screen flex flex-col overflow-hidden">
+            {/* Artist Detail Integrated Header */}
+            <div className="flex-shrink-0">
+                <ArtistDetailHeader
+                    artist={artist}
+                    coExhibitionCount={state.coExhibitionCount}
+                    onCoExhibitionCountChange={handleCoExhibitionCountChange}
+                    minCoExhibitions={1}
+                    maxCoExhibitions={20}
+                    groupBy={state.groupBy}
+                    onGroupByChange={handleGroupByChange}
+                    orderBy={state.orderBy}
+                    onOrderByChange={handleOrderByChange}
+                    searchTerm={state.searchTerm}
+                    onSearchChange={handleSearchChange}
+                    searchResults={state.searchResults}
+                    onArtistSelect={handleArtistSelect}
+                    compareWith={state.compareWith}
+                    onClearComparison={handleClearComparison}
+                    loadingCompareArtist={state.loadingCompareArtist}
+                    totalExhibitions={state.exhibitionsList.length}
+                    totalLinks={state.links.length} // Total co-exhibition links
+                    totalArtists={new Set(state.links.map(link => link.target.id)).size + 1} // Unique connected artists + base artist
+                />
+            </div>
+            
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {/* Desktop: 2x2 Grid Layout */}
+                <div className="hidden lg:flex lg:flex-col lg:h-full lg:gap-1">
+                    {/* Top Row: Timeline + Area Chart - Compact height */}
+                    <div className="top-row grid grid-cols-2 gap-2 flex-shrink-0" style={{ flex: '0 0 20%' }}>
+                        {/* Timeline Section - Top Left */}
+                        <div className="timeline-section h-full">
+                            <div id="timeline-container" className="w-full h-full">
+                                <ArtistTimeline 
+                                    artist={artist}
+                                    exhibitionsList={state.exhibitionsList}
+                                    compareArtist={state.compareWith}
+                                    width={800}
+                                    highlightedYear={state.highlightedYear}
+                                    onEgoNetworkYearHighlight={state.highlightedYear}
+                                    onEgoNetworkHover={(year: number | null) => {
+                                        if (year !== null) {
+                                            handleTimelineCallback(year);
+                                        } else {
+                                            handleTimelineMouseOut();
+                                        }
+                                    }}
+                                    onYearHover={(year: number, exhibitions: any[]) => {
+                                        handleTimelineCallback(year);
+                                        // Could add more year-specific handling here
+                                    }}
+                                    className="w-full h-full"
+                                />
                             </div>
                         </div>
-                        <div className="lg:row-span-1 md:row-span-1 lg:col-span-3 sm:col-span-1 z-30">
-                            <div className="w-full h-full sm:h-full" id="area-chart-container">
-                                {/* Ego Network Defines Grouping Criteria - Wait for initialization then render group distribution */}
-                                {this.state.rendered &&
-                                    <AreaChartComponent ref={this.areaChart} groupBy={this.egoNetwork.current?.state.groupBy} links={this.state.links} colors={this.state.colors} stacked={true} onclick={this.onAreaChartClick.bind(this)} />
-                                }
-                            </div>
-                        </div>
-                        <div className="lg:row-span-4 md:row-span-1 col-span-2 z-30">
-                            <div className="w-full h-full overflow-y-scroll" id="table-container">
-                                <TableComponent ref={this.table} query={GET_EXHIBITION} baseId={this.state.artist.id} compareWith={this.state.compareWith} exhibitions={this.state.artist.exhibitedAtExhibitions} />
-                            </div>
-                        </div>
-                        <div className="lg:row-span-4 md:row-span-1 lg:col-span-3 sm:col-span-1 z-40">
-                            <div className="w-full h-full sm:h-full" id="ego-net-container">
-                                {this.showNetwork &&
-                                    <EgoNetworkComponent ref={this.egoNetwork} syncColors={this.onSyncColors.bind(this)} colors={this.state.colors} initCallBack={this.egoNetworkReady.bind(this)} baseNode={this.state.baseNode} links={this.state.links} requestNode={this.onArtistChange.bind(this)} groupByCallBack={this.onGroupByChange.bind(this)} mouseOverCallBack={this.showTimeCallBack.bind(this)} arcClickCallback={this.groupSelected.bind(this)} filterCallback={this.filterUpdate.bind(this)} />
-                                }
+
+                        {/* Area Chart Section - Top Right */}
+                        <div className="area-chart-section h-full">
+                            <div id="area-chart-container" className="w-full h-full">
+                                <AreaChartComponent
+                                    links={state.links}
+                                    colors={state.colors}
+                                    stacked={true}
+                                    groupBy={state.groupBy}
+                                    coExhibitionCount={state.coExhibitionCount}
+                                    onclick={handleGroupSelection}
+                                />
                             </div>
                         </div>
                     </div>
-                }
-            </>
-        );
-    }
+
+                    {/* Bottom Row: Table + Network - 2/3 height */}
+                    <div className="bottom-row grid grid-cols-2 gap-2 flex-1 min-h-0">
+                        {/* Table Section - Bottom Left */}
+                        <div className="table-section h-full overflow-hidden">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+
+                        {/* Network Section - Bottom Right */}
+                        <div className="network-section h-full flex flex-col">
+                            <div id="ego-net-container" className="flex-1 min-h-0">
+                                {state.baseNode.id ? (
+                                    <div className="h-full">
+                                        <EgoNetworkComponent
+                                            baseNode={state.baseNode}
+                                            links={state.links}
+                                            colors={state.colors}
+                                            coExhibitionCount={state.coExhibitionCount}
+                                            groupBy={state.groupBy}
+                                            orderBy={state.orderBy}
+                                            selectedGroup={state.selectedGroup}
+                                            highlightedYear={state.highlightedYear}
+                                            compareArtist={state.compareWith}
+                                            initCallBack={handleNetworkReady}
+                                            requestNode={(node?: number) => handleArtistChange(node || null)}
+                                            mouseOverCallBack={handleTimelineCallback}
+                                            mouseOutCallBack={handleTimelineMouseOut}
+                                            arcClickCallback={handleGroupSelection}
+                                            syncColors={() => handleColorSync(state.colors)}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        Loading network...
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile: Linear Stacked Layout with Scroll */}
+                <div className="lg:hidden flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4">
+                    {/* Timeline Section */}
+                    <div className="timeline-section flex-shrink-0" style={{ height: '200px' }}>
+                        <div id="timeline-container-mobile" className="w-full h-full">
+                            <ArtistTimeline 
+                                artist={artist}
+                                exhibitionsList={state.exhibitionsList}
+                                compareArtist={state.compareWith}
+                                width={800}
+                                height={280}
+                                highlightedYear={state.highlightedYear}
+                                onEgoNetworkYearHighlight={state.highlightedYear}
+                                onEgoNetworkHover={(year: number | null) => {
+                                    if (year !== null) {
+                                        handleTimelineCallback(year);
+                                    } else {
+                                        handleTimelineMouseOut();
+                                    }
+                                }}
+                                onYearHover={(year: number, exhibitions: any[]) => {
+                                    handleTimelineCallback(year);
+                                }}
+                                className="w-full h-full"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Area Chart Section */}
+                    <div className="area-chart-section flex-shrink-0" style={{ height: '120px' }}>
+                        <div id="area-chart-container-mobile" className="w-full h-full">
+                            <AreaChartComponent
+                                links={state.links}
+                                colors={state.colors}
+                                stacked={true}
+                                groupBy={state.groupBy}
+                                coExhibitionCount={state.coExhibitionCount}
+                                onclick={handleGroupSelection}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="table-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div className="h-full">
+                            <TableComponent
+                                baseId={Number(artist.id)}
+                                compareWith={state.compareWith}
+                                exhibitions={state.exhibitionsList}
+                                query={GET_EXHIBITION}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Network Section */}
+                    <div className="network-section flex-shrink-0" style={{ height: '400px' }}>
+                        <div id="ego-net-container-mobile" className="h-full">
+                            {state.baseNode.id ? (
+                                <div className="h-full">
+                                    <EgoNetworkComponent
+                                        baseNode={state.baseNode}
+                                        links={state.links}
+                                        colors={state.colors}
+                                        coExhibitionCount={state.coExhibitionCount}
+                                        groupBy={state.groupBy}
+                                        orderBy={state.orderBy}
+                                        selectedGroup={state.selectedGroup}
+                                        highlightedYear={state.highlightedYear}
+                                        initCallBack={handleNetworkReady}
+                                        requestNode={(node?: number) => handleArtistChange(node || null)}
+                                        mouseOverCallBack={handleTimelineCallback}
+                                        mouseOutCallBack={handleTimelineMouseOut}
+                                        arcClickCallback={handleGroupSelection}
+                                        syncColors={() => handleColorSync(state.colors)}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-gray-500">
+                                    Loading network...
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default ArtistDetailComponent;

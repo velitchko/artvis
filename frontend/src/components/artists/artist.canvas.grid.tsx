@@ -70,7 +70,8 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
 
     // Update viewport dimensions on window resize with proper debouncing
     React.useEffect(() => {
-        let timeoutId: NodeJS.Timeout;
+        // Use 'any' to avoid NodeJS.Timeout vs number type error in browser
+        let timeoutId: any;
         
         const handleResize = () => {
             // Debounce the resize to avoid excessive recalculations
