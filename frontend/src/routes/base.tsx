@@ -11,6 +11,7 @@ import AboutPage from "../pages/about";
 import PublicationsPage from "../pages/publications";
 import GroupsPage from "../pages/groups";
 import GroupDetailPage from "../pages/group.detail";
+import DataPage from "../pages/data";
 
 
 export default function Base() {
@@ -26,6 +27,7 @@ export default function Base() {
                 <Route path="/exhibitions/:artist" element={<ExhibitionsPage />} />
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/group/:id" element={<GroupDetailPage />} />
+                <Route path="/data" element={<DataPage />} />
                 <Route path="*" element={<ErrorPage />} />
             </Routes>
         </React.StrictMode>
