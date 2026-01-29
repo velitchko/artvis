@@ -11,7 +11,8 @@ interface ArtistCanvasGridProps {
     searchArtistId?: number; // Artist to scroll to
     similarityBaseArtist?: Artist; // Base artist for similarity highlighting
     timelineScaling?: 'absolute' | 'relative'; // Timeline scaling mode
-    curveRendering?: 'jagged' | 'smooth'; // Curve rendering style
+    curveRendering?: 'jagged' | 'smooth'; // Curve rendering style,
+    exhibitionExplorer?: boolean; // Whether in exhibition explorer mode
 }
 
 interface ArtistGridItem {
@@ -24,26 +25,27 @@ interface ArtistGridItem {
     timelineData: Array<{ year: number; count: number }>;
 }
 
-const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({ 
-    artists, 
-    onReorderBySimilarity, 
-    forcedColumnsPerRow = 0, 
+const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
+    artists,
+    onReorderBySimilarity,
+    forcedColumnsPerRow = 0,
     searchArtistId,
     similarityBaseArtist,
     timelineScaling = 'relative',
-    curveRendering = 'jagged'
+    curveRendering = 'jagged',
+    exhibitionExplorer = false
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-    
+
     // Grid configuration - More compact layout
     const CARD_WIDTH = 200;
     const CARD_HEIGHT = 60; // Reduced height to eliminate overlap
     const CARD_MARGIN = 6; // Reduced margin
     const CHART_HEIGHT = 35; // Balanced chart area
     const CHART_MARGIN = { top: 3, bottom: 3, left: 8, right: 8 };
-    
+
     const [gridItems, setGridItems] = useState<Array<ArtistGridItem>>([]);
     const [hoveredArtist, setHoveredArtist] = useState<number | string | null>(null); // Use index as fallback for null IDs
     const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -57,10 +59,10 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     const [totalContentHeight, setTotalContentHeight] = useState(0);
     const [isAnimationMode, setIsAnimationMode] = useState(false);
     const [animationProgress, setAnimationProgress] = useState(0);
-    const [dotPositions, setDotPositions] = useState<{[id: string]: {x: number, y: number}} | null>(null);
+    const [dotPositions, setDotPositions] = useState<{ [id: string]: { x: number, y: number } } | null>(null);
     const [dotLayoutReady, setDotLayoutReady] = useState(false);
-    const [dotColors, setDotColors] = useState<{[id: string]: string}>({});
-    
+    const [dotColors, setDotColors] = useState<{ [id: string]: string }>({});
+
     // Virtualization settings - Use dynamic height based on available space
     const HEADER_HEIGHT = 64; // Match pt-16 (64px) from parent component
     const PADDING_BUFFER = 20; // Extra buffer for margins and spacing
@@ -72,7 +74,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     React.useEffect(() => {
         // Use 'any' to avoid NodeJS.Timeout vs number type error in browser
         let timeoutId: any;
-        
+
         const handleResize = () => {
             // Debounce the resize to avoid excessive recalculations
             clearTimeout(timeoutId);
@@ -81,7 +83,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                 setContainerWidth(window.innerWidth - 16);
             }, 150); // 150ms debounce
         };
-        
+
         window.addEventListener('resize', handleResize);
         return () => {
             window.removeEventListener('resize', handleResize);
@@ -92,14 +94,14 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     // Additional ResizeObserver for container element changes
     React.useEffect(() => {
         if (!containerRef.current) return;
-        
+
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width } = entry.contentRect;
                 setContainerWidth(width - 16); // Account for padding
             }
         });
-        
+
         resizeObserver.observe(containerRef.current);
         return () => resizeObserver.disconnect();
     }, []);
@@ -110,32 +112,33 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         const duration = 300; // 0.3 seconds
         const startProgress = animationProgress;
         const targetProgress = isAnimationMode ? 0 : 1;
-        
+
         const animate = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             // Use easeInOutCubic for smooth animation
             const eased = progress < 0.5
                 ? 4 * progress * progress * progress
                 : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-            
+
             const currentProgress = startProgress + (targetProgress - startProgress) * eased;
             setAnimationProgress(currentProgress);
-            
+
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
                 setIsAnimationMode(!isAnimationMode);
             }
         };
-        
+
         requestAnimationFrame(animate);
     };
 
     // Debug logging
     useEffect(() => {
         console.log('ArtistCanvasGrid - Artists received:', artists.length);
+        console.log("ArtistCanvasGrid: exhibitionExplorer mode:", exhibitionExplorer);
         console.log('Sample artist:', artists[0]);
     }, [artists]);
 
@@ -145,22 +148,22 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         let allCounts: number[] = [];
 
         console.log(artistsToUse)
-        
+
         artistsToUse.forEach(artist => {
             if (artist.exhibitedAtExhibitions) {
                 const yearCounts = new Map<number, number>();
                 artist.exhibitedAtExhibitions
-                    .filter((exhibition, index, self) => 
+                    .filter((exhibition, index, self) =>
                         self.findIndex(e => e.id === exhibition.id) === index
                     )
                     .forEach(exhibition => {
                         // Parse year from startdate - handle different date formats
                         let year: number = NaN;
-                        
+
                         try {
                             // Convert to string and parse year
                             const dateStr = String(exhibition.startdate);
-                            
+
                             // Try to extract 4-digit year from string
                             const yearMatch = dateStr.match(/(\d{4})/);
                             if (yearMatch) {
@@ -172,37 +175,37 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         } catch (e) {
                             console.warn('Failed to parse date:', exhibition.startdate, e);
                         }
-                        
+
                         // Debug first few exhibitions
                         if (allYears.length < 5) {
                             console.log('Exhibition startdate:', exhibition.startdate, 'type:', typeof exhibition.startdate, 'parsed year:', year);
                         }
-                        
+
                         if (!isNaN(year) && year > 1800 && year < 2100) { // Filter reasonable years
                             yearCounts.set(year, (yearCounts.get(year) || 0) + 1);
                         }
                     });
-                
+
                 allYears.push(...Array.from(yearCounts.keys()));
                 allCounts.push(...Array.from(yearCounts.values()));
             }
         });
-        
+
         const yearExtent = allYears.length > 0 ? d3.extent(allYears) as [number, number] : [1900, 2000];
         const countExtent = allCounts.length > 0 ? [0, d3.max(allCounts) || 1] as [number, number] : [0, 1];
-        
+
         console.log('Year extent:', yearExtent);
         console.log('Count extent:', countExtent);
         console.log('Sample years found:', allYears.slice(0, 10));
         console.log('Sample counts found:', allCounts.slice(0, 10));
-        
+
         return { yearExtent, countExtent };
     };
 
     // Calculate grid layout and prepare data with virtualization
     useEffect(() => {
         console.log('Calculating grid layout for', artists.length, 'artists');
-        
+
         if (!artists.length) {
             console.log('No artists provided');
             setIsReady(false);
@@ -212,20 +215,20 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Use all artists but implement virtualization
         const limitedArtists = artists;
         console.log('Using all artists with virtualization:', limitedArtists.length);
-        
+
         // Debug: Check for duplicate artists in the source data
         const artistIds = limitedArtists.map(artist => artist.id);
         const uniqueArtistIds = new Set(artistIds);
         if (artistIds.length !== uniqueArtistIds.size) {
             console.warn('Found duplicate artists in source data! Total:', artistIds.length, 'Unique:', uniqueArtistIds.size);
-            
+
             // Find and log the duplicates
             const duplicates = artistIds.filter((id, index) => artistIds.indexOf(id) !== index);
             console.warn('Duplicate artist IDs:', [...new Set(duplicates)]);
         }
 
         const containerWidthToUse = containerWidth; // Use reactive container width
-        
+
         // Calculate items per row - use forced columns or auto-fit
         let itemsPerRow: number;
         if (forcedColumnsPerRow > 0) {
@@ -235,27 +238,27 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         }
         const actualItemsPerRow = Math.max(1, itemsPerRow);
         const totalRows = Math.ceil(limitedArtists.length / actualItemsPerRow);
-        
+
         // Canvas is only the viewport size, not the total content size
         const canvasWidth = actualItemsPerRow * (CARD_WIDTH + CARD_MARGIN) - CARD_MARGIN;
         const canvasHeight = viewportHeight;
-        
+
         console.log('Virtualized canvas dimensions:', { width: canvasWidth, height: canvasHeight });
         console.log('Total content would be:', { rows: totalRows, height: totalRows * (CARD_HEIGHT + CARD_MARGIN) });
-        
+
         setCanvasSize({ width: canvasWidth, height: canvasHeight });
 
         const { yearExtent, countExtent } = getExtents(limitedArtists);
-        
+
         console.log('Processing', limitedArtists.length, 'artists for grid items...');
         const startTime = performance.now();
-        
+
         const items: Array<ArtistGridItem> = limitedArtists.map((artist, index) => {
             // Show progress for large datasets
             if (index > 0 && index % 1000 === 0) {
                 console.log(`Processed ${index}/${limitedArtists.length} artists...`);
             }
-            
+
             const row = Math.floor(index / actualItemsPerRow);
             const col = index % actualItemsPerRow;
             const x = col * (CARD_WIDTH + CARD_MARGIN);
@@ -265,17 +268,17 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             const exhibitionsPerYear = new Map<number, number>();
             if (artist.exhibitedAtExhibitions) {
                 artist.exhibitedAtExhibitions
-                    .filter((exhibition, index, self) => 
+                    .filter((exhibition, index, self) =>
                         self.findIndex(e => e.id === exhibition.id) === index
                     )
                     .forEach(exhibition => {
                         // Parse year from startdate - handle different date formats
                         let year: number = NaN;
-                        
+
                         try {
                             // Convert to string and parse year
                             const dateStr = String(exhibition.startdate);
-                            
+
                             // Try to extract 4-digit year from string
                             const yearMatch = dateStr.match(/(\d{4})/);
                             if (yearMatch) {
@@ -287,7 +290,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                         } catch (e) {
                             // Silently handle parsing errors
                         }
-                        
+
                         if (!isNaN(year) && year > 1800 && year < 2100) { // Filter reasonable years
                             exhibitionsPerYear.set(year, (exhibitionsPerYear.get(year) || 0) + 1);
                         }
@@ -325,33 +328,33 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         const endTime = performance.now();
         console.log(`Grid items created: ${items.length} in ${(endTime - startTime).toFixed(2)}ms`);
         setGridItems(items);
-        
+
         setLayoutInfo({
             itemsPerRow: actualItemsPerRow,
             totalRows,
             artists: limitedArtists
         });
-        
+
         // Calculate total content height for scrollable container
         const totalContentHeight = totalRows * (CARD_HEIGHT + CARD_MARGIN) - CARD_MARGIN;
         setTotalContentHeight(totalContentHeight);
-        
+
         setIsReady(true);
     }, [artists, forcedColumnsPerRow, containerWidth, viewportHeight]);
 
     // Handle scrolling to searched artist
     useEffect(() => {
         if (!searchArtistId || !gridItems.length || !layoutInfo) return;
-        
+
         // Clear any existing hover state when searching
         setHoveredArtist(null);
-        
+
         const artistIndex = gridItems.findIndex(item => item.artist.id === searchArtistId);
         if (artistIndex === -1) return;
-        
+
         const row = Math.floor(artistIndex / layoutInfo.itemsPerRow);
         const targetScrollTop = row * (CARD_HEIGHT + CARD_MARGIN);
-        
+
         // Scroll to the artist with some padding
         const scrollContainer = containerRef.current?.querySelector('.no-scrollbar') as HTMLDivElement;
         if (scrollContainer) {
@@ -362,7 +365,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     // Render the canvas with virtualization
     useEffect(() => {
         console.log('Render effect triggered - isReady:', isReady, 'gridItems:', gridItems.length, 'scrollTop:', scrollTop);
-        
+
         if (!canvasRef.current || !gridItems.length || !isReady || !layoutInfo) {
             console.log('Render conditions not met');
             return;
@@ -380,14 +383,14 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Calculate which items are visible based on scroll position
         const itemHeight = CARD_HEIGHT + CARD_MARGIN;
         const startRow = Math.max(0, Math.floor(scrollTop / itemHeight) - BUFFER_ROWS);
-        const endRow = Math.min(layoutInfo.totalRows - 1, 
+        const endRow = Math.min(layoutInfo.totalRows - 1,
             Math.floor((scrollTop + viewportHeight) / itemHeight) + BUFFER_ROWS);
-        
+
         const startIndex = startRow * layoutInfo.itemsPerRow;
         const endIndex = Math.min(gridItems.length - 1, (endRow + 1) * layoutInfo.itemsPerRow - 1);
-        
+
         console.log(`Rendering rows ${startRow}-${endRow} (items ${startIndex}-${endIndex}) from scroll ${scrollTop}`);
-        
+
         // Filter items to only visible ones, adjusting their y position for the scroll offset
         const visibleItems = gridItems.slice(startIndex, endIndex + 1).map(item => ({
             ...item,
@@ -397,15 +400,15 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Handle high DPI displays
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        
+
         // Set the internal size to the display size times DPR
         canvas.width = canvasSize.width * dpr;
         canvas.height = canvasSize.height * dpr;
-        
+
         // Scale the canvas back down using CSS
         canvas.style.width = canvasSize.width + 'px';
         canvas.style.height = canvasSize.height + 'px';
-        
+
         // Scale the drawing context so everything draws at the correct size
         ctx.scale(dpr, dpr);
 
@@ -426,11 +429,11 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                     function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
                     function hexToRgb(hex: string) {
                         const m = hex.match(/^#([0-9a-f]{6})$/i);
-                        if (!m) return [0,0,0];
+                        if (!m) return [0, 0, 0];
                         const n = parseInt(m[1], 16);
                         return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
                     }
-                    const rgb0 = [0,0,0];
+                    const rgb0 = [0, 0, 0];
                     const rgb1 = hexToRgb(color);
                     const rgb = rgb0.map((c, i) => Math.round(lerp(c, rgb1[i], t)));
                     ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
@@ -443,12 +446,12 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         }
 
         const { yearExtent, countExtent } = getExtents(artists);
-        
+
         // Create scales for timeline
         const xScale = d3.scaleLinear()
             .domain(yearExtent)
             .range([CHART_MARGIN.left, CARD_WIDTH - CHART_MARGIN.right]);
-        
+
         // Y-scale is now dynamic based on timelineScaling mode
         // It will be created per-item for relative scaling, or use global extent for absolute scaling
         const globalYScale = d3.scaleLinear()
@@ -612,7 +615,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             }
             ctx.restore();
         });
-        
+
         console.log('Canvas render complete');
     }, [gridItems, hoveredArtist, canvasSize, isReady, scrollTop, layoutInfo, curveRendering, timelineScaling, animationProgress, dotPositions]);
 
@@ -621,12 +624,12 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         if (ctx.measureText(text).width <= maxWidth) {
             return text;
         }
-        
+
         let truncated = text;
         while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
             truncated = truncated.slice(0, -1);
         }
-        
+
         return truncated + '...';
     };
 
@@ -642,23 +645,23 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Find hovered artist - more precise hit detection with stricter bounds
         const hoveredItem = gridItems.find(item => {
             const itemScreenY = item.y - scrollTop;
-            
-             // Stricter bounds checking with small margin to prevent edge cases
+
+            // Stricter bounds checking with small margin to prevent edge cases
             const margin = 1;
             const isInHorizontalBounds = mouseX >= (item.x + margin) && mouseX <= (item.x + item.width - margin);
             const isInVerticalBounds = mouseY >= (itemScreenY + margin) && mouseY <= (itemScreenY + item.height - margin);
-            
+
             // Only consider items that are actually visible on screen
             const isVisible = itemScreenY + item.height >= 0 && itemScreenY <= viewportHeight;
-            
+
             // Additional check: ensure we're not in empty space
             const isWithinCanvas = mouseX >= 0 && mouseX <= canvasSize.width && mouseY >= 0 && mouseY <= canvasSize.height;
-            
+
             return isInHorizontalBounds && isInVerticalBounds && isVisible && isWithinCanvas;
         });
 
         const newHoveredArtistId = hoveredItem ? hoveredItem.uniqueId : null;
-        
+
         // Debug logging to track hover behavior
         if (newHoveredArtistId !== hoveredArtist) {
             console.log('Hover changed from', hoveredArtist, 'to', newHoveredArtistId);
@@ -668,7 +671,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         }
 
         setHoveredArtist(newHoveredArtistId);
-        
+
         // Change cursor - show pointer when hovering over any card
         if (hoveredItem) {
             // Show pointer cursor when hovering over a card (click for similarity, Ctrl+click for detail page)
@@ -691,10 +694,10 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             const itemScreenY = item.y - scrollTop;
             const isInHorizontalBounds = mouseX >= item.x && mouseX <= item.x + item.width;
             const isInVerticalBounds = mouseY >= itemScreenY && mouseY <= itemScreenY + item.height;
-            
+
             // Only consider items that are actually visible on screen
             const isVisible = itemScreenY + item.height >= 0 && itemScreenY <= viewportHeight;
-            
+
             return isInHorizontalBounds && isInVerticalBounds && isVisible;
         });
 
@@ -703,7 +706,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
         // Check if Ctrl key is held down (Cmd on Mac)
         if (event.ctrlKey || event.metaKey) {
             // Open artist detail page in new tab
-            window.open(`/artist/${clickedItem.artist.id}`, '_blank');
+            exhibitionExplorer ? window.open(`/exhibition/${clickedItem.artist.id}`, '_blank') : window.open(`/artist/${clickedItem.artist.id}`, '_blank');
         } else {
             // Normal click activates similarity mode
             onReorderBySimilarity(clickedItem.artist.id);
@@ -721,7 +724,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
     useEffect(() => {
         if (animationProgress < 0.66 || dotLayoutReady) return;
         // Use all gridItems, not just visible
-        const pos: {[id: string]: {x: number, y: number}} = {};
+        const pos: { [id: string]: { x: number, y: number } } = {};
         const margin = 12;
         for (const item of gridItems) {
             pos[item.uniqueId] = {
@@ -750,7 +753,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
             '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f',
             '#e5c494', '#b3b3b3'
         ];
-        const colors: {[id: string]: string} = {};
+        const colors: { [id: string]: string } = {};
         gridItems.forEach((item, i) => {
             colors[item.uniqueId] = palette[Math.floor(Math.random() * palette.length)];
         });
@@ -772,7 +775,7 @@ const ArtistCanvasGrid: React.FC<ArtistCanvasGridProps> = ({
                     {artists.length === 0 && <p>No artists data available</p>}
                 </div>
             ) : (
-                <div 
+                <div
                     className="overflow-auto no-scrollbar"
                     style={{
                         width: canvasSize.width,

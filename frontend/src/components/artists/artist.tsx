@@ -6,7 +6,7 @@ import ArtistRenderer from './artist.renderer';
 import IntegratedHeader from '../navigation/integrated.header';
 import { Exhibition } from '../../models/exhibition.model';
 
-const ArtistsComponent = (props: { artists: Array<Artist> }) => {
+const ArtistsComponent = (props: { artists: Array<Artist>, exhibitionExplorer?: boolean }) => {
 
     let totalYearCount = new Map<number, number>();
     // subtract scrollbar width from window width
@@ -75,7 +75,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     // });
 
     // ==================== SIMILARITY ANALYSIS FUNCTIONS ====================
-    
+
     // Configuration for similarity algorithms
     const [similarityConfig, setSimilarityConfig] = React.useState({
         algorithm: 'combined', // 'combined', 'dtw', 'correlation', 'trend', 'frequency'
@@ -91,10 +91,10 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     // Normalize timeline to focus on shape rather than absolute values
     const normalizeTimeline = (timeline: number[]): number[] => {
         if (!similarityConfig.normalizeValues) return timeline;
-        
+
         const total = timeline.reduce((sum, val) => sum + val, 0);
         if (total === 0) return timeline.map(() => 0);
-        
+
         // Convert to proportions to focus on shape
         return timeline.map(val => val / total);
     };
@@ -104,7 +104,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         const mean = timeline.reduce((sum, val) => sum + val, 0) / timeline.length;
         const variance = timeline.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / timeline.length;
         const stdDev = Math.sqrt(variance);
-        
+
         if (stdDev === 0) return timeline.map(() => 0);
         return timeline.map(val => (val - mean) / stdDev);
     };
@@ -114,9 +114,9 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         const n = series1.length;
         const m = series2.length;
         const dtw = Array.from({ length: n + 1 }, () => Array(m + 1).fill(Infinity));
-        
+
         dtw[0][0] = 0;
-        
+
         for (let i = 1; i <= n; i++) {
             for (let j = 1; j <= m; j++) {
                 const cost = Math.abs(series1[i - 1] - series2[j - 1]);
@@ -127,7 +127,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                 );
             }
         }
-        
+
         return dtw[n][m] / Math.max(n, m); // Normalize by length
     };
 
@@ -139,13 +139,13 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         const sumXY = x.reduce((sum, val, i) => sum + val * y[i], 0);
         const sumX2 = x.reduce((sum, val) => sum + val * val, 0);
         const sumY2 = y.reduce((sum, val) => sum + val * val, 0);
-        
+
         const numerator = n * sumXY - sumX * sumY;
         const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-        
+
         if (denominator === 0) return 0;
         const correlation = numerator / denominator;
-        
+
         // Convert to distance (0 = identical, 2 = opposite)
         return 1 - correlation;
     };
@@ -161,15 +161,15 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
             }
             return trends;
         };
-        
+
         const trends1 = getTrends(series1);
         const trends2 = getTrends(series2);
-        
+
         let matches = 0;
         for (let i = 0; i < Math.min(trends1.length, trends2.length); i++) {
             if (trends1[i] === trends2[i]) matches++;
         }
-        
+
         const totalComparisons = Math.min(trends1.length, trends2.length);
         return totalComparisons === 0 ? 1 : 1 - (matches / totalComparisons);
     };
@@ -186,14 +186,14 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
             }
             return peaks;
         };
-        
+
         const peaks1 = findPeaks(series1);
         const peaks2 = findPeaks(series2);
-        
+
         // Compare peak patterns
         const maxPeaks = Math.max(peaks1.length, peaks2.length);
         if (maxPeaks === 0) return 0;
-        
+
         const peakDiff = Math.abs(peaks1.length - peaks2.length);
         return peakDiff / maxPeaks;
     };
@@ -202,12 +202,12 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     const crossCorrelation = (x: number[], y: number[]): number => {
         let maxCorr = -1;
         const minLen = Math.min(x.length, y.length);
-        
+
         // Try different shifts to find best alignment
         for (let shift = -minLen + 1; shift < minLen; shift++) {
             let correlation = 0;
             let count = 0;
-            
+
             for (let i = 0; i < x.length; i++) {
                 const j = i + shift;
                 if (j >= 0 && j < y.length) {
@@ -215,23 +215,23 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                     count++;
                 }
             }
-            
+
             if (count > 0) {
                 correlation /= count;
                 maxCorr = Math.max(maxCorr, correlation);
             }
         }
-        
+
         // Normalize and convert to distance
         return 1 - Math.max(0, maxCorr);
     };
-    
+
     // Get exhibition timeline for an artist as a normalized array
     const getArtistTimeline = (artist: Artist, startYear: number = 1900, endYear: number = 2020): number[] => {
         const exhibitionsCount = new Map<number, number>();
-        
+
         // Count exhibitions per year, removing duplicates
-        artist.exhibitedAtExhibitions?.filter((exhibition, index, self) => 
+        artist.exhibitedAtExhibitions?.filter((exhibition, index, self) =>
             self.findIndex(e => e.id === exhibition.id) === index
         ).forEach(exhibition => {
             let year: number;
@@ -243,7 +243,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                 } else {
                     year = +exhibition.startdate;
                 }
-                
+
                 if (!isNaN(year) && year >= startYear && year <= endYear) {
                     exhibitionsCount.set(year, (exhibitionsCount.get(year) || 0) + 1);
                 }
@@ -251,20 +251,20 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                 // Skip invalid dates
             }
         });
-        
+
         // Create timeline array with zeros for missing years
         const timeline: number[] = [];
         for (let year = startYear; year <= endYear; year++) {
             timeline.push(exhibitionsCount.get(year) || 0);
         }
-        
+
         // Apply normalization based on configuration
         if (similarityConfig.focusOnShape) {
             return zScoreNormalize(timeline);
         } else if (similarityConfig.normalizeValues) {
             return normalizeTimeline(timeline);
         }
-        
+
         return timeline;
     };
 
@@ -273,7 +273,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         let divergence = 0;
         const totalP = p.reduce((sum, val) => sum + val, 0) + p.length * smoothing;
         const totalQ = q.reduce((sum, val) => sum + val, 0) + q.length * smoothing;
-        
+
         for (let i = 0; i < p.length; i++) {
             const normalizedP = (p[i] + smoothing) / totalP;
             const normalizedQ = (q[i] + smoothing) / totalQ;
@@ -308,15 +308,15 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
         let dotProduct = 0;
         let normA = 0;
         let normB = 0;
-        
+
         for (let i = 0; i < a.length; i++) {
             dotProduct += a[i] * b[i];
             normA += a[i] * a[i];
             normB += b[i] * b[i];
         }
-        
+
         if (normA === 0 || normB === 0) return 1; // Maximum distance
-        
+
         const cosineSimilarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         return 1 - cosineSimilarity; // Convert to distance
     };
@@ -325,34 +325,34 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     const computeSimilarityScores = (baseArtist: Artist, allArtists: Artist[]): Map<number, number> => {
         const baseTimeline = getArtistTimeline(baseArtist);
         const scores = new Map<number, number>();
-        
+
         console.log(`Computing similarity using algorithm: ${similarityConfig.algorithm}`);
-        
+
         allArtists.forEach(artist => {
             const artistTimeline = getArtistTimeline(artist);
             let combinedScore = 0;
-            
+
             switch (similarityConfig.algorithm) {
                 case 'dtw':
                     combinedScore = dynamicTimeWarping(baseTimeline, artistTimeline);
                     break;
-                    
+
                 case 'correlation':
                     combinedScore = pearsonCorrelation(baseTimeline, artistTimeline);
                     break;
-                    
+
                 case 'trend':
                     combinedScore = trendSimilarity(baseTimeline, artistTimeline);
                     break;
-                    
+
                 case 'frequency':
                     combinedScore = frequencyDomainSimilarity(baseTimeline, artistTimeline);
                     break;
-                    
+
                 case 'cross_correlation':
                     combinedScore = crossCorrelation(baseTimeline, artistTimeline);
                     break;
-                    
+
                 case 'combined':
                 default:
                     // Shape-focused combination for timeline patterns
@@ -361,15 +361,15 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                     const trend = trendSimilarity(baseTimeline, artistTimeline);
                     const crossCorr = crossCorrelation(baseTimeline, artistTimeline);
                     const frequency = frequencyDomainSimilarity(baseTimeline, artistTimeline);
-                    
+
                     // Weights optimized for shape similarity
                     combinedScore = 0.3 * dtw + 0.25 * correlation + 0.2 * trend + 0.15 * crossCorr + 0.1 * frequency;
                     break;
             }
-            
+
             scores.set(artist.id, combinedScore);
         });
-        
+
         return scores;
     };
 
@@ -383,23 +383,23 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
     // Improved similarity-based reordering function
     const reorderArtistBySimilarity = (baseArtistId: number) => {
         console.log('Reordering by similarity to artist ID:', baseArtistId);
-        
+
         const baseArtist = artists.find(artist => artist.id === baseArtistId);
         if (!baseArtist) {
             console.warn('Base artist not found for similarity comparison');
             return;
         }
-        
+
         setSimilarityBaseArtist(baseArtist);
         const scores = computeSimilarityScores(baseArtist, artists);
-        
+
         // Sort artists by similarity score (lower score = more similar)
         const sortedArtists = [...artists].sort((a, b) => {
             const aScore = scores.get(a.id) || Infinity;
             const bScore = scores.get(b.id) || Infinity;
             return aScore - bScore;
         });
-        
+
         console.log('Similarity scores computed for', scores.size, 'artists');
         setArtists(sortedArtists);
         setOrder('similarity'); // Update the order state
@@ -415,7 +415,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                 objects.sort((a: Artist, b: Artist) => {
                     return a.exhibitedAtExhibitions && b.exhibitedAtExhibitions ? b.exhibitedAtExhibitions.length - a.exhibitedAtExhibitions.length : 0;
                 });
-                break;  
+                break;
             case 'birth':
                 objects.sort((a: Artist, b: Artist) => {
                     const aYear = a.birthyear || 0;
@@ -457,9 +457,9 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                 onColumnsChange={setColumnsPerRow}
                 onSearchArtist={setSearchArtistId}
                 similarityBaseArtist={similarityBaseArtist}
-                onClearSimilarity={() => { 
-                    setOrder('name'); 
-                    setSimilarityBaseArtist(null); 
+                onClearSimilarity={() => {
+                    setOrder('name');
+                    setSimilarityBaseArtist(null);
                 }}
                 similarityConfig={similarityConfig}
                 onSimilarityConfigChange={(newConfig) => {
@@ -476,8 +476,8 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
 
             {/* Top padding to account for fixed header - extra padding to ensure borders are visible */}
             <div className="pt-16 flex flex-wrap items-center justify-center w-full px-2">
-                <ArtistRenderer 
-                    artists={reorder(order)} 
+                <ArtistRenderer
+                    artists={reorder(order)}
                     onReorderBySimilarity={reorderArtistBySimilarity}
                     navigate={navigate}
                     useCanvas={true}
@@ -486,6 +486,7 @@ const ArtistsComponent = (props: { artists: Array<Artist> }) => {
                     similarityBaseArtist={similarityBaseArtist || undefined}
                     timelineScaling={timelineScaling}
                     curveRendering={curveRendering}
+                    exhibitionExplorer={props.exhibitionExplorer || false}
                 />
             </div>
         </>

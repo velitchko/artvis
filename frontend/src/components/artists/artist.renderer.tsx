@@ -15,31 +15,34 @@ interface ArtistRendererProps {
     similarityBaseArtist?: Artist; // For canvas grid similarity highlighting
     timelineScaling?: 'absolute' | 'relative'; // Timeline scaling mode
     curveRendering?: 'jagged' | 'smooth'; // Curve rendering style
+    exhibitionExplorer?: boolean; // Whether in exhibition explorer mode
 }
 
-const ArtistRenderer: React.FC<ArtistRendererProps> = ({ 
-    artists, 
-    onReorderBySimilarity, 
-    navigate, 
+const ArtistRenderer: React.FC<ArtistRendererProps> = ({
+    artists,
+    onReorderBySimilarity,
+    navigate,
     useCanvas = true,
     forcedColumnsPerRow,
     searchArtistId,
     similarityBaseArtist,
     timelineScaling = 'relative',
-    curveRendering = 'jagged'
+    curveRendering = 'jagged',
+    exhibitionExplorer = false
 }) => {
     console.log('ArtistRenderer - Received artists:', artists.length);
-    
+
     if (useCanvas) {
         return (
-            <ArtistCanvasGrid 
-                artists={artists} 
+            <ArtistCanvasGrid
+                artists={artists}
                 onReorderBySimilarity={onReorderBySimilarity}
                 forcedColumnsPerRow={forcedColumnsPerRow}
                 searchArtistId={searchArtistId}
                 similarityBaseArtist={similarityBaseArtist}
                 timelineScaling={timelineScaling}
                 curveRendering={curveRendering}
+                exhibitionExplorer={exhibitionExplorer}
             />
         );
     }
@@ -48,18 +51,18 @@ const ArtistRenderer: React.FC<ArtistRendererProps> = ({
     const width = window.innerWidth;
     const chartCount = 7;
     const chartWidth = width / chartCount;
-    
+
     // Calculate extents for SVG version
     let totalYearCount = new Map<number, number>();
     artists.forEach((artist: Artist) => {
-        artist.exhibitedAtExhibitions?.filter((exhibition, index, self) => 
+        artist.exhibitedAtExhibitions?.filter((exhibition, index, self) =>
             self.findIndex((t) => t.id === exhibition.id) === index
         ).forEach((exhibition) => {
             const count = totalYearCount.get(+exhibition.startdate);
             totalYearCount.set(+exhibition.startdate, count ? Math.max(count, 1) : 1);
         });
     });
-    
+
     const xExt = d3.extent(Array.from(totalYearCount.keys()));
     const yExt = d3.extent(Array.from(totalYearCount.values()));
 
@@ -67,15 +70,16 @@ const ArtistRenderer: React.FC<ArtistRendererProps> = ({
         <div className="flex flex-wrap items-center justify-center w-full">
             {artists && artists.map((artist: Artist) => {
                 return (
-                    <ArtistCardComponent 
-                        artist={artist} 
-                        key={artist.id} 
-                        width={chartWidth} 
-                        height={150} 
-                        yearExtent={xExt} 
-                        countExtent={yExt} 
-                        navigate={navigate} 
-                        reorderSim={onReorderBySimilarity} 
+                    <ArtistCardComponent
+                        artist={artist}
+                        key={artist.id}
+                        width={chartWidth}
+                        height={150}
+                        yearExtent={xExt}
+                        countExtent={yExt}
+                        navigate={navigate}
+                        reorderSim={onReorderBySimilarity}
+                        exhibitionExplorer={exhibitionExplorer}
                     />
                 );
             })}
