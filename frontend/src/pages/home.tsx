@@ -87,6 +87,7 @@ const HomePage = (props: any) => {
                         style={{ letterSpacing: '0.01em' }}
                     >
                         Exhibition Explorer
+                        <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-gray-300 text-gray-600 rounded-full">BETA In Progress</span>
                     </a>
                 </div>
             </div>
