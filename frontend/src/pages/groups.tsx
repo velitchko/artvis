@@ -31,15 +31,15 @@ const GroupsPage = () => {
         client.query({
             query: GET_GROUPS
         })
-        .then(result => {
-            setGroups(result.data.groups || []);
-            setLoading(false);
-        })
-        .catch(err => {
-            console.error('Error loading groups:', err);
-            setError('Error loading groups');
-            setLoading(false);
-        });
+            .then(result => {
+                setGroups(result.data.groups || []);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error('Error loading groups:', err);
+                setError('Error loading groups');
+                setLoading(false);
+            });
     }, []);
 
     const handleSearch = (term: string) => {
@@ -54,7 +54,7 @@ const GroupsPage = () => {
 
     // Filter and sort groups
     const filteredAndSortedGroups = groups
-        .filter(group => 
+        .filter(group =>
             group.name.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => {
@@ -68,9 +68,9 @@ const GroupsPage = () => {
 
     if (loading) {
         return (
-            <LoadingComponent 
-                overlay={true} 
-                size="large" 
+            <LoadingComponent
+                overlay={true}
+                size="large"
                 showLogo={true}
             />
         );
@@ -111,7 +111,7 @@ const GroupsPage = () => {
                         {/* Order By Control */}
                         <div className="flex items-center gap-2">
                             <label className="text-black font-bold text-xs whitespace-nowrap">Order by:</label>
-                            <select 
+                            <select
                                 className="bg-white border-2 border-black text-black font-bold px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black"
                                 value={order}
                                 onChange={(e) => setOrder(e.target.value)}
