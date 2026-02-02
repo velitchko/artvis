@@ -4,7 +4,7 @@ import NetworkPage from "../pages/network";
 import HomePage from "../pages/home";
 import ArtistPage from "../pages/artist";
 import ErrorPage from "./not-found";
-import ExplorerPage from "../pages/explorer";
+import ExhibitionExplorerPage from "../pages/exhibition.explorer";
 import ArtistDetailPage from "../pages/artist.detail";
 import ExhibitionsPage from "../pages/exhibitions";
 import AboutPage from "../pages/about";
@@ -25,7 +25,8 @@ export default function Base() {
                 <Route path="/artists" element={<ArtistPage />} />
                 <Route path="/artist/:id" element={<ArtistDetailPage />} />
                 <Route path="/artist/" element={<ArtistDetailPage />} />
-                <Route path="/exhibitions/:artist" element={<ExhibitionsPage />} />
+                <Route path="/exhibitions" element={<ExhibitionExplorerPage />} />
+                <Route path="/exhibition/:artist" element={<ExhibitionsPage />} />
                 <Route path="/groups" element={<GroupsPage />} />
                 <Route path="/group/:id" element={<GroupDetailPage />} />
                 <Route path="/data" element={<DataPage />} />
