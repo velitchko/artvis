@@ -16,10 +16,6 @@ class SmallHeadingComponent extends React.Component<{}, {}> {
 
                     </h1>
 
-                    <span className="ml-60 px-3 py-1 text-5xl font-semibold bg-gray-300 text-gray-600">
-                        BETA Version, View under Construction
-                    </span>
-
                 </a>
             </div>
 
