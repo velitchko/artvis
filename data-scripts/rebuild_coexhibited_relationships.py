@@ -272,29 +272,43 @@ class CoExhibitedRelationshipBuilder:
             logger.info("=" * 60)
 
 
+
+import argparse
+
 def main():
-    """Main execution function."""
+    """Main execution function with CLI flags."""
+    parser = argparse.ArgumentParser(description="Rebuild CO_EXHIBITED and CO_EXHIBITED_TOTAL relationships.")
+    parser.add_argument('--skip-clear', action='store_true', help='Skip deleting all existing CO_EXHIBITED and CO_EXHIBITED_TOTAL relationships')
+    parser.add_argument('--only-total', action='store_true', help='Only calculate CO_EXHIBITED_TOTAL relationships (do not rebuild CO_EXHIBITED)')
+    parser.add_argument('--only-coexhibited', action='store_true', help='Only rebuild CO_EXHIBITED relationships (do not calculate CO_EXHIBITED_TOTAL)')
+    parser.add_argument('--batch-size', type=int, default=int(os.getenv("BATCH_SIZE", "50")), help='Batch size for processing exhibitions')
+    args = parser.parse_args()
+
     # Get Neo4j credentials from environment variables or use defaults
     NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "admin123")
-    
-    # Batch size for processing exhibitions
-    BATCH_SIZE = int(os.getenv("BATCH_SIZE", "50"))
-    
+
     logger.info("CO_EXHIBITED Relationship Rebuild Script")
     logger.info("=" * 60)
-    
+
     builder = None
     try:
         builder = CoExhibitedRelationshipBuilder(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
-        
-        # Rebuild all relationships
-        builder.rebuild_relationships(batch_size=BATCH_SIZE, clear_existing=True)
-        
-        # Show statistics
+
+        if args.only_total:
+            # Only calculate CO_EXHIBITED_TOTAL
+            builder.create_coexhibited_total_relationships()
+        elif args.only_coexhibited:
+            # Only rebuild CO_EXHIBITED (optionally skip clearing)
+            builder.rebuild_relationships(batch_size=args.batch_size, clear_existing=not args.skip_clear)
+        else:
+            # Default: rebuild CO_EXHIBITED (optionally skip clearing) and then CO_EXHIBITED_TOTAL
+            builder.rebuild_relationships(batch_size=args.batch_size, clear_existing=not args.skip_clear)
+            builder.create_coexhibited_total_relationships()
+
         builder.get_statistics()
-        
+
     except Exception as e:
         logger.error(f"Error during execution: {str(e)}", exc_info=True)
         raise
