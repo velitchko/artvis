@@ -566,13 +566,35 @@ const EgoNetworkComponent: React.FC<EgoNetworkProps> = ({
     }, []);
 
     const filterData = useCallback((numCoEx: number): { sortedLinks: Link[], updatedColors: Map<string, string> } => {
-        // Filter links based on co-exhibition threshold
+        // Debug: log all incoming links
+        // @ts-ignore
+        if (typeof window !== 'undefined' && window.DEBUG) {
+            // eslint-disable-next-line no-console
+            console.log('EgoNetwork: baseNode.id', baseNode.id, 'links:', links);
+        }
+
+        // Filter links based on co-exhibition threshold (assume sourceId always baseNode.id)
         const filteredLinks = links.filter((link: Link) => {
             const sum = links
-                .filter((l: Link) => l.targetId === link.targetId && link.target.props.data.country !== null)
+                .filter((l: Link) =>
+                    l.sourceId === baseNode.id && l.targetId === link.targetId &&
+                    link.target.props.data.country !== null
+                )
                 .reduce((acc: number, cur: Link) => acc + cur.props.data.count, 0);
-            return sum >= numCoEx && (link.props.data.year >= YEAR_RANGE.min && link.props.data.year <= YEAR_RANGE.max);
+            const inYearRange = link.props.data.year >= YEAR_RANGE.min && link.props.data.year <= YEAR_RANGE.max;
+            // @ts-ignore
+            if (typeof window !== 'undefined' && window.DEBUG) {
+                // eslint-disable-next-line no-console
+                console.log('EgoNetwork: link', link, 'sum', sum, 'inYearRange', inYearRange);
+            }
+            return sum >= numCoEx && inYearRange;
         });
+
+        // @ts-ignore
+        if (typeof window !== 'undefined' && window.DEBUG) {
+            // eslint-disable-next-line no-console
+            console.log('EgoNetwork: filteredLinks', filteredLinks);
+        }
 
         // Group links by the specified property (e.g., country)
         const currentGroupBy = propGroupBy || state.groupBy;

@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "NODE_ENV=development nodemon index.js"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "body-parser": "^1.20.1",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.4",
     "express": "^4.18.2",
     "graphql": "^16.6.0",
     "graphql-import-node": "^0.0.5",

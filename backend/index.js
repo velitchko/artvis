@@ -8,17 +8,28 @@ import http from 'http';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import neo4j from 'neo4j-driver';
-
+import dotenv from 'dotenv';
 import { schema } from './schema.js';
 import { cypherRouter } from './cypherRouting.js';
 import compression from 'compression';
 
+
+// Load .env.dev for dev, .env for start
+const envFile = process.env.NODE_ENV === 'development' || process.argv.some(arg => arg.includes('nodemon'))
+	? '.env.dev'
+	: '.env';
+
+dotenv.config({ path: envFile });
+console.log(`Using environment file: ${envFile}`);
+
 const typeDefs = gql`${schema}`;
 
-// TODO: Load from secrets
 const driver = neo4j.driver(
-	'bolt://localhost:7687',
-	neo4j.auth.basic('neo4j', 'admin123')
+	process.env.NEO4J_URI,
+	neo4j.auth.basic(
+		process.env.NEO4J_USER,
+		process.env.NEO4J_PASSWORD
+	)
 );
 const app = express();
 
@@ -37,47 +48,43 @@ const httpServer = http.createServer(app);
 
 const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
 
-neoSchema.getSchema().then(async (schema) => {
-	const server = new ApolloServer({
-		schema,
-		plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
-	});
+async function startServer() {
+	try {
+		const schema = await neoSchema.getSchema();
+		const server = new ApolloServer({
+			schema,
+			plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
+		});
 
-	await server.start();
+		await server.start();
 
-	app.set('neo4jDriver', driver);
+		app.set('neo4jDriver', driver);
 
-	app.use(
-		'/graphql',
-		bodyParser.json(),
-		// expressMiddleware accepts the same arguments:
-		// an Apollo Server instance and optional configuration options
-		expressMiddleware(server, {
+		app.use(
+			'/graphql',
+			bodyParser.json(),
+			expressMiddleware(server, {
+				context: async ({ req }) => ({
+					token: req.headers.token
+				}),
+			}),
+		);
+
+		app.use('/cypher', bodyParser.json(), cypherRouter);
+
+		app.use('/api', bodyParser.json(), expressMiddleware(server, {
 			context: async ({ req }) => ({
 				token: req.headers.token
 			}),
-		}),
-	);
+		}));
 
-	app.use('/cypher', bodyParser.json(), cypherRouter);
+		await new Promise((resolve) => httpServer.listen({ port: 4000 }, resolve));
+		console.log(`🚀 Server ready at http://localhost:4000/`);
+	} catch (err) {
+		console.error('Failed to start server:', err);
+		process.exit(1);
+	}
+}
 
-	// Setup /api endpoint to serve GraphQL with proper CORS
-	app.use('/api', bodyParser.json(), expressMiddleware(server, {
-		context: async ({ req }) => ({
-			token: req.headers.token
-		}),
-	}));
-
-
-	// Modified server startup
-	await new Promise((resolve) => httpServer.listen({ port: 4000 }, resolve));
-
-	console.log(`🚀 Server ready at http://localhost:4000/`);
-	// app.use('/graphql', cors(), json(), expressMiddleware(server));
-
-
-	// server.listen(4000).then(({ url }) => {
-	// 	console.log(`🚀 Server ready at ${url}`);
-	// });
-});
+startServer();
 
