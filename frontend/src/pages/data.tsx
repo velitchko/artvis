@@ -77,7 +77,7 @@ const DataPage: React.FC = () => (
                                 <li><strong>TOOK_PLACE_AT</strong> <code>(Exhibition → Location)</code> – Associates an exhibition with a broader geographic location.</li>
                                 <li><strong>LOCATED_AT</strong> <code>(Venue → Geoname)</code> – Links a venue to its standardized geographic identifier.</li>
                                 <li><strong>LOCATED_AT</strong> <code>(Location → Geoname)</code> – Maps a general location to a normalized geospatial reference.</li>
-                                <li><strong>EXHIBITED_AT</strong> <code>(Item → Exhibition)</code> – States that an item was shown as part of an exhibition.</li>
+                                <li><strong>EXHIBITED_AT</strong> <code>(Artist → Exhibition)</code> – States that an item was shown as part of an exhibition.</li>
                                 <li><strong>CREATED</strong> <code>(Artist → Item)</code> – Indicates authorship of an exhibited item by an artist.</li>
                                 <li><strong>MEMBER_OF</strong> <code>(Artist → Group)</code> – Describes an artist’s affiliation with a group or collective.</li>
                                 <li><strong>CO_EXHIBITED</strong> <code>(Artist → Artist)</code> – Captures pairwise co-participation of artists in the same exhibition.</li>
