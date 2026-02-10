@@ -8,4 +8,5 @@ export type Publication = {
   doi?: string;
   url?: string;
   bibtex: string;
+  group?: 'core' | 'related';
 };

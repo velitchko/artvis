@@ -69,8 +69,15 @@ const PubCard: React.FC<{ pub: Publication }> = ({ pub }) => {
 
 const PublicationsPage: React.FC = () => {
     const pubs = [...publications].sort((a, b) => (b.year || 0) - (a.year || 0));
-    const grouped = groupByYear(pubs);
-    const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+
+    const corePubs = pubs.filter(p => (p as any).group === 'core');
+    const relatedPubs = pubs.filter(p => (p as any).group !== 'core');
+
+    const groupedCore = groupByYear(corePubs);
+    const groupedRelated = groupByYear(relatedPubs);
+
+    const coreYears = Object.keys(groupedCore).sort((a, b) => Number(b) - Number(a));
+    const relatedYears = Object.keys(groupedRelated).sort((a, b) => Number(b) - Number(a));
 
     return (
         <div className="min-h-screen bg-gray-50 relative overflow-hidden">
@@ -97,16 +104,37 @@ const PublicationsPage: React.FC = () => {
                         </p>
                     </div>
 
-                    {years.map(year => (
-                        <section key={year} className="mb-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-4">{year}</h2>
-                            <div className="grid gap-4 md:grid-cols-1">
-                                {grouped[year].map(pub => (
-                                    <PubCard key={pub.id + pub.title} pub={pub} />
-                                ))}
-                            </div>
-                        </section>
-                    ))}
+                    {corePubs.length > 0 && (
+                        <div className="mb-10">
+                            <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Core Publications</h2>
+                            {coreYears.map(year => (
+                                <section key={`core-${year}`} className="mb-6">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-3">{year}</h3>
+                                    <div className="grid gap-4 md:grid-cols-1">
+                                        {groupedCore[year].map(pub => (
+                                            <PubCard key={pub.id + pub.title} pub={pub} />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    )}
+
+                    {relatedPubs.length > 0 && (
+                        <div className="mb-10">
+                            <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Related Publications</h2>
+                            {relatedYears.map(year => (
+                                <section key={`related-${year}`} className="mb-6">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-3">{year}</h3>
+                                    <div className="grid gap-4 md:grid-cols-1">
+                                        {groupedRelated[year].map(pub => (
+                                            <PubCard key={pub.id + pub.title} pub={pub} />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
