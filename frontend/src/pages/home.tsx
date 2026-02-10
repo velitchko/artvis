@@ -99,6 +99,16 @@ const HomePage = (props: any) => {
                 <div className="text-center mb-8 sm:mb-12">
                     <HeadingComponent {...title} />
                 </div>
+                {/* Tools blurb - placed directly under the title to avoid dropdown overlap */}
+                <div className="w-full flex justify-center mb-6">
+                    <div className="max-w-md w-full px-4">
+                        <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-6 text-center">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Explore the Tools</h3>
+                            <p className="text-gray-700 mb-4">Discover interactive explorers, network visualizations, and detail views built to help you interrogate the dataset — see what, how and why each tool helps research questions.</p>
+                            <a href="/tools" className="inline-block px-6 py-2 text-sm font-semibold text-white bg-black rounded-full hover:bg-gray-900">View Tools</a>
+                        </div>
+                    </div>
+                </div>
                 {/* Search section - Google-style positioning */}
                 <div className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto">
                     <SearchComponent query={GET_EVERYTHING} onClick={handleClick} />
@@ -115,6 +125,14 @@ const HomePage = (props: any) => {
                 {/* Spacer for bottom */}
                 <div className="flex-1"></div>
                 {/* Minimal Footer - now in main view */}
+                <div className="max-w-4xl mx-auto px-6 mb-6">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm p-6 text-center">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Explore the Tools</h3>
+                        <p className="text-gray-700 mb-4">Discover interactive explorers, network visualizations, and detail views built to help you interrogate the dataset — see what, how and why each tool helps research questions.</p>
+                        <a href="/tools" className="inline-block px-6 py-2 text-sm font-semibold text-white bg-black rounded-full hover:bg-gray-900">View Tools</a>
+                    </div>
+                </div>
+
                 <footer className="w-full py-4 border-t border-gray-200">
                     <div className="max-w-4xl mx-auto">
                         <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6 text-xs sm:text-sm text-gray-600">
